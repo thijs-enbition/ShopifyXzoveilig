@@ -137,7 +137,7 @@
               {%- endif -%}{%- endfor -%}
             </ul>
             <div class="vhero__cta">
-              <a class="cta-gold" href="{{ b.settings.hero_cta_url | default: '/#keuzehulp' }}" data-zv-event="book_advice" data-solution-type="{{ anchor }}" data-cta-name="vind_uw_oplossing" data-cta-position="{{ anchor }}_hero" data-zv-finder>{{ b.settings.hero_cta_label | default: 'Vind uw oplossing' }}<svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+              <a class="cta-gold" href="{{ b.settings.hero_cta_url | default: '/#keuzehulp' }}" data-zv-event="book_advice" data-solution-type="{{ anchor }}" data-cta-name="vind_uw_oplossing" data-cta-position="{{ anchor }}_hero" data-zv-finder>{{ b.settings.hero_cta_label | default: 'Keuzehulp' }}<svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
             </div>
           </div>
         </div>
@@ -176,7 +176,7 @@
         {%- if is_coming_soon -%}
           <div class="cs-wrap">
             <div class="cs-copy"><p>Veilig Onderweg wordt een persoonlijk alarm voor onderweg en thuis: één druk op de knop of automatische valdetectie verbindt u met de meldkamer. We werken de precieze specificaties en prijzen nog uit.</p></div>
-            <div class="cs-formbox">
+            <div class="cs-formbox" id="veilig-onderweg-aanmelden">
               <b>Blijf op de hoogte</b>
               <form class="cs-form" data-cs-form data-consent-error="{% render 'zv-form-copy', key: 'consent_error' %}">
                 <label>E-mailadres<input type="email" name="email" placeholder="uw@email.nl" required></label>
@@ -2439,7 +2439,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
         { "type": "textarea", "id": "trust", "label": "Hero trust-punten (1 per regel)" },
         { "type": "text", "id": "hero_asset", "label": "Hero-foto (asset-bestandsnaam)", "default": "opl-hero-langer-thuis.jpg" },
         { "type": "text", "id": "hero_pos", "label": "Hero-focuspunt (object-position)", "default": "center" },
-        { "type": "text", "id": "hero_cta_label", "label": "Hero-knop", "default": "Vind uw oplossing" },
+        { "type": "text", "id": "hero_cta_label", "label": "Hero-knop", "default": "Keuzehulp" },
         { "type": "url", "id": "hero_cta_url", "label": "Hero-knop link" },
         { "type": "collection", "id": "collection", "label": "Pakketten-collectie" },
         { "type": "text", "id": "pak_heading", "label": "Pakketten-kop", "default": "Kies uw niveau" },

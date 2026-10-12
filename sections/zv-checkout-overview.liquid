@@ -376,7 +376,7 @@
 {%- capture herroeping_url -%}{% render 'zv-route', key: 'herroepingsrecht' %}{%- endcapture -%}
 {%- assign consent_prefix = section.settings.consent_prefix | default: 'Ik ga akkoord met de' -%}
 {%- assign consent_suffix = section.settings.consent_suffix | default: 'en de betaalplicht.' -%}
-{%- capture privacy_html -%}ons <a href="{{ privacy_url }}" target="_blank" rel="noopener">privacybeleid</a>{%- endcapture -%}
+{%- capture privacy_html -%}ons privacybeleid (<a href="{{ privacy_url }}" target="_blank" rel="noopener">Privacy</a>){%- endcapture -%}
 {%- if pkg_available -%}
   {%- assign consent_middle = section.settings.consent_middle | default: ', de contractduur van' -%}
   {%- capture consent_html -%}{{ consent_prefix }} <a href="{{ av_url }}" target="_blank" rel="noopener">Algemene Voorwaarden</a>{{ consent_middle }} {{ pkg_term }} maanden, {{ privacy_html }} {{ consent_suffix }}{%- endcapture -%}
@@ -612,7 +612,7 @@
               <dl class="ovdl">
                 <div><dt>Maandelijkse betaling</dt><dd>SEPA-incasso</dd></div>
                 <div><dt>Opzeggen</dt><dd>Maandelijks, na afloop van de contractduur</dd></div>
-                <div><dt>Bedenktijd</dt><dd>14 dagen <a href="{{ herroeping_url }}" target="_blank" rel="noopener">herroepingsrecht</a></dd></div>
+                <div><dt>Bedenktijd</dt><dd>14 dagen (<a href="{{ herroeping_url }}" target="_blank" rel="noopener">Herroepen</a>)</dd></div>
                 {%- if pkg_install_group == 'nami' -%}
                   <div>
                     <dt>Installatie</dt>

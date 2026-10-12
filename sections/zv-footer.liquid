@@ -74,7 +74,7 @@
           <a href="{% render 'zv-route', key: 'over-ons' %}">Over ons</a>
           <a href="{% render 'zv-route', key: 'klantenservice' %}">Klantenservice</a>
           <a href="{% render 'zv-route', key: 'contact' %}">Contact</a>
-          <a href="{% render 'zv-route', key: 'herroepingsrecht' %}">Aankoop herroepen</a>
+          <a href="{% render 'zv-route', key: 'herroepingsrecht' %}">Herroepen</a>
         {%- endif -%}
       </div>
     </div>
@@ -114,7 +114,7 @@
         {%- else -%}
           {%- if shop.privacy_policy != blank -%}<a href="{{ shop.privacy_policy.url }}">Privacy</a>{%- endif -%}
           {%- if shop.terms_of_service != blank -%}<a href="{{ shop.terms_of_service.url }}">Voorwaarden</a>{%- endif -%}
-          <a href="{% render 'zv-route', key: 'herroepingsrecht' %}">Retourneren</a>
+          <a href="{% render 'zv-route', key: 'herroepingsrecht' %}">Herroepen</a>
         {%- endif -%}
       </div>
     </div>
@@ -127,7 +127,7 @@
   "settings": [
     { "type": "header", "content": "Merk" },
     { "type": "image_picker", "id": "logo_light", "label": "Logo (wit)" },
-    { "type": "textarea", "id": "tagline", "label": "Tagline", "default": "Slimme zorg en beveiliging voor thuis. Al bijna twintig jaar, met een Nederlandse meldkamer die nooit slaapt." },
+    { "type": "textarea", "id": "tagline", "label": "Tagline", "default": "Slimme zorg en beveiliging voor thuis. Sinds 2007, met een Nederlandse meldkamer die nooit slaapt." },
     { "type": "text", "id": "phone", "label": "Telefoonnummer", "default": "088 122 11 11" },
     { "type": "header", "content": "Kolom 1" },
     { "type": "text", "id": "col_1_heading", "label": "Kop", "default": "Oplossingen" },
