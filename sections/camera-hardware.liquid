@@ -93,14 +93,14 @@
         <div class="sum-tot" id="sumTot"></div>
         <button class="sumbtn" id="sumBtn" disabled>Bel om te bestellen<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div class="sum-note"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Bestellen gaat altijd via een kort telefoongesprek, 088 122 11 11</div>
-        <form class="cam-contact" id="camContact">
+        <form class="cam-contact" id="camContact" data-consent-error="{% render 'zv-form-copy', key: 'consent_error' %}">
           <div class="cam-contact-h">Of laat ons u terugbellen</div>
           <input type="text" id="ccName" placeholder="Naam" required>
-          <input type="tel" id="ccPhone" placeholder="Telefoonnummer" required>
+          <input type="tel" id="ccPhone" placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}" aria-label="Telefoonnummer" required>
           <input type="email" id="ccEmail" placeholder="E-mailadres (optioneel)">
           <label class="cam-contact-consent">
             <input type="checkbox" id="ccConsent" required>
-            <span>Ik geef toestemming dat Zo Veilig contact met mij opneemt over mijn aanvraag.</span>
+            <span>{% render 'zv-form-copy', key: 'consent' %}</span>
           </label>
           <div class="cam-contact-err" id="ccErr"></div>
           <button type="submit">Verstuur terugbelverzoek</button>
@@ -296,7 +296,7 @@
     var consent=document.getElementById('ccConsent').checked;
     var err=document.getElementById('ccErr');
     if(!name || !phone){ err.textContent='Vul uw naam en telefoonnummer in.'; err.style.display='block'; return; }
-    if(!consent){ err.textContent='Geef eerst toestemming zodat we contact mogen opnemen.'; err.style.display='block'; return; }
+    if(!consent){ err.textContent=this.getAttribute('data-consent-error'); err.style.display='block'; return; }
     err.style.display='none';
     var payload={ lead_type:'camerahardware', source_page:'camera-hardware', name:name, phone:phone, email:email||null,
       consent:consent, cta_location:'camera_hardware_page', source:captureSource() };
@@ -460,6 +460,7 @@
 .zv-camera .cam-contact-consent { display:flex; align-items:flex-start; gap:10px; cursor:pointer; }
 .zv-camera .cam-contact-consent input { width:18px; height:18px; margin-top:2px; flex:none; accent-color:var(--indigo); }
 .zv-camera .cam-contact-consent span { font-size:12.5px; font-weight:600; color:var(--muted); line-height:1.45; }
+.zv-camera .cam-contact-consent a { color:var(--indigo); font-weight:800; }
 .zv-camera .cam-contact button { font-family:inherit; font-size:14px; font-weight:800; color:#fff; background:var(--indigo); border:none; border-radius:8px; padding:12px 16px; cursor:pointer; }
 .zv-camera .cam-contact-err { font-size:12px; font-weight:700; color:var(--red); display:none; }
 .zv-camera .cam-contact-done { display:none; align-items:center; gap:8px; font-size:13px; font-weight:700; color:#2f8f5b; }

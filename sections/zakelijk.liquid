@@ -47,7 +47,7 @@
               </div>
               <div class="frow">
                 <div class="zf"><label for="z-email">E-mail</label><input id="z-email" name="contact[email]" type="email" required placeholder="naam@bedrijf.nl"></div>
-                <div class="zf"><label for="z-tel">Telefoon</label><input id="z-tel" name="contact[Telefoon]" type="tel" placeholder="06 12 34 56 78"></div>
+                <div class="zf"><label for="z-tel">Telefoon</label><input id="z-tel" name="contact[Telefoon]" type="tel" placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}"></div>
               </div>
               <div class="zf"><label for="z-type">Type locatie</label>
                 <select id="z-type" name="contact[Type locatie]">
@@ -59,7 +59,7 @@
                 </select>
               </div>
               <div class="zf"><label for="z-bericht">Waar wilt u mee beginnen?</label><textarea id="z-bericht" name="contact[Bericht]" placeholder="Bijv. toegangscontrole, camerabewaking, of monitoring na sluitingstijd."></textarea></div>
-              <label class="consent"><input type="checkbox" id="z-consent" required><span>Ik ga akkoord met het <a href="{% render 'zv-route', key: 'klantenservice' %}">privacybeleid</a> en dat Zo Veilig mijn gegevens gebruikt om contact met me op te nemen over deze aanvraag.</span></label>
+              <label class="consent"><input type="checkbox" id="z-consent" required><span>{% render 'zv-form-copy', key: 'consent' %}</span></label>
               <button class="btn btn--gold submit" type="submit" id="z-submit" disabled>Plan mijn gesprek
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
