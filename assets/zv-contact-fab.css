@@ -1,0 +1,107 @@
+/* Floating contact button (S-02). Markup: snippets/zv-contact-fab.liquid.
+   Bottom-left so it never sits under Lio (bottom-right, z-index 9000).
+   z-index 40: below the sticky header group (50), so the full-screen mobile nav drawer
+   covers it; far below the Oplossingen modal/cart drawer (9999/10000) and Shopify's
+   cookie banner. Minimal on purpose: a designer restyles this later. */
+.zv-fab {
+  position: fixed;
+  left: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  display: flex;
+  /* Toggle comes first in the DOM so Tab moves from it straight into the open panel;
+     column-reverse paints the panel above it. */
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  gap: 10px;
+  font-family: var(--zv-heading-font, inherit);
+}
+/* Belt and braces: also hide it outright while the mobile nav drawer is open, so it is
+   out of the tab order too, not just painted over. */
+body:has(.sf-drawer details[open]) .zv-fab { display: none; }
+
+.zv-fab__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 20px 0 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--indigo, #322469);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 12px 28px -12px rgba(26, 18, 48, 0.6);
+  transition: background 0.15s, transform 0.15s;
+}
+.zv-fab__toggle:hover { background: var(--indigo-2, #473a86); transform: translateY(-1px); }
+.zv-fab__icon { width: 20px; height: 20px; flex: 0 0 auto; }
+.zv-fab__icon--close { display: none; }
+.zv-fab__toggle[aria-expanded="true"] .zv-fab__icon--open { display: none; }
+.zv-fab__toggle[aria-expanded="true"] .zv-fab__icon--close { display: block; }
+
+.zv-fab__panel {
+  width: min(290px, calc(100vw - 40px));
+  box-sizing: border-box;
+  background: var(--paper, #fff);
+  border: 1px solid var(--line, #e7e0cf);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 22px 52px -24px rgba(26, 18, 48, 0.45);
+}
+.zv-fab__panel[hidden] { display: none; }
+.zv-fab__title {
+  margin: 2px 4px 10px;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--indigo, #322469);
+}
+.zv-fab__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.zv-fab__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line-2, #dcd2bd);
+  background: #fff;
+  color: var(--indigo, #322469);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+}
+.zv-fab__link:hover { background: var(--cream, #fdfaf2); border-color: var(--indigo, #322469); }
+.zv-fab__link svg { width: 18px; height: 18px; flex: 0 0 auto; }
+/* The adviesgesprek link is the primary action: gold, like .btn--gold. */
+.zv-fab__list li:last-child .zv-fab__link {
+  background: var(--gold, #e4a311);
+  border-color: var(--gold, #e4a311);
+  color: var(--ink, #1a1230);
+}
+.zv-fab__list li:last-child .zv-fab__link:hover { background: var(--gold-lt, #f5c84a); }
+
+/* Visible focus: gold ring framed in indigo (white gap inside), so it reads on white,
+   cream and gold surfaces alike. */
+.zv-fab__toggle:focus-visible,
+.zv-fab__link:focus-visible {
+  outline: 3px solid var(--gold, #e4a311);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 7px var(--indigo, #322469);
+}
+
+@media (max-width: 600px) {
+  .zv-fab { left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .zv-fab__panel { width: min(290px, calc(100vw - 32px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zv-fab__toggle { transition: none; }
+  .zv-fab__toggle:hover { transform: none; }
+}
+@media print { .zv-fab { display: none; } }
