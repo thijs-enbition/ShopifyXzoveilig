@@ -178,10 +178,10 @@
             <div class="cs-copy"><p>Veilig Onderweg wordt een persoonlijk alarm voor onderweg en thuis: één druk op de knop of automatische valdetectie verbindt u met de meldkamer. We werken de precieze specificaties en prijzen nog uit.</p></div>
             <div class="cs-formbox">
               <b>Blijf op de hoogte</b>
-              <form class="cs-form" data-cs-form>
+              <form class="cs-form" data-cs-form data-consent-error="{% render 'zv-form-copy', key: 'consent_error' %}">
                 <label>E-mailadres<input type="email" name="email" placeholder="uw@email.nl" required></label>
-                <label>Telefoonnummer<input type="tel" name="phone" placeholder="06 12345678" required></label>
-                <label class="cs-check"><input type="checkbox" name="consent"><span>Ik ga akkoord met het <a href="{% render 'zv-route', key: 'privacyverklaring' %}" target="_blank" rel="noopener">privacybeleid</a>.</span></label>
+                <label>Telefoonnummer<input type="tel" name="phone" placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}" required></label>
+                <label class="cs-check"><input type="checkbox" name="consent"><span>{% render 'zv-form-copy', key: 'consent' %}</span></label>
                 <div class="cs-err" data-cs-err hidden></div>
                 <button type="submit" class="btn btn--gold">Laat uw gegevens achter</button>
               </form>
@@ -553,14 +553,14 @@
                       {%- if v.sku == 'MT-VIS' or fk == 'secure_plus' -%}
                         {%- comment -%} Vista is callout-only (maatwerk): no self-checkout, no detail drawer. Conversion is a VISTA Lead callback -> window.ZV_LEAD_ENDPOINT (Odoo CRM). {%- endcomment -%}
                         <div class="pcard__vista" data-vista data-odoo="{{ v.sku | default: 'MT-VIS' }}" data-item="{{ p.title | default: 'Mijn Thuis Vista' | escape }}" data-price="{% if price_known %}{{ p.price | money }}{% else %}Geen vast pakket{% endif %}">
-                          <form class="pcard__vista-form" data-vista-form>
+                          <form class="pcard__vista-form" data-vista-form data-consent-error="{% render 'zv-form-copy', key: 'consent_error' %}">
                             <input type="text" name="name" placeholder="Naam" autocomplete="name" required>
                             <input type="email" name="email" placeholder="E-mailadres" autocomplete="email" required>
-                            <input type="tel" name="phone" placeholder="Telefoonnummer" autocomplete="tel" required>
-                            <label class="pcard__vista-time"><span>Wanneer mogen wij bellen?</span>
-                            <input type="text" name="time" placeholder="Wanneer mogen wij bellen?">
+                            <input type="tel" name="phone" placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}" aria-label="Telefoonnummer" autocomplete="tel" required>
+                            <label class="pcard__vista-time"><span>{% render 'zv-form-copy', key: 'callback_time' %}</span>
+                            <input type="text" name="time" placeholder="{% render 'zv-form-copy', key: 'callback_time' %}">
                             </label>
-                            <label class="pcard__vista-consent"><input type="checkbox" name="consent"><span>Ik geef toestemming dat Zo Veilig contact met mij opneemt.</span></label>
+                            <label class="pcard__vista-consent"><input type="checkbox" name="consent"><span>{% render 'zv-form-copy', key: 'consent' %}</span></label>
                             <div class="pcard__vista-err" data-vista-err hidden></div>
                             <p class="pcard__vista-note">Iedere woning en situatie is anders. Daarom bepalen we samen waar camera's het meeste effect hebben en welke camera het beste past bij iedere plek. Zo krijgt u precies de beveiliging die nodig is.</p>
                             <button type="submit">Plan een vrijblijvend adviesgesprek</button>
@@ -1282,7 +1282,8 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
 .cs-form label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:800;color:#1a1230;}
 .cs-form input[type=email],.cs-form input[type=tel]{background:#fdfaf2;border:1.5px solid #ddd4c0;border-radius:10px;padding:12px 14px;font:inherit;font-size:15px;font-weight:600;color:#1a1230;}
 .cs-form input:focus{outline:none;border-color:#322469;background:#fff;}
-.cs-check{flex-direction:row;align-items:flex-start;gap:8px;font-size:12px;font-weight:600;color:#5b5374;}
+/* .cs-form prefix (2026-10-12): .cs-form label (0,1,1) used to win, stacking the checkbox above its text in bold. */
+.cs-form .cs-check{flex-direction:row;align-items:flex-start;gap:8px;font-size:12px;font-weight:600;color:#5b5374;}
 .cs-check input{width:16px;height:16px;flex:none;margin-top:1px;accent-color:#322469;}
 .cs-check a{color:#322469;font-weight:800;}
 .cs-err{font-size:12px;font-weight:700;color:#e24b4a;}
@@ -1303,7 +1304,8 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
    Onderweg form). The label wraps the unchanged input (same name and placeholder, no id), so it
    is also the input's accessible name. The in-field placeholder is transparent, so the wording
    never shows twice or cut off. Later on 2026-09-24 (Thijs), label and placeholder both became
-   "Wanneer mogen wij bellen?" without "(optioneel)"; the label approach stays. */
+   "Wanneer mogen wij bellen?" without "(optioneel)"; the label approach stays. Since 2026-10-12 (S-10)
+   both read "Wanneer belt u het liefst?" from snippets/zv-form-copy.liquid, still without "(optioneel)". */
 .pcard__vista-time{display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:800;color:#1a1230;line-height:1.4;}
 .pcard__vista-time input::placeholder{color:transparent;}
 /* Vista consent (2026-09-24): the same checkbox row as the Overzicht AV consent (.zv-overzicht
@@ -1315,6 +1317,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
 /* [type] adds specificity: Dawn's base.css `input[type="checkbox"] { width: auto }` (0,1,1, loaded later) otherwise wins and squeezes the box to 13px wide. */
 .pcard__vista-consent input[type="checkbox"]{width:19px;height:19px;margin-top:2px;flex:none;accent-color:var(--indigo);}
 .pcard__vista-consent span{font-size:13.5px;font-weight:600;color:#5b5374;line-height:1.5;}
+.pcard__vista-consent a{color:#322469;font-weight:800;}
 /* Vista advice text (2026-09-24): secondary text like the card footnotes (.ltc__footnote,
    .pcard__plus-hint): 12px/600 at line-height 1.5. The colour is var(--muted) rather than
    their --muted-2, which is only 3.5:1 on the white card, below WCAG AA for 12px text
@@ -2322,7 +2325,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
         var consent = !!(form.querySelector('[name=consent]') || {}).checked;
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Vul een geldig e-mailadres in.'; err.hidden = false; return; }
         if (!phone) { err.textContent = 'Vul uw telefoonnummer in.'; err.hidden = false; return; }
-        if (!consent) { err.textContent = 'Ga akkoord met het privacybeleid om verder te gaan.'; err.hidden = false; return; }
+        if (!consent) { err.textContent = form.getAttribute('data-consent-error'); err.hidden = false; return; }
         err.hidden = true;
         submitLead({ lead_type: 'onderweg', email: email, phone: phone, consent: consent, cta_location: 'coming_soon_onderweg' });
         form.style.display = 'none'; if (done) done.hidden = false;
@@ -2354,7 +2357,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
         if (!name) { err.textContent = 'Vul uw naam in.'; err.hidden = false; return; }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Vul een geldig e-mailadres in.'; err.hidden = false; return; }
         if (!phone) { err.textContent = 'Vul uw telefoonnummer in.'; err.hidden = false; return; }
-        if (!consent) { err.textContent = 'Geef toestemming dat wij contact met u opnemen.'; err.hidden = false; return; }
+        if (!consent) { err.textContent = form.getAttribute('data-consent-error'); err.hidden = false; return; }
         err.hidden = true;
         submitLead({
           lead_type: 'vista', name: name, email: email, phone: phone, preferred_callback_time: time, consent: consent,

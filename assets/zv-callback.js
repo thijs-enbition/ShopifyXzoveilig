@@ -53,7 +53,7 @@
 
       var consent = form.querySelector('[name="consent"]');
       if (consent && !consent.checked) {
-        setStatus(form, 'Geef eerst toestemming zodat we contact mogen opnemen.', 'error');
+        setStatus(form, form.getAttribute('data-consent-error'), 'error');
         consent.focus();
         return;
       }
