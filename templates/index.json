@@ -127,10 +127,10 @@
         "o3"
       ],
       "settings": {
-        "eyebrow": "Zo Veilig Keuzehulp",
+        "eyebrow": "Keuzehulp",
         "heading": "",
         "text": "Lio stelt u een paar korte vragen en zoekt de ondersteuning die past bij uw situatie.",
-        "card_eyebrow": "Zo Veilig Keuzehulp",
+        "card_eyebrow": "Keuzehulp",
         "card_sub": "In 3 korte vragen naar het juiste pad",
         "total_steps": 3,
         "step_label": "Vraag 1 · Stap 1 van 3",
@@ -146,7 +146,7 @@
       "settings": {
         "eyebrow": "Ons verhaal",
         "heading": "Veiligheid is veranderd. Wij ook.",
-        "text": "Bijna twintig jaar geleden begonnen we met het beschermen van woningen. Vandaag beschermen we ook de mensen die er wonen.",
+        "text": "Sinds 2007 beschermen we woningen. Vandaag beschermen we ook de mensen die er wonen.",
         "link_text": "Lees ons verhaal",
         "link": "/pages/over-ons"
       }
@@ -159,7 +159,7 @@
         "category": "",
         "close_heading": "Twijfelt u wat bij u past?",
         "close_text": "Elke familie is anders. Beantwoord een paar eenvoudige vragen en ontdek welke ondersteuning logisch is voor uw situatie.",
-        "btn1_label": "Start de Keuzehulp",
+        "btn1_label": "Keuzehulp",
         "btn1_link": "/#keuzehulp",
         "btn2_label": "Bezoek het kenniscentrum",
         "btn2_link": "/pages/kenniscentrum",
