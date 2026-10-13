@@ -298,12 +298,13 @@ never a hardcoded variant id, for Beschermd/Protect only. NAMI packages use
 
 **Videodeurbel (ADC-750, `koop-video-deurbel-750`) and Afstandsbediening (H0010,
 `huur-afstandsbediening`)** are real Shopify products with a live-priced checkbox in the
-Uitbreidingen accordion on every package card except Vista. Climax (Beschermd/Protect) has one
+Uitbreidingen accordion. Climax (Beschermd/Protect) shows both; since 2026-10-13 the NAMI cards
+(Inzicht/Zeker/Alert) show only Videodeurbel, and Vista shows neither. Climax has one
 accordion holding the two checkboxes plus, as its last row below a divider, the existing
 "Uitbreiding hardware" link (folded in 2026-09-26 — there is no separate hardware button or
 "Extra uitbreidingen" link any more, on any card); it renders even with no add-on resolved,
-since the hardware link alone still needs the panel. NAMI (Inzicht/Zeker/Alert) keeps its
-existing accordion (Woning + the two checkboxes + Ontzorgpakket) unchanged, no hardware link.
+since the hardware link alone still needs the panel. NAMI keeps its existing accordion (Woning +
+the Videodeurbel checkbox + Ontzorgpakket), no hardware link.
 Checking a box keeps one shared cart line at `zv_promo_package_qty`, same discount mechanic as
 Woning. Both were confirmed "sold out" (inventory tracked, DENY, stock <= 0) on 2026-09-26 —
 the checkbox and its live price still work, but no line can be added until that's fixed in
