@@ -23,23 +23,23 @@ body:has(.sf-drawer details[open]) .zv-fab { display: none; }
 .zv-fab__toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 48px;
-  padding: 0 20px 0 16px;
+  gap: 16px;
+  min-height: 96px;
+  padding: 0 40px 0 32px;
   border: none;
   border-radius: 999px;
-  background: var(--indigo, #322469);
+  background: #e8651a;
   color: #fff;
   font: inherit;
-  font-size: 15px;
+  font-size: 22px;
   font-weight: 800;
   line-height: 1;
   cursor: pointer;
   box-shadow: 0 12px 28px -12px rgba(26, 18, 48, 0.6);
   transition: background 0.15s, transform 0.15s;
 }
-.zv-fab__toggle:hover { background: var(--indigo-2, #473a86); transform: translateY(-1px); }
-.zv-fab__icon { width: 20px; height: 20px; flex: 0 0 auto; }
+.zv-fab__toggle:hover { background: #c94e0a; transform: translateY(-1px); }
+.zv-fab__icon { width: 40px; height: 40px; flex: 0 0 auto; }
 .zv-fab__icon--close { display: none; }
 .zv-fab__toggle[aria-expanded="true"] .zv-fab__icon--open { display: none; }
 .zv-fab__toggle[aria-expanded="true"] .zv-fab__icon--close { display: block; }
@@ -99,6 +99,8 @@ body:has(.sf-drawer details[open]) .zv-fab { display: none; }
 @media (max-width: 600px) {
   .zv-fab { left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
   .zv-fab__panel { width: min(290px, calc(100vw - 32px)); }
+  .zv-fab__toggle { min-height: 72px; padding: 0 30px 0 24px; gap: 12px; font-size: 17px; }
+  .zv-fab__icon { width: 30px; height: 30px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .zv-fab__toggle { transition: none; }
