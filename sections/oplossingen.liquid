@@ -268,12 +268,18 @@
                 (care/guard) used to share a list of seven one-off koop-* hardware add-ons;
                 those Shopify products were deleted on purpose, so the list was removed
                 2026-09-23 (docs/pakket-wijzigingen-2026-09-23.md). aware/aware_plus/secure
-                never had a list. Since 2026-09-26, all five NAMI/Climax packages share the
+                never had a list. Since 2026-09-26, all five NAMI/Climax packages shared the
                 same two real add-ons (Videodeurbel, Afstandsbediening — never Vista, whose
                 card uses the separate b.settings.uitbreidingen source below and never reads
-                ltc_addons at all).
+                ltc_addons at all). Since 2026-10-13 the NAMI packages (aware/aware_plus/secure
+                — Inzicht/Zeker/Alert) no longer offer Afstandsbediening and keep only
+                Videodeurbel; Climax (care/guard — Beschermd/Protect) is unchanged and still
+                gets both.
               {%- endcomment -%}
-              {%- assign ltc_addons = 'Videodeurbel|' | append: zv_addon_videodeurbel_handle | append: '§Afstandsbediening|' | append: zv_addon_afstandsbediening_handle -%}
+              {%- assign ltc_addons = 'Videodeurbel|' | append: zv_addon_videodeurbel_handle -%}
+              {%- unless fk == 'aware' or fk == 'aware_plus' or fk == 'secure' -%}
+                {%- assign ltc_addons = ltc_addons | append: '§Afstandsbediening|' | append: zv_addon_afstandsbediening_handle -%}
+              {%- endunless -%}
               {%- case fk -%}
                 {%- when 'aware' -%}
                   {%- assign ltc_tagline = 'Rust, weet dat het goed gaat' -%}
