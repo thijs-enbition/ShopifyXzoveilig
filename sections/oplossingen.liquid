@@ -60,6 +60,18 @@
 {%- assign zv_addon_afstandsbediening_handle = 'huur-afstandsbediening' -%}
 {%- assign zv_addon_videodeurbel_variant_id = all_products[zv_addon_videodeurbel_handle].variants.first.id -%}
 {%- assign zv_addon_afstandsbediening_variant_id = all_products[zv_addon_afstandsbediening_handle].variants.first.id -%}
+{%- comment -%}
+  Ontzorgpakket Inzicht (2026-10-13): real Shopify product, confirmed EUR 5,95/mnd, Inzicht
+  (fk 'aware') only for now — see pricing.config.json addonNames note: shipped deliberately
+  without the "Eerste 3 maanden" promo discount, full price today (Thijs, 2026-10-13). IF that
+  changes (product added to the discount later), this note and the config note both need
+  updating — "shipped deliberately without" will no longer be true. Same live-price/
+  live-availability resolution as Videodeurbel/Afstandsbediening above, never a hardcoded
+  amount. Zeker/Beschermd keep the static 'Prijs volgt' placeholder until their own Ontzorgpakket
+  variants go live.
+{%- endcomment -%}
+{%- assign zv_addon_ontzorg_inzicht_handle = 'ontzorgpakket-inzicht' -%}
+{%- assign zv_addon_ontzorg_inzicht_variant_id = all_products[zv_addon_ontzorg_inzicht_handle].variants.first.id -%}
 {%- assign partners = shop.metaobjects.partner.values | where: 'active', true | sort: 'display_order' -%}
 {%- assign sols = section.blocks | where: 'type', 'solution' -%}
 {%- comment -%}
@@ -76,7 +88,7 @@
 <script src="{{ 'zv-vergelijk-pakketten.js' | asset_url }}" defer="defer"></script>
 
 {%- if sols.size > 0 -%}
-<div class="opl-page" id="oplossingen-page" data-zv-oplossingen data-activation-variant-id="{{ activation_variant_id }}" data-woning-variant-id="{{ woning_variant_id }}" data-cart-url="{{ routes.cart_url }}" data-addon-videodeurbel-variant-id="{{ zv_addon_videodeurbel_variant_id }}" data-addon-afstandsbediening-variant-id="{{ zv_addon_afstandsbediening_variant_id }}">
+<div class="opl-page" id="oplossingen-page" data-zv-oplossingen data-activation-variant-id="{{ activation_variant_id }}" data-woning-variant-id="{{ woning_variant_id }}" data-cart-url="{{ routes.cart_url }}" data-addon-videodeurbel-variant-id="{{ zv_addon_videodeurbel_variant_id }}" data-addon-afstandsbediening-variant-id="{{ zv_addon_afstandsbediening_variant_id }}" data-addon-ontzorg-inzicht-variant-id="{{ zv_addon_ontzorg_inzicht_variant_id }}">
 
   <div class="catnav" role="tablist" aria-label="Onze oplossingen">
     <span class="catnav__lbl">Onze oplossingen</span>
@@ -280,6 +292,17 @@
               {%- unless fk == 'aware' or fk == 'aware_plus' or fk == 'secure' -%}
                 {%- assign ltc_addons = ltc_addons | append: '§Afstandsbediening|' | append: zv_addon_afstandsbediening_handle -%}
               {%- endunless -%}
+              {%- comment -%}
+                Ontzorgpakket Inzicht (2026-10-13): added to the shared "Veel gekozen
+                uitbreidingen" group ONLY for fk 'aware' (Inzicht), so it inherits the same
+                live-price/live-availability rendering and the same real cart-line wiring
+                (ADDON_VARIANT_IDS / syncAddonLines in the script below) as Videodeurbel —
+                no separate mechanism needed. Zeker/Beschermd are deliberately untouched here;
+                their static "Ontzorgpakket · Prijs volgt" row further down still applies to
+                them. Appended after the unless block above on purpose, so this never interacts
+                with whether Afstandsbediening is included.
+              {%- endcomment -%}
+              {%- if fk == 'aware' -%}{%- assign ltc_addons = ltc_addons | append: '§Ontzorgpakket|' | append: zv_addon_ontzorg_inzicht_handle -%}{%- endif -%}
               {%- case fk -%}
                 {%- when 'aware' -%}
                   {%- assign ltc_tagline = 'Rust, weet dat het goed gaat' -%}
@@ -469,11 +492,21 @@
                               <label class="pcard__plus-opt"><input type="checkbox" data-woning-floors="2"><span>{{ zv_woning_2_value | escape }}</span><span class="pcard__plus-pr">+{{ zv_woning_2_cents | money_without_trailing_zeros }}/mnd</span></label>
                             </div>
                             {{ ltc_addons_group_html }}
+                            {%- comment -%}
+                              Ontzorgpakket Inzicht (2026-10-13): Inzicht's real, purchasable
+                              Ontzorgpakket now lives in ltc_addons_group_html above (its only
+                              Ontzorgpakket row) — this static "Prijs volgt" placeholder would
+                              otherwise show the same name twice on the Inzicht card, so it's
+                              hidden for fk 'aware' only. Zeker (aware_plus) and Alert (secure)
+                              still need it until their own Ontzorgpakket variants are live.
+                            {%- endcomment -%}
+                            {%- if fk != 'aware' -%}
                             <div class="ltc__optgroup" data-group="terms">
                               <p class="ltc__optgroup-h">Extra diensten (optioneel)</p>
                               <p class="pcard__plus-hint">Maandelijkse diensten naast uw abonnement.</p>
                               <label class="pcard__plus-opt"><input type="checkbox"><span>Ontzorgpakket</span><span class="pcard__plus-pr">Prijs volgt</span></label>
                             </div>
+                            {%- endif -%}
                           </div>
                         </details>{% elsif climax_pakket != blank %}<details class="ltc__uitbreidingen">
                           <summary>Uitbreidingen<svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
@@ -1612,7 +1645,12 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
      still be recorded in the Uitbreidingen property, just no line is added for it. */
   var ADDON_VARIANT_IDS = {
     'Videodeurbel': page.dataset.addonVideodeurbelVariantId || null,
-    'Afstandsbediening': page.dataset.addonAfstandsbedieningVariantId || null
+    'Afstandsbediening': page.dataset.addonAfstandsbedieningVariantId || null,
+    // Ontzorgpakket Inzicht (2026-10-13): only ever rendered/checkable on the Inzicht card
+    // (see ltc_addons above), but harmless to key in globally the same way as the other two —
+    // syncAddonLines() only acts on it when 'Ontzorgpakket' actually appears in some package
+    // line's Uitbreidingen property.
+    'Ontzorgpakket': page.dataset.addonOntzorgInzichtVariantId || null
   };
   function isAddonLine(it) {
     for (var name in ADDON_VARIANT_IDS) {

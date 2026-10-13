@@ -436,7 +436,7 @@
         "status": "PRICE_PENDING",
         "display": "Prijs volgt"
       },
-      "note": "Price not confirmed. Must NOT enter the cart with any amount. The EUR 4,95 on the confirmation mockup is not authorised."
+      "note": "Price not confirmed. Must NOT enter the cart with any amount. The EUR 4,95 on the confirmation mockup is not authorised. Superseded for Inzicht (fk 'aware') by the real, confirmed addonNames entry 'ontzorgpakket-inzicht' below (EUR 5,95/mnd, 2026-10-13) — this placeholder still applies to Zeker/Beschermd."
     }
   ],
   "addonNames": [
@@ -451,6 +451,12 @@
       "sku": "H0010",
       "name": "Afstandsbediening",
       "note": "Real Shopify product (2026-09-26), same treatment as Videodeurbel above: name-only, no price here — live price and the qty-3/discount cart mechanic read straight from all_products['huur-afstandsbediening']."
+    },
+    {
+      "productHandle": "ontzorgpakket-inzicht",
+      "sku": "MOIOH",
+      "name": "Ontzorgpakket",
+      "note": "Real Shopify product (2026-10-13), confirmed price EUR 5,95/mnd (Thijs), published to Online Store. Inzicht (fk 'aware') only for now — Zeker/Beschermd keep the 'Prijs volgt' placeholder in sections/oplossingen.liquid until their own Ontzorgpakket variants are live. SHIPPED DELIBERATELY WITHOUT THE PROMO DISCOUNT (Thijs, 2026-10-13): this product is not in the 'Eerste 3 maanden' automatic discount's product list, so syncAddonLines() adds its line at quantity 3 at full price (EUR 17,85 today, not the ~EUR 8,94 a discounted line would be) — a known, accepted gap, not a bug. Add it to that automatic discount in Shopify Admin whenever the full 50%-off treatment is wanted; nothing in this repo needs to change for that. Same treatment as Videodeurbel/Afstandsbediening otherwise: name-only, no price here — live price and the qty-3 cart mechanic read straight from all_products['ontzorgpakket-inzicht']. Supersedes the generic 'ontzorgpakket' entry in `addons` above for Inzicht specifically; that entry still stands for Zeker/Beschermd. Reported on Inzicht's package line via the Uitbreidingen property (not Abonnement, where the Zeker/Beschermd placeholder still reports it) — flag to whoever owns the Odoo mapping if anything there reads Abonnement for services."
     }
   ],
   "bundles": [
@@ -534,6 +540,7 @@
   "labels": {
     "activation": "Eenmalige activatie en installatie",
     "commitment": "eerste 3 maanden (50% korting)",
+    "commitmentNoDiscount": "eerste 3 maanden",
     "monthlyAfter": "Daarna per maand",
     "dueToday": "Vandaag te betalen",
     "indicativeContractValue": "Indicatieve totale contractwaarde, inclusief eenmalige kosten",
@@ -549,7 +556,8 @@
     "breakdownIntro": "Opbouw van dit bedrag",
     "forbidden": {
       "Pakketactivatie (1,5× maandbedrag)": "Mislabels the commitment as activation. Use labels.commitment.",
-      "Totaal over looptijd": "Hides that one-off charges are included. Use labels.indicativeContractValue."
+      "Totaal over looptijd": "Hides that one-off charges are included. Use labels.indicativeContractValue.",
+      "Ontzorgpakket × 3 — eerste 3 maanden (50% korting)": "Ontzorgpakket Inzicht is not in the promo discount (2026-10-13, deliberate) — using labels.commitment here would falsely claim 50% off. Use labels.commitmentNoDiscount instead."
     }
   },
   "retired": [

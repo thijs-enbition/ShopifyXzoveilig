@@ -59,6 +59,16 @@
 {%- assign zv_addon_videodeurbel_variant_id = all_products['koop-video-deurbel-750'].variants.first.id -%}
 {%- assign zv_addon_afstandsbediening_variant_id = all_products['huur-afstandsbediening'].variants.first.id -%}
 {%- comment -%}
+  Ontzorgpakket Inzicht (2026-10-13): same treatment as the two add-ons above — resolved by
+  handle only, name via zv-install-name/zv_install_names_by_handle. It's a confirmed monthly
+  service (Thijs, EUR 5,95/mnd), so its unit price also counts toward "Daarna" below — see the
+  true_month_cents addition further down. NOTE: Afstandsbediening (huur-afstandsbediening,
+  productType "Huur Componenten") may also be a recurring monthly rental rather than a one-off
+  — unconfirmed, and if so it has the same "Daarna" gap this fix closes for Ontzorgpakket.
+  Worth checking with Alex; not addressed here since it predates this change.
+{%- endcomment -%}
+{%- assign zv_addon_ontzorg_inzicht_variant_id = all_products['ontzorgpakket-inzicht'].variants.first.id -%}
+{%- comment -%}
   Woning line (2026-09-25, NAMI packages only): resolved like the packages, by handle and only
   if its first variant's SKU is zv_woning_sku. It renders as one non-editable row, "Woning:
   <option value>", from the NAMI package lines' Woning properties (zv_woning_* values, never
@@ -142,7 +152,7 @@
               {%- assign is_install = false -%}
               {%- if item.variant_id == activation_variant_id or item.variant_id == nami_install_geen_variant_id or item.variant_id == nami_install_telefonisch_variant_id or item.variant_id == nami_install_huis_variant_id -%}{%- assign is_install = true -%}{%- endif -%}
               {%- assign is_addon = false -%}
-              {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id -%}{%- assign is_addon = true -%}{%- endif -%}
+              {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_addon_ontzorg_inzicht_variant_id -%}{%- assign is_addon = true -%}{%- endif -%}
               <div class="citem">
                 <div class="ci-thumb">
                   {%- if item.image -%}
@@ -205,6 +215,17 @@
               {%- if item.product.type == sub_type or item.product.tags contains sub_tag -%}{%- assign li_sub = true -%}{%- endif -%}
               {%- assign today_cents = today_cents | plus: item.final_line_price -%}
               {%- comment -%}
+                Ontzorgpakket Inzicht (2026-10-13): a confirmed recurring monthly service
+                (EUR 5,95/mnd), so its unit price counts toward "Daarna" too — see the note on
+                Afstandsbediening's own billing nature further up this file. Added independently
+                of the row-classification chain below, so this true_month_cents addition doesn't
+                depend on which branch renders its row — it now has its own elsif branch there
+                (the "× 3 — eerste 3 maanden" row), not the generic zv-install-name fallback.
+              {%- endcomment -%}
+              {%- if zv_addon_ontzorg_inzicht_variant_id != blank and item.variant_id == zv_addon_ontzorg_inzicht_variant_id -%}
+                {%- assign true_month_cents = true_month_cents | plus: item.original_price -%}
+              {%- endif -%}
+              {%- comment -%}
                 Every row is the line's real final_line_price, so the rows add up to
                 "Vandaag te betalen". A package row is labelled "<pakket> × 3 — eerste 3
                 maanden (50% korting)"; "Daarna" sums the package lines' unit prices.
@@ -228,6 +249,14 @@
                 {%- endif -%}
                 {%- assign true_month_cents = true_month_cents | plus: item.original_price | plus: li_wc -%}
                 <div class="srow"><span>{{ row_pkg_name }} × {{ item.quantity }} — {{ zv_label_commitment }}</span><b>{{ item.final_line_price | money }}</b></div>
+              {%- elsif zv_addon_ontzorg_inzicht_variant_id != blank and item.variant_id == zv_addon_ontzorg_inzicht_variant_id -%}
+                {%- comment -%}
+                  Ontzorgpakket Inzicht (2026-10-13): same "× 3 — eerste 3 maanden" shape as a
+                  package row, so the 3-months-prepaid structure is explained the same way, but
+                  with zv_label_commitment_no_discount (no "(50% korting)") since this line isn't
+                  discounted — see pricing.config.json labels.forbidden.
+                {%- endcomment -%}
+                <div class="srow"><span>Ontzorgpakket × {{ item.quantity }} — {{ zv_label_commitment_no_discount }}</span><b>{{ item.final_line_price | money }}</b></div>
               {%- else -%}
                 {%- capture row_name -%}{%- render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle -%}{%- endcapture -%}
                 {%- assign row_name = row_name | strip | default: item.product.title -%}

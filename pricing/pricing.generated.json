@@ -66,6 +66,7 @@
   "labels": {
     "activation": "Eenmalige activatie en installatie",
     "commitment": "eerste 3 maanden (50% korting)",
+    "commitmentNoDiscount": "eerste 3 maanden",
     "monthlyAfter": "Daarna per maand",
     "dueToday": "Vandaag te betalen",
     "indicativeContractValue": "Indicatieve totale contractwaarde, inclusief eenmalige kosten",
@@ -81,7 +82,8 @@
     "breakdownIntro": "Opbouw van dit bedrag",
     "forbidden": {
       "Pakketactivatie (1,5× maandbedrag)": "Mislabels the commitment as activation. Use labels.commitment.",
-      "Totaal over looptijd": "Hides that one-off charges are included. Use labels.indicativeContractValue."
+      "Totaal over looptijd": "Hides that one-off charges are included. Use labels.indicativeContractValue.",
+      "Ontzorgpakket × 3 — eerste 3 maanden (50% korting)": "Ontzorgpakket Inzicht is not in the promo discount (2026-10-13, deliberate) — using labels.commitment here would falsely claim 50% off. Use labels.commitmentNoDiscount instead."
     }
   },
   "packageOrder": [

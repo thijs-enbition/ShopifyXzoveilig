@@ -399,6 +399,7 @@ def build():
         f"{{%- assign zv_activation_cents = {activation_cents} -%}}",
         f"{{%- assign zv_label_activation = '{cfg['labels']['activation']}' -%}}",
         f"{{%- assign zv_label_commitment = '{cfg['labels']['commitment']}' -%}}",
+        f"{{%- assign zv_label_commitment_no_discount = '{cfg['labels']['commitmentNoDiscount']}' -%}}",
         f"{{%- assign zv_label_due_today = '{cfg['labels']['dueToday']}' -%}}",
         f"{{%- assign zv_label_monthly_after = '{cfg['labels']['monthlyAfter']}' -%}}",
         f"{{%- assign zv_label_breakdown_intro = '{cfg['labels']['breakdownIntro']}' -%}}",
