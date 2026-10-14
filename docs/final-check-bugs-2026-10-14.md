@@ -3,13 +3,16 @@
 Implements the decisions on `docs/final-check-bugs-plan-2026-10-14.md` (commit `1c1f821`; this
 branch is cut from it, so the plan doc is included).
 
-**Two items did not go exactly as briefed. Read these first:**
+Two commits:
+- `ff0b85d`: the batch.
+- The follow-up "fix: correct opening hours + live Nu bereikbaar time check". It sets the hours
+  you confirmed and builds the label that the first commit stopped on, because of the
+  conflicting hours.
 
-1. **"Nu bereikbaar" (Decision 2) was not implemented. I stopped as instructed.** There is a
-   conflicting hours statement on the live site; see section 4.
-2. **Decision 4's premise was off, so I kept two names, not one.** The telefonische/remote
-   installation is **N0005 at €35**, not the €0 one. The €0 one is N0006, "Geen installatie".
-   Only CL003 and N0004 now read "Installatie". See section 5.
+**One item did not go exactly as briefed. Read this first:**
+Decision 4's premise was off, so I kept two names, not one. The telefonische/remote
+installation is **N0005 at €35**, not the €0 one. The €0 one is N0006, "Geen installatie".
+Only CL003 and N0004 now read "Installatie". See section 5.
 
 ## Baseline and validation
 
@@ -30,6 +33,12 @@ branch is cut from it, so the plan doc is included).
   was checked on every page. The theme was then deleted by id.
 - **Console:** 0 theme console errors on `/pages/oplossingen`, `/cart`, Overzicht,
   `/pages/contact`, `/pages/kenniscentrum` and `/pages/zakelijk`. Same as live.
+- **Hours commit, validated again from scratch:**
+  - Live pull: the 4 hours files equal `main`; `page.klantenservice.json` compared after parsing.
+  - `check_pricing.py`: all pass. Generated files unchanged.
+  - `theme check`: 0 errors, and 0 new offenses against `ff0b85d` (403 → 403).
+  - Disposable `zz-validate-final-check-bugs` (`#189705421181`): QA'd as in section 4, then
+    deleted by id.
 
 ## 1. Clear fixes
 
@@ -39,7 +48,7 @@ branch is cut from it, so the plan doc is included).
 | Zakelijk "De meldkamer die niet slaapt" h2 | `sections/zakelijk.liquid` (`.anchor h2`) | `color:#fff` | same |
 | KC "Veiligheid & inbraakpreventie" intro | `assets/zv-kc.css` | `.cluster .lede` → `.cluster .sec-head p.lede` (0,3,1), which now beats `.sec-head p.lede` (0,2,1) | `rgb(205,198,232)`, was `#6f6786` = 2.86:1, now ~9.3:1 |
 | Contact "Meldkamer & klantenservice" h3 | `sections/contact-page.liquid` | `color:#fff` | `rgb(255,255,255)`, was 1.15:1 |
-| Contact hours layout | `sections/contact-page.liquid` | `ul` `padding:0`; `li` `gap:12px`; `li span` `flex:none`; `li b` `text-align:right`; markup `…17.00 uur<br>vr 08.30…` | `ul` padding 0px (was 40px). Gap is 112px at 1440 and 23px at 390 (was 0). Hours on two right-aligned lines, one per day range. |
+| Contact hours layout | `sections/contact-page.liquid` | `ul` `padding:0`; `li` `gap:12px`; `li span` `flex:none`; `li b` `text-align:right`; markup `…17.00 uur<br>vr 09.00…` (hours since corrected, section 4) | `ul` padding 0px (was 40px). Gap is 112px at 1440 and 23px at 390 (was 0). Hours on two right-aligned lines, one per day range. |
 | `/cart` "ALL" eyebrow | `sections/zv-cart.liquid` | ported the 2026-09-24 Overzicht rule (`5ab1ede`): `is_install` → "Installatie" | All 4 installation SKUs read "INSTALLATIE" (was "ALL" for CL003, "NAMI" for N0004/5/6) |
 | Drawer "/mnd" on installation | `sections/oplossingen.liquid` | `isActivation` now matches every installation handle (CL003, N0004, N0005, N0006), passed from `zv-pricing` in `data-install-handles`. Matching by handle needs no extra `all_products` lookups. | "Installatie €99,00" and "Telefonische ondersteuning €35,00", no "/mnd". Live showed "€99,00/mnd" **and "€35,00/mnd"**. |
 
@@ -134,59 +143,103 @@ one-shared-line mechanic, so they count 1 each the same way.
 The Woning sits inside the package row as a checkbox, and an add-on would sit inside the row the
 same way. This follows the brief's counting rule.
 
-## 4. Decision 2: "Nu bereikbaar". STOPPED: conflicting hours found
+## 4. Decision 2: opening hours + live "Nu bereikbaar"
 
-The brief said to confirm the five places still agree, and to stop and report rather than pick
-one if a sixth or conflicting instance turned up. I re-scanned the theme, then fetched the live
-HTML of all 43 storefront pages (sitemap plus the four policy pages, because admin-managed
-content isn't in the repo).
+### Hours (confirmed by Thijs, 2026-10-14; single source of truth)
 
-**Conflict:** the live Shopify **shipping policy** (`/policies/shipping-policy`, edited in Shopify
-Admin → Settings → Policies; not a theme file) says:
+**Monday–Thursday 09:00–17:00, Friday 09:00–13:00.** Both values on the site were wrong:
+- the theme's 08:30 start;
+- the shipping policy's Mon–Fri 09:00–17:00, which has no short Friday.
 
-> **Vragen over jouw zending**
-> Onze klantenservice is bereikbaar van **maandag tot en met vrijdag tussen 09:00 en 17:00 uur**:
-> - Telefoon: 088 122 11 11
-> - E-mail: klantenservice@zoveilig.nl
+The first commit stopped on that conflict. Every on-theme location was re-located by grep for
+`08:30` / `8:30` / `08.30` / `8.30` / `13:00` / `13.00` / `17:00` / `17.00`. That found 7 strings in
+4 files, and each kept its own format:
 
-Every theme instance says **ma t/m do 08.30–17.00, vr 08.30–13.00**:
-- `contact-page.liquid:76`
-- `contact-page.liquid:78`
-- `herroepen-page.liquid:72`
-- `klantenservice.liquid:110` and `:349`, plus `page.klantenservice.json:594`
-- the FAQ answer at `page.klantenservice.json:172`
+| # | Location | Now reads |
+|---|---|---|
+| 1 | `sections/contact-page.liquid:76`, "Bel ons direct" sub line | ma t/m do 09.00–17.00 uur, vr 09.00–13.00 uur |
+| 1 | `sections/contact-page.liquid:78`, the "Meldkamer & klantenservice" box | ma t/m do 09.00–17.00 uur⏎vr 09.00–13.00 uur |
+| 2 | `sections/herroepen-page.liquid:72`, "Bel ons direct" | ma t/m do 09.00–17.00 uur, vr 09.00–13.00 uur |
+| 3 | `sections/klantenservice.liquid:110` (rendered fallback) + `:349` (schema default) | Ma t/m do 09.00–17.00 uur, vr 09.00–13.00 uur. |
+| 4 | `templates/page.klantenservice.json:594`, the live `phone_hours` value on the klantenservice page | Ma t/m do 09.00–17.00 uur, vr 09.00–13.00 uur. |
+| 5 | `templates/page.klantenservice.json:172`, the FAQ answer | …van maandag tot en met donderdag tussen 9:00 en 17:00 uur of op vrijdag tussen 9:00 en 13:00 uur… |
 
-The policy text also looks unfinished: it contains a "vanaf €⚠ [bedrag]" placeholder and uses
-je-vorm. It is still customer-facing, because Shopify links its policies from checkout. Which
-schedule is right is your call. The policy is fixed in Shopify Admin, not in this repo.
+The grep also hit `contact-page.liquid:56-57` ("Middag (12:00 - 17:00)", "Avond (17:00 - 20:00)").
+Those are the "Voorkeur terugbelmoment" options of the callback form, not opening hours, so they
+are untouched.
 
-Not conflicts, for the record:
-- "Belt u na 16:00 uur…" and "technische dienst 24 uur per dag bereikbaar voor urgente
-  storingen" (`page.klantenservice.json:108`) are about the storingen line.
-- "24 uur per dag telefonisch bereikbaar bij storingen" (`over-ons.liquid:182`) is also about
-  the storingen line.
-- The terms of service mention "onderhoud … op werkdagen tussen 08.00 en 17.00 uur", which is a
-  maintenance window, not klantenservice hours.
+On the preview, `/pages/contact`, `/pages/herroepen` and `/pages/klantenservice` (which includes
+the FAQ) show only the new hours. No `8:30` / `08.30` is left anywhere in the rendered text.
 
-**Ready to build once the hours are confirmed (not in this branch):**
-- **Pattern: client-side JS in `contact-page.liquid`'s existing `{% javascript %}` block.** The
-  theme has no time-of-day logic to match. The only "now" is `{{ 'now' | date: '%Y' }}` in the
-  footers, and Liquid can't do this job: Shopify serves cached HTML, so a server-rendered
-  open/closed state would be stale. The JS would read Amsterdam time with
-  `Intl.DateTimeFormat('nl-NL', { timeZone: 'Europe/Amsterdam', … })`, so a visitor's own clock
-  zone doesn't matter. It would read the schedule from a `data-` attribute next to the visible
-  hours text, so both get edited together. The label would stay hidden until the script runs,
-  so no-JS visitors never see a false claim.
-- **Proposed copy:**
-  - Open: "Nu bereikbaar" (unchanged).
-  - Closed: **"Klantenservice nu gesloten · weer bereikbaar {vandaag | morgen | maandag} vanaf
-    08.30 uur"**, with a neutral grey dot instead of the green one. It says "Klantenservice"
-    because the box also lists the 24/7 meldkamer, which is never closed.
-  - Example: Friday 14:00 → "Klantenservice nu gesloten · weer bereikbaar maandag vanaf 08.30 uur".
-- Known limitation: public holidays aren't known to the script unless you give me Zo Veilig's
-  holiday closures.
+**Out of scope, untouched:** the Shopify shipping policy (Admin-only content). Its
+"Mon–Fri 09:00–17:00" text and the "€⚠ [bedrag]" placeholder are tracked separately for the
+legal/J-04 review. It now differs from the theme on Friday afternoons until that review updates
+it.
 
-The label itself is untouched on this branch: still the hardcoded "Nu bereikbaar".
+### The label
+
+**Copy:**
+- Open: **"Klantenservice nu bereikbaar"**, with the green dot. I changed it from the bare "Nu
+  bereikbaar" because the approved closed copy names "Klantenservice". The box also lists the
+  24/7 meldkamer, which is never closed, so the open state names the service too.
+- Closed: **"Klantenservice nu gesloten · weer bereikbaar {wanneer} vanaf 09.00 uur"**, with a
+  grey dot (`#8c84a6`) and lavender text (`#d8d2ef` on `#281c54`, well above 4.5:1). `{wanneer}`
+  is worked out in general, not hardcoded:
+  - **vandaag**: before opening on a working day (Mon–Fri before 09:00);
+  - **morgen**: after closing Monday to Thursday (Thursday evening → Friday);
+  - **maandag**: whenever the next opening is a Monday, so Friday from 13:00 through Sunday;
+  - the next day's name, otherwise. That can't happen with this schedule, but the code handles
+    it if the schedule changes.
+  - The "09.00" comes from the schedule, not the copy.
+
+**Pattern matched:** the theme has no existing live time-based rendering. The only time output
+is `{{ 'now' | date: '%Y' }}` (the copyright year in `zv-footer.liquid` / `footer.liquid`), and
+that can't be used here: Shopify serves cached HTML, so a server-rendered open/closed state
+would be stale. So I matched the pattern the theme uses for live behaviour on top of cached
+HTML:
+- a self-contained IIFE in the section's own `{% javascript %}` block, like this section's
+  contact-form script;
+- a client-side correction of server-rendered state on load, like `zv-header.liquid`'s cart-dot
+  sync.
+
+Details:
+- **Amsterdam time.** `Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Amsterdam', weekday,
+  hour, minute, hourCycle: 'h23' }).formatToParts(new Date())`. The visitor's own clock zone
+  doesn't matter, and summer/winter time is handled by the browser's tz data.
+- **Schedule** in `data-zv-hours="09:00-17:00|…|09:00-13:00||"` (Mon..Sun, empty = closed) on
+  the label, on the same line as the visible hours, so both get edited together.
+- **Hidden** (`hidden`) until the script has decided. Without JS or `Intl` time-zone support, no
+  open/closed claim shows at all.
+- **Re-evaluated every 60 seconds**, so an open tab flips at 13:00/17:00.
+- **Public holidays** aren't modelled. The site has no holiday list, and on a closed holiday
+  the label follows the weekday schedule.
+
+### Test scenarios
+
+Playwright on the disposable theme. The clock was pinned with `page.clock.setFixedTime` (the
+theme code runs unmodified, no test hooks). The browser ran in `America/New_York` to prove
+Amsterdam time is used: e.g. "Monday 12:00" Amsterdam is 06:00 in the browser's own zone.
+
+| Scenario (Amsterdam time) | Expected | Rendered | Result |
+|---|---|---|---|
+| **1. Monday 08:00** (pre-opening) | closed, today | Klantenservice nu gesloten · weer bereikbaar vandaag vanaf 09.00 uur | **PASS** |
+| **2. Monday 12:00** | open | Klantenservice nu bereikbaar | **PASS** |
+| **3. Friday 13:30** (past Friday close) | closed, Monday | Klantenservice nu gesloten · weer bereikbaar maandag vanaf 09.00 uur | **PASS** |
+| **4. Friday 16:00** (must not say open: Fri closes 13:00) | closed, Monday | Klantenservice nu gesloten · weer bereikbaar maandag vanaf 09.00 uur | **PASS** |
+| **5. Saturday 11:00** | closed, Monday | Klantenservice nu gesloten · weer bereikbaar maandag vanaf 09.00 uur | **PASS** |
+| **6. Sunday 15:00** | closed, Monday | Klantenservice nu gesloten · weer bereikbaar maandag vanaf 09.00 uur | **PASS** |
+| extra: Monday 09:00 (opening boundary) | open | Klantenservice nu bereikbaar | PASS |
+| extra: Tuesday 18:00 (weekday evening) | closed, tomorrow | …weer bereikbaar morgen vanaf 09.00 uur | PASS |
+| extra: Thursday 17:00 (Thu close → Fri) | closed, tomorrow | …weer bereikbaar morgen vanaf 09.00 uur | PASS |
+| extra: Friday 12:59 | open | Klantenservice nu bereikbaar | PASS |
+| extra: Friday 13:00 (closing boundary) | closed, Monday | …weer bereikbaar maandag vanaf 09.00 uur | PASS |
+| extra: Sunday 23:59 | closed, Monday | …weer bereikbaar maandag vanaf 09.00 uur | PASS |
+| extra: Monday 2 Nov 08:59, winter time (CET) | closed, today | …weer bereikbaar vandaag vanaf 09.00 uur | PASS |
+| extra: Monday 2 Nov 09:00, winter time (CET) | open | Klantenservice nu bereikbaar | PASS |
+| extra: JavaScript disabled | label not shown | label not visible | PASS |
+
+Dates used: Fri 16, Sat 17, Sun 18, Mon 19, Tue 20, Thu 22 Oct 2026 (CEST) and Mon 2 Nov 2026
+(CET).
 
 ## 5. Decision 4: installation naming
 
@@ -234,7 +287,10 @@ theme shows", by design). From now on it reports "Installatie" for both CL003 an
 ## Files changed
 
 - `sections/zakelijk.liquid`: 2 heading colours.
-- `sections/contact-page.liquid`: h3 colour, hours CSS, hours `<br>`.
+- `sections/contact-page.liquid`: h3 colour, hours CSS, hours `<br>`; corrected hours (2×);
+  "Nu bereikbaar" label markup, CSS and Amsterdam-time script.
+- `sections/herroepen-page.liquid`, `sections/klantenservice.liquid`,
+  `templates/page.klantenservice.json`: corrected hours.
 - `assets/zv-kc.css`: cluster lede specificity, `--belt-on-cream` / `--belt-on-sand`, hero
   eyebrow, dropdown tags, CTA band.
 - `assets/zv-article.css`: `--belt-on-cream`, callbox/summary h4 (both rule copies), CTA band.
@@ -248,10 +304,10 @@ theme shows", by design). From now on it reports "Installatie" for both CL003 an
 - `snippets/zv-pricing.liquid`, `snippets/zv-item-names.liquid`: regenerated.
 - `docs/final-check-bugs-2026-10-14.md`: this file.
 
-## Open items for you
+## Open items
 
-1. **Hours:** which schedule is right (theme: ma–do 08.30–17.00, vr 08.30–13.00; shipping
-   policy: ma–vr 09.00–17.00)? Then fix the shipping policy in Shopify Admin (it also has the
-   "€⚠ [bedrag]" placeholder and je-vorm). After that, Decision 2 can be built as described in
-   section 4.
-2. The Zakelijk eyebrows on the band are still 4.04:1 (outside Decision 1's scope).
+None on this branch. For the record, two things outside its scope:
+- the Shopify shipping policy's hours text and "€⚠ [bedrag]" placeholder (Admin content, legal/J-04
+  review);
+- the Zakelijk eyebrows on the band at 4.04:1, which Decision 1 limited to Kenniscentrum and the
+  CTA band. `#926508` would fix them in a follow-up.

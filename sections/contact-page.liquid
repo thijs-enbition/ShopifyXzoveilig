@@ -73,9 +73,9 @@
         </div>
 
         <div class="cn-side">
-          <div class="cn-opt"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L14 14l5 2v3a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span><div><h3>Bel ons direct</h3><p>Persoonlijk contact met een adviseur.</p><a class="big" href="tel:0881221111">088 122 11 11</a><div class="sub">ma t/m do 08.30–17.00 uur, vr 08.30–13.00 uur</div></div></div>
+          <div class="cn-opt"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L14 14l5 2v3a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span><div><h3>Bel ons direct</h3><p>Persoonlijk contact met een adviseur.</p><a class="big" href="tel:0881221111">088 122 11 11</a><div class="sub">ma t/m do 09.00–17.00 uur, vr 09.00–13.00 uur</div></div></div>
           <div class="cn-opt"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M4 7l8 6 8-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><h3>Stuur een e-mail</h3><p>Voor niet-urgente vragen. We reageren binnen één werkdag.</p><a class="big" href="mailto:klantenservice@zoveilig.nl" style="font-size:16px">klantenservice@zoveilig.nl</a></div></div>
-          <div class="cn-hours"><h3>Meldkamer &amp; klantenservice</h3><ul><li><span>Klantenservice</span><b>ma t/m do 08.30–17.00 uur<br>vr 08.30–13.00 uur</b></li><li><span>Meldkamer</span><b>24 uur, 7 dagen</b></li></ul><span class="now"><i></i>Nu bereikbaar</span></div>
+          <div class="cn-hours"><h3>Meldkamer &amp; klantenservice</h3><ul><li><span>Klantenservice</span><b>ma t/m do 09.00–17.00 uur<br>vr 09.00–13.00 uur</b></li><li><span>Meldkamer</span><b>24 uur, 7 dagen</b></li></ul><span class="now" data-zv-hours="09:00-17:00|09:00-17:00|09:00-17:00|09:00-17:00|09:00-13:00||" hidden><i></i><span data-zv-now-text>Klantenservice nu bereikbaar</span></span></div>
         </div>
       </div>
     </div>
@@ -143,10 +143,81 @@
 .zv-contact .cn-hours li span { flex:none; }
 .zv-contact .cn-hours li b { color:#fff; font-weight:800; text-align:right; }
 .zv-contact .cn-hours .now { display:inline-flex; align-items:center; gap:8px; margin-top:14px; font-size:13px; font-weight:800; color:#c9f0d8; }
-.zv-contact .cn-hours .now i { width:8px; height:8px; border-radius:50%; background:var(--ok); }
+.zv-contact .cn-hours .now i { width:8px; height:8px; border-radius:50%; background:var(--ok); flex:none; }
+.zv-contact .cn-hours .now[hidden] { display:none; }
+.zv-contact .cn-hours .now.is-closed { color:#d8d2ef; }
+.zv-contact .cn-hours .now.is-closed i { background:#8c84a6; }
 {% endstylesheet %}
 
 {% javascript %}
+/* "Klantenservice nu bereikbaar / gesloten" label in the opening-hours box. Client-side on
+   purpose: Shopify serves cached HTML, so a Liquid 'now' check would be stale. Reads the current
+   Europe/Amsterdam time (independent of the visitor's own clock zone) and the schedule in the
+   span's data-zv-hours (Mon..Sun, "HH:MM-HH:MM" or empty = closed), which sits right next to the
+   visible hours text so both are edited together. The label stays hidden until this has run, so
+   without JS (or without Intl time-zone support) no open/closed claim is shown at all.
+   Public holidays are not known here. */
+(function () {
+  var el = document.querySelector('.zv-contact .cn-hours .now[data-zv-hours]');
+  if (!el) return;
+  var textEl = el.querySelector('[data-zv-now-text]');
+  var days = (el.getAttribute('data-zv-hours') || '').split('|');   // 0 = maandag ... 6 = zondag
+  var DAY_NAMES = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
+  var WEEKDAY = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+  var fmt;
+  try {
+    fmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Amsterdam', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    if (!fmt.formatToParts) return;
+  } catch (e) { return; }
+
+  function toMinutes(hhmm) { var p = hhmm.split(':'); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); }
+  function hoursOn(day) {
+    var s = days[day];
+    if (!s) return null;
+    var p = s.split('-');
+    return { open: toMinutes(p[0]), close: toMinutes(p[1]), from: p[0].replace(':', '.') };
+  }
+
+  function render() {
+    var day, hour, minute;
+    fmt.formatToParts(new Date()).forEach(function (part) {
+      if (part.type === 'weekday') day = WEEKDAY[part.value];
+      if (part.type === 'hour') hour = parseInt(part.value, 10) % 24;
+      if (part.type === 'minute') minute = parseInt(part.value, 10);
+    });
+    if (day === undefined || isNaN(hour) || isNaN(minute)) return;
+    var now = hour * 60 + minute;
+    var today = hoursOn(day);
+    var open = !!today && now >= today.open && now < today.close;
+    var text = 'Klantenservice nu bereikbaar';
+    if (!open) {
+      // Next opening: later today (before opening time), else the first day with hours.
+      // "morgen" for the next calendar day, "maandag" whenever the next opening is a Monday
+      // (Friday after closing through Sunday), the day name otherwise.
+      var when = '';
+      var next = null;
+      if (today && now < today.open) {
+        when = 'vandaag';
+        next = today;
+      } else {
+        for (var k = 1; k <= 7; k++) {
+          var d = (day + k) % 7;
+          next = hoursOn(d);
+          if (next) { when = d === 0 ? 'maandag' : (k === 1 ? 'morgen' : DAY_NAMES[d]); break; }
+        }
+      }
+      if (!next) return;
+      text = 'Klantenservice nu gesloten · weer bereikbaar ' + when + ' vanaf ' + next.from + ' uur';
+    }
+    textEl.textContent = text;
+    el.classList.toggle('is-closed', !open);
+    el.hidden = false;
+  }
+
+  render();
+  setInterval(render, 60000);
+})();
+
 (function () {
   var form = document.getElementById('zv-contact-form');
   if (!form) return;
