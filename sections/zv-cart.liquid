@@ -110,7 +110,8 @@
   <section class="cartbar">
     <div class="wrap">
       <h1>Winkelwagen</h1>
-      <span class="cnt">{{ cart.item_count }} {% if cart.item_count == 1 %}artikel{% else %}artikelen{% endif %}</span>
+      {%- comment -%} Logical count: one per line (package, installation, Woning, each add-on), never cart.item_count — see zv-header's a.cart. {%- endcomment -%}
+      <span class="cnt">{{ cart.items.size }} {% if cart.items.size == 1 %}artikel{% else %}artikelen{% endif %}</span>
       <a class="cont" href="{% render 'zv-route', key: 'oplossingen' %}"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Verder winkelen</a>
     </div>
   </section>
@@ -162,7 +163,8 @@
                   {%- endif -%}
                 </div>
                 <div>
-                  {%- if is_addon -%}<span class="ci-line">Uitbreiding</span>{%- elsif item.product.type != blank -%}<span class="ci-line">{{ item.product.type | escape }}</span>{%- endif -%}
+                  {%- comment -%} Installation lines (CL003 and the 3 NAMI options) always read "Installatie", as on Overzicht: Odoo sets their product type (e.g. "All"), which isn't customer copy. {%- endcomment -%}
+                  {%- if is_install -%}<span class="ci-line">Installatie</span>{%- elsif is_addon -%}<span class="ci-line">Uitbreiding</span>{%- elsif item.product.type != blank -%}<span class="ci-line">{{ item.product.type | escape }}</span>{%- endif -%}
                   <div class="ci-name"><a href="{{ item.url }}">{{ item_name | escape }}</a></div>
                   {%- unless item.variant.title contains 'Default' -%}<div class="ci-meta">{{ item.variant.title | escape }}</div>{%- endunless -%}
                   {%- if item.selling_plan_allocation -%}<div class="ci-meta">{{ item.selling_plan_allocation.selling_plan.name | escape }}</div>{%- endif -%}

@@ -63,9 +63,10 @@
         </a>
       {%- endif -%}
 
-      <a class="cart" href="{{ routes.cart_url }}" aria-label="Winkelwagen, {{ cart.item_count }} artikelen">
+      {%- comment -%} Logical count (2026-10-14): one per cart line, never cart.item_count. A package line holds 3 units (the prepaid months) and the Woning/add-on lines 3 per choice, so summing quantities showed "4" for one package + installation. The guard keeps every product group on exactly one line. {%- endcomment -%}
+      <a class="cart" href="{{ routes.cart_url }}" aria-label="Winkelwagen, {{ cart.items.size }} artikelen">
         <svg class="sf-icn" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12L4 3H2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="20" r="1.6" fill="currentColor"/><circle cx="18" cy="20" r="1.6" fill="currentColor"/></svg>
-        {%- if cart.item_count > 0 -%}<span class="dot">{{ cart.item_count }}</span>{%- endif -%}
+        {%- if cart.items.size > 0 -%}<span class="dot">{{ cart.items.size }}</span>{%- endif -%}
       </a>
 
       {%- if section.settings.cta_text != blank -%}
@@ -167,7 +168,8 @@
 
 {% javascript %}
 (function () {
-  // The .dot badge is server-rendered from cart.item_count, correct at page load but
+  // The .dot badge is server-rendered from cart.items.size (one per line, see the comment on
+  // a.cart above; never cart.item_count, which sums quantities), correct at page load but
   // otherwise static. Reconcile it with the authoritative Shopify cart on load (so a
   // stale count can never show while /cart is empty) and on the drawer's cart:refresh.
   function syncCartDot(n) {
@@ -184,11 +186,11 @@
   }
   window.fetch('/cart.js', { headers: { 'Accept': 'application/json' } })
     .then(function (r) { return r.json(); })
-    .then(function (cart) { syncCartDot(cart && cart.item_count ? cart.item_count : 0); })
+    .then(function (cart) { syncCartDot(cart && cart.items ? cart.items.length : 0); })
     .catch(function () {});
   document.addEventListener('cart:refresh', function (e) {
     var c = e && e.detail && e.detail.cart;
-    syncCartDot(c && c.item_count ? c.item_count : 0);
+    syncCartDot(c && c.items ? c.items.length : 0);
   });
 
   // Closing via the explicit close button re-clicks the <summary> (rather than

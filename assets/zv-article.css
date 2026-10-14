@@ -3,6 +3,9 @@
   --ink:#1a1230; --indigo:#322469; --indigo-2:#473a86; --indigo-soft:#efecf7;
   --cream:#fdfaf2; --paper:#fffdf8; --sand:#efe9d6; --sand-2:#e6dfca;
   --gold:#e4a311; --gold-lt:#f5c84a; --belt:#9c6c08; --gold-soft:#fbf0d4;
+  /* Scoped WCAG AA override for the callbox/summary h4 labels on the cream gradient (4.42-4.46
+     -> 4.52+), NOT a brand colour: --belt stays #9c6c08. See docs/final-check-bugs-2026-10-14.md. */
+  --belt-on-cream:#996a08;
   --rood:#c52e2f; --red-soft:#fbe6e5; --ok:#2f8f5b; --ok-soft:#e3f0e8;
   --blauw:#00509f; --blauw-soft:#e6ecf6;
   --line:#e4dac4; --line-2:#d8cdb4; --muted:#6f6786; --muted-2:#8c84a6;
@@ -31,7 +34,7 @@
 .zv-article .pullquote cite { display:block;font-size:13.5px;font-weight:700;color:var(--muted);font-style:normal;margin-top:12px; }
 .zv-article .callbox { margin:30px 0;border-radius:18px;padding:22px 24px;border:1px solid var(--line);background:var(--paper);box-shadow:var(--shadow-sm); }
 .zv-article .callbox.key { background:linear-gradient(180deg,#fffdf8,#fbf6ea);border-color:var(--line-2); }
-.zv-article .callbox h4 { display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--belt);margin-bottom:13px; }
+.zv-article .callbox h4 { display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--belt-on-cream);margin-bottom:13px; }
 .zv-article .callbox h4 svg { width:18px;height:18px; }
 .zv-article .callbox ul { padding-left:2px;list-style:none;display:flex;flex-direction:column;gap:10px; }
 .zv-article .callbox li { position:relative;padding-left:28px;font-size:15px;font-weight:600;color:#332c4a;line-height:1.45; }
@@ -93,7 +96,7 @@
 .zv-article .myth .m-truth p { font-size:15px;font-weight:500;color:#4a4458;line-height:1.55;margin:0; }
 .zv-article .myth .m-truth p strong { font-weight:800;color:var(--ink); }
 .zv-article .summary h4 { display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--belt);margin-bottom:13px; }
+  text-transform:uppercase;color:var(--belt-on-cream);margin-bottom:13px; }
 .zv-article .summary h4 svg { width:18px;height:18px; }
 .zv-article .summary ul { padding-left:2px;list-style:none;display:flex;flex-direction:column;gap:10px; }
 .zv-article .summary li { position:relative;padding-left:28px;font-size:15.5px;font-weight:600;color:#332c4a;line-height:1.5; }
@@ -142,9 +145,9 @@
 .zv-article .cta-band .wrap {padding-top:clamp(40px,4vw,58px);padding-bottom:clamp(40px,4vw,58px);
   display:flex;align-items:center;justify-content:space-between;gap:28px;flex-wrap:wrap;}
 .zv-article .cta-band .ct-tx {max-width:60ch;}
-.zv-article .cta-band .eyebrow {color:#7a560a;}
+.zv-article .cta-band .eyebrow {color:#5b4007;} /* was #7a560a: 3.12 -> 4.53:1 (scoped AA fix) */
 .zv-article .cta-band h2 {font-size:clamp(24px,2.8vw,34px);font-weight:900;color:#3a2a06;letter-spacing:-.015em;line-height:1.08;margin-top:8px;}
-.zv-article .cta-band p {font-size:15.5px;font-weight:600;color:#5c4410;margin-top:9px;line-height:1.5;}
+.zv-article .cta-band p {font-size:15.5px;font-weight:600;color:#59410f;margin-top:9px;line-height:1.5;}
 .zv-article .cta-band .ct-actions {display:flex;gap:12px;flex-wrap:wrap;}
 .zv-article .btn--ink {background:var(--indigo);color:#fff;box-shadow:0 2px 0 #211748;}
 .zv-article .btn--ink:hover {transform:translateY(-1px);box-shadow:0 4px 0 #211748,0 12px 24px -12px rgba(33,23,72,.6);}
@@ -210,7 +213,7 @@
 .zv-article .pullquote cite {display:block;font-size:13.5px;font-weight:700;color:var(--muted);font-style:normal;margin-top:12px;}
 .zv-article .callbox {margin:30px 0;border-radius:18px;padding:22px 24px;border:1px solid var(--line);background:var(--paper);box-shadow:var(--shadow-sm);}
 .zv-article .callbox.key {background:linear-gradient(180deg,#fffdf8,#fbf6ea);border-color:var(--line-2);}
-.zv-article .callbox h4 {display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--belt);margin-bottom:13px;}
+.zv-article .callbox h4 {display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--belt-on-cream);margin-bottom:13px;}
 .zv-article .callbox h4 svg {width:18px;height:18px;}
 .zv-article .callbox ul {padding-left:2px;list-style:none;display:flex;flex-direction:column;gap:10px;}
 .zv-article .callbox li {position:relative;padding-left:28px;font-size:15px;font-weight:600;color:#332c4a;line-height:1.45;}
@@ -320,7 +323,7 @@
 .zv-article .summary {margin:30px 0;border-radius:18px;padding:22px 24px;border:1px solid var(--line-2);
   background:linear-gradient(180deg,#fffdf8,#fbf6ea);box-shadow:var(--shadow-sm);}
 .zv-article .summary h4 {display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--belt);margin-bottom:13px;}
+  text-transform:uppercase;color:var(--belt-on-cream);margin-bottom:13px;}
 .zv-article .summary h4 svg {width:18px;height:18px;}
 .zv-article .summary ul {padding-left:2px;list-style:none;display:flex;flex-direction:column;gap:10px;}
 .zv-article .summary li {position:relative;padding-left:28px;font-size:15.5px;font-weight:600;color:#332c4a;line-height:1.5;}
