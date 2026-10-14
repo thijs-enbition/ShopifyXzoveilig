@@ -153,7 +153,9 @@ products to the end of a collection, which reordered grids. The homepage finder 
 showed "Prijs volgt". `assets/zv-finder.js` shows each package's product price, except Vista
 (secure_plus): no price but "Op maat, na een vrijblijvend adviesgesprek", and its link goes to
 the Vista card (`#mijn-thuis-vista`), like the matcher's. Veilig Onderweg (product price 0)
-shows "Prijs volgt".
+shows "Prijs volgt". So does Shopify's own price display (`snippets/price.liquid`: product page,
+collection and search cards) for any `Beveiligingsabonnement` product priced at 0, since
+2026-10-14. Free non-package products such as N0006 still show their €0 price.
 **When Odoo replaces a product, update its `productHandle` (and `sku`) in
 pricing.config.json and rebuild**; `check_pricing.py` section 14 fails if a package has no
 handle or sku. `all_products` allows 20 unique handles per page, so keep lookups well under

@@ -38,6 +38,14 @@
   if target == product and product.price_varies
     assign money_price = 'products.product.price.from_price_html' | t: price: money_price
   endif
+
+  # zv: a package (product type Beveiligingsabonnement, see CLAUDE.md) is never really free. A
+  # package at 0 in Shopify has no price yet (PRICE_PENDING in pricing.config.json, e.g. the
+  # two Veilig Onderweg products), so show the config's "Prijs volgt" instead of a zero
+  # amount. Free non-package products (e.g. geen-installatie-nami) keep showing their price.
+  if product.type == 'Beveiligingsabonnement' and price == 0
+    assign money_price = 'Prijs volgt'
+  endif
 -%}
 
 {%- unless target == null and placeholder == null -%}
