@@ -28,8 +28,8 @@ body:has(.sf-drawer details[open]) .zv-fab { display: none; }
   padding: 0 40px 0 32px;
   border: none;
   border-radius: 999px;
-  background: #e8651a;
-  color: #fff;
+  background: var(--gold, #e4a311);
+  color: var(--ink, #1a1230);
   font: inherit;
   font-size: 22px;
   font-weight: 800;
@@ -38,7 +38,7 @@ body:has(.sf-drawer details[open]) .zv-fab { display: none; }
   box-shadow: 0 12px 28px -12px rgba(26, 18, 48, 0.6);
   transition: background 0.15s, transform 0.15s;
 }
-.zv-fab__toggle:hover { background: #c94e0a; transform: translateY(-1px); }
+.zv-fab__toggle:hover { background: var(--gold-lt, #f5c84a); transform: translateY(-1px); }
 .zv-fab__icon { width: 40px; height: 40px; flex: 0 0 auto; }
 .zv-fab__icon--close { display: none; }
 .zv-fab__toggle[aria-expanded="true"] .zv-fab__icon--open { display: none; }
