@@ -16,6 +16,7 @@
         "eyebrow": "Herroepingsrecht",
         "title": "Aankoop binnen 14 dagen herroepen",
         "lead": "",
+        "helpdesk_webhook_url": "https://zoveilig.odoo.com/web/hook/a645c5b5-c0af-4e43-8eec-17b02bdd9d15",
         "withdrawal_pdf_url": "https://cdn.shopify.com/s/files/1/0947/8334/0925/files/modelformulier-herroeping-zoveilig.pdf?v=1791961573",
         "capture_lead_endpoint": "https://lfwkpbooieiesuvblvse.supabase.co/functions/v1/capture-lead",
         "capture_lead_anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxmd2twYm9vaWVpZXN1dmJsdnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0NjI2ODYsImV4cCI6MjEwNTAzODY4Nn0.mwOnoWN2pDZ5J8nj0RfEMbnrH8HUei0C6qCKGt4twaE"
