@@ -28,7 +28,7 @@
           <div id="hp-err" class="hp-err" hidden>Controleer even de gemarkeerde velden en probeer het opnieuw.</div>
           <div id="hp-err-server" class="hp-err" hidden>Er ging iets mis bij het versturen. Probeer het over een moment opnieuw, of bel ons direct op <a href="tel:0881221111">088 122 11 11</a>.</div>
 
-          <form id="zv-herroepen-form" novalidate data-capture-lead-endpoint="{{ section.settings.capture_lead_endpoint | escape }}" data-capture-lead-key="{{ section.settings.capture_lead_anon_key | escape }}">
+          <form id="zv-herroepen-form" novalidate data-capture-lead-endpoint="{{ section.settings.capture_lead_endpoint | escape }}" data-capture-lead-key="{{ section.settings.capture_lead_anon_key | escape }}" data-helpdesk-webhook-url="{{ section.settings.helpdesk_webhook_url | escape }}">
             <div class="fld-row">
               <div class="fld"><label for="h-naam">Naam</label><input id="h-naam" name="Naam" placeholder="Voor- en achternaam" required></div>
               <div class="fld"><label for="h-tel">Telefoon</label><input id="h-tel" name="Telefoon" type="tel" placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}" required></div>
@@ -214,6 +214,21 @@
       }
     } catch (e) { /* never block the Supabase submit below on this */ }
 
+    // Odoo Helpdesk-ticket dual-write — separate webhook from the CRM-lead one
+    // above, bound to helpdesk.ticket not crm.lead (Automation Rule "Herroeping
+    // ticket aanmaken", team: klantenservice). Fire-and-forget, same as the lead one.
+    try {
+      var ticketWebhookUrl = form.getAttribute('data-helpdesk-webhook-url');
+      if (ticketWebhookUrl) {
+        fetch(ticketWebhookUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+    } catch (e) { /* never block the Supabase submit below on this */ }
+
     var submitBtn = form.querySelector('button[type="submit"]');
     if (submitBtn) submitBtn.disabled = true;
 
@@ -257,6 +272,16 @@
     { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Herroepingsrecht" },
     { "type": "text", "id": "title", "label": "Titel", "default": "Aankoop binnen 14 dagen herroepen" },
     { "type": "textarea", "id": "lead", "label": "Lead" },
+    {
+      "type": "header",
+      "content": "Odoo Helpdesk-ticket"
+    },
+    {
+      "type": "text",
+      "id": "helpdesk_webhook_url",
+      "label": "Helpdesk-ticket webhook URL",
+      "info": "De 'On Webhook'-URL van de 'Herroeping ticket aanmaken' Automation Rule in Odoo."
+    },
     {
       "type": "header",
       "content": "Modelformulier (PDF)"
