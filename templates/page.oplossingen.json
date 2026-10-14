@@ -183,15 +183,6 @@
             "row": "3"
           }
         },
-        "s9": {
-          "type": "scenario",
-          "settings": {
-            "title": "Opvolging aan huis mogelijk",
-            "quote": "Zorgpartner aan huis mogelijk.",
-            "package": "beschermd",
-            "row": "3"
-          }
-        },
         "mt1": {
           "type": "scenario_mijn_thuis",
           "settings": {
@@ -277,7 +268,7 @@
           "type": "mantelzorgdashboard",
           "settings": {
             "heading": "Het mantelzorgdashboard",
-            "badge": "Bij alle Langer Thuis-pakketten: Inzicht, Zeker en Beschermd",
+            "badge": "Bij de Langer Thuis-pakketten Inzicht en Zeker",
             "intro": "Via de Familie-app ziet u als mantelzorger in één oogopslag hoe het gaat. Het dashboard is gebouwd op het Wellness-platform van Alarm.com.",
             "item_1_title": "Dashboard",
             "item_1_text": "Activiteitsniveau van vandaag afgezet tegen het persoonlijke gemiddelde, met kleurcodering: groen is routine, geel is opvallend, rood is ongebruikelijk.",
@@ -304,7 +295,6 @@
         "s6",
         "s7",
         "s8",
-        "s9",
         "mt1",
         "mt2",
         "mt3",

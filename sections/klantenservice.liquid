@@ -147,7 +147,8 @@
           <p>{{ section.settings.cta_text | default: 'Ontdek welke beveiligingsoplossing past bij uw woning, gezin en levensstijl.' | escape }}</p>
         </div>
         <div class="kb">
-          <a class="btn btn--gold" href="{{ section.settings.cta1_url | default: '/pages/oplossingen' }}">{{ section.settings.cta1_label | default: 'Maak me wegwijs' | escape }}<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          {%- capture cta1_default -%}{% render 'zv-route', key: 'keuzehulp' %}{%- endcapture -%}
+          <a class="btn btn--gold" href="{{ section.settings.cta1_url | default: cta1_default }}">{{ section.settings.cta1_label | default: 'Maak me wegwijs' | escape }}<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
           <a class="btn btn--ghost" href="{{ section.settings.cta2_url | default: '/pages/hoe-het-werkt' }}">{{ section.settings.cta2_label | default: 'Hoe het werkt' | escape }}</a>
         </div>
       </div>
