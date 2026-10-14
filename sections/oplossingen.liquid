@@ -312,14 +312,13 @@
                 {%- when 'aware_plus' -%}
                   {%- assign ltc_tagline = 'Vroeg weten geeft rust' -%}
                   {%- assign ltc_intro = 'Alles van Inzicht, plus:' -%}
-                  {%- assign ltc_bullets = 'Signalering bij meer of minder bezoek aan badkamer, keuken of toilet|Signalering als medicijnen of koelkast niet worden gebruikt|Directe melding als er mogelijk niet meer gegeten of gedronken wordt' -%}
+                  {%- assign ltc_bullets = 'Signalering bij meer of minder bezoek aan badkamer, keuken of toilet|Inzicht in slaap- en rustpatronen|Melding bij afwijkende nachtelijke routines' -%}
                   {%- assign ltc_hw_bullets = '3x activiteiten sensor|1x deur/raamsensor|2x locatiesensor|Geen meldkamer' -%}
                   {%- capture ltc_icon -%}<svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M32 14 L49 20 V35 C49 47 32 54 32 54 C32 54 15 47 15 35 V20 Z" stroke="var(--indigo)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M32 45 C27 40 20 41.5 20 33.5 C20 28.5 27 27 32 32.5 C37 27 44 28.5 44 33.5 C44 41.5 37 40 32 45 Z" fill="var(--red)"/></svg>{%- endcapture -%}
                 {%- when 'care' -%}
                   {%- assign ltc_tagline = 'Snelle hulp bij nood' -%}
-                  {%- assign ltc_intro = 'Alles van Zeker, plus:' -%}
                   {%- assign ltc_bullets = 'Nederlandse [meldkamer](kc/hoe-werkt-een-meldkamer) 24/7|Alarmknop met opvolging|Rookmelders met doormelding naar de meldkamer' -%}
-                  {%- assign ltc_hw_bullets = '1x centrale|1x codebedienpaneel|2x deur/raamsensor|2x locatiesensor|2x rookmelder|3x paniekknop naar keuze|Incl. meldkamer' -%}
+                  {%- assign ltc_hw_bullets = '1x centrale|1x codebedienpaneel|2x deur/raamsensor|2x locatiesensor|2x rookmelder|Paniekknop, keuze uit 3|Incl. meldkamer' -%}
                   {%- capture ltc_icon -%}<svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M15 42 V34 A17 17 0 0 1 49 34 V42" stroke="var(--indigo)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><rect x="11" y="40" width="9" height="15" rx="3.6" stroke="var(--indigo)" stroke-width="3.4"/><rect x="44" y="40" width="9" height="15" rx="3.6" stroke="var(--indigo)" stroke-width="3.4"/><path d="M48 55 V59 Q48 62 41 62 H35" stroke="var(--indigo)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="62" r="2.8" fill="var(--red)"/></svg>{%- endcapture -%}
                 {%- when 'secure' -%}
                   {%- comment -%} Alert. Benefit-led headline/bullets (2026-09-14 redesign, replaces the raw hardware list now shown in "Wat zit erin?"). Bullets and "Wat zit erin?" replaced 2026-09-23 per docs/pakket-wijzigingen-2026-09-23.md §5; tagline unchanged. {%- endcomment -%}
@@ -863,7 +862,7 @@
     "pkg": {
       "aware": {"name":"Inzicht","plat":"","hook":"Weet dat de dag normaal en veilig is begonnen.","sub":"3x activiteiten sensor · 1x deur/raamsensor · geen meldkamer","tier":[{"id":"wifisensor","qty":3,"name":"Activiteiten sensor"},{"id":"deursensor","name":"Deur/raamsensor"},{"id":"familieapp"}],"plus":{"items":["1 sensor","2 pluggen"]},"info":{"introTitle":"Begrijp aanwezigheid, routines en dagelijkse activiteit, op schaal van de hele woning.","body":"Inzicht biedt een basislaag van algemeen activiteitsinzicht: of iemand thuis, actief of weg is, en hoe het dagritme in de loop van de tijd verandert. Dankzij wifi-sensing dekt Inzicht grote leefruimtes niet-intrusief, zonder een sensor per kamer. Geïnstalleerd in ~10 minuten, zonder technische kennis.","idealFor":"Teleassistentie, mantelzorg-apps, verzekeraars en instap-inzichtdiensten die snel en schaalbaar willen uitrollen.","deployment":[["3× activiteiten sensor","~100 m² / 1.200 ft² dekking"],["Deur/raamsensor","per toegangspunt"]]}},
       "aware_plus": {"name":"Zeker","plat":"","hook":"Zie subtiele veranderingen vóór het misgaat.","sub":"3x activiteiten sensor · 1x deur/raamsensor · 2x locatiesensor · geen meldkamer","tier":[{"id":"wifisensor","qty":3,"name":"Activiteiten sensor"},{"id":"deursensor","name":"Deur/raamsensor"},{"id":"pir","qty":2,"name":"Locatiesensor"},{"id":"familieapp"}],"plus":{"items":["1 sensor","2 pluggen"]},"info":{"introTitle":"Dieper inzicht in Activiteiten van het Dagelijks Leven, rust en gezondheidssignalen.","body":"Zeker bouwt voort op Inzicht en voegt inzicht op kamerniveau en gedragsintelligentie toe, waarmee subtiele veranderingen in rustpatronen, badkamergebruik en nachtelijke routines vroeg worden opgemerkt. Ondanks die diepgang blijft Zeker opmerkelijk eenvoudig uit te rollen. Geïnstalleerd in ~15 minuten, inclusief sensoren op kamerniveau, nog steeds zonder training.","idealFor":"Professionele zorgdiensten, publieke programma’s en geavanceerde zorgtechnologieplatformen die ADL-inzicht willen, zonder ADL-complexiteit.","deployment":[["3× activiteiten sensor","~100 m² / 1.200 ft² dekking"],["Deur/raamsensor","per toegangspunt"],["2× locatiesensor","voor slaapkamer en badkamer, uitbreidbaar"]]}},
-      "care": {"name":"Beschermd","plat":"","hook":"Complete bescherming met 24/7 meldkamer.","sub":"1x centrale · 1x codebedienpaneel · 2x deur/raamsensor · 2x locatiesensor · 2x rookmelder · 3x paniekknop naar keuze · incl. meldkamer","tier":[{"id":"hub","name":"Centrale"},{"id":"codepaneel","name":"Codebedienpaneel"},{"id":"pir","qty":2,"name":"Locatiesensor"},{"id":"deursensor","qty":2,"name":"Deur/raamsensor"},{"id":"rook","qty":2,"name":"Rookmelder"},{"id":"paniek","qty":3,"name":"Paniekknop naar keuze"},{"id":"zorgmeld"},{"id":"familieapp"}]},
+      "care": {"name":"Beschermd","plat":"","hook":"Complete bescherming met 24/7 meldkamer.","sub":"1x centrale · 1x codebedienpaneel · 2x deur/raamsensor · 2x locatiesensor · 2x rookmelder · paniekknop, keuze uit 3 · incl. meldkamer","tier":[{"id":"hub","name":"Centrale"},{"id":"codepaneel","name":"Codebedienpaneel"},{"id":"pir","qty":2,"name":"Locatiesensor","tagline":"Ziet beweging in de ruimte waar hij hangt."},{"id":"deursensor","qty":2,"name":"Deur/raamsensor"},{"id":"rook","qty":2,"name":"Rookmelder","tagline":"Meldt rook direct bij de meldkamer."},{"id":"paniek","name":"Paniekknop, keuze uit 3"},{"id":"meldkamer","name":"Nederlandse meldkamer 24/7"}]},
       "secure": {"name":"Alert","plat":"","hook":"Slim alarm dat u zelf in de gaten houdt.","sub":"1x centrale/sirene · 1x activiteiten sensor · 1x bewegingsmelder · 1x deur/raamsensor · 1x codebedienpaneel · geen meldkamer of camera","tier":[{"id":"alarmpod","name":"Centrale/sirene"},{"id":"senseplug","name":"Activiteiten sensor"},{"id":"pir","name":"Bewegingsmelder"},{"id":"deursensor","name":"Deur/raamsensor"},{"id":"codepaneel","name":"Codebedienpaneel"}],"plus":{"items":["1 activiteiten sensor","1 sensor"]}},
       "guard": {"name":"Protect","plat":"","hook":"Alarm met 24/7 meldkamer die meekijkt.","sub":"1x centrale · 1x codebedienpaneel · 1x rookmelder · 1x fotobewegingsmelder · 2x deur/raamsensor · incl. meldkamer, camera optioneel","tier":[{"id":"hub","name":"Centrale"},{"id":"codepaneel","name":"Codebedienpaneel"},{"id":"rook","name":"Rookmelder"},{"id":"pir","name":"Fotobewegingsmelder"},{"id":"deursensor","qty":2,"name":"Deur/raamsensor"},{"id":"meldkamer"}]},
       "secure_plus": {"name":"Vista","plat":"Alarm.com · camerabeveiliging","hook":"Camerabeveiliging op maat, na een vrijblijvend adviesgesprek. Meldkamer optioneel.","sub":"Zie wat er gebeurt. Weet wat ertoe doet.","noPrice":true,"tier":[{"id":"alarmhub"},{"id":"cam_in"},{"id":"cam_out"},{"id":"deurbel2"},{"id":"meldkamer","name":"24/7 Securitas meldkamer (optioneel)"}],"plus":{"price":"+€4 p/m","items":["1 PIR","1 deurcontact"]}},
@@ -2164,9 +2163,11 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     var qty = (entry.qty && entry.qty > 1) ? '<b class="pbd-qty">' + entry.qty + '×</b>' : '';
     var kind = esc(hw.kind) + (hw.sku ? ' · ' + esc(hw.sku) : '');
     // entry.name: optional per-package display name (the card's "Wat zit erin?" wording); entry.id stays the DATA.hw lookup key.
+    // entry.tagline: optional per-package tagline, for a shared hw entry whose own tagline doesn't hold for this package
+    // (Beschermd's locatiesensor: no routine claim; its rookmelder: no familie-app, 2026-10-14).
     return '<li class="pbd-item"><span class="pbd-ic">' + ICON.check + '</span><div class="pbd-it-body">' +
       '<div class="pbd-it-top"><span class="pbd-it-name">' + qty + esc(entry.name || hw.name) + '</span><span class="pbd-kind">' + kind + '</span></div>' +
-      '<p class="pbd-it-tag">' + esc(hw.tagline) + '</p>' + specs + '</div></li>';
+      '<p class="pbd-it-tag">' + esc(entry.tagline || hw.tagline) + '</p>' + specs + '</div></li>';
   }
 
   function infoHtml(info) {
@@ -2511,7 +2512,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
       "type": "scenario",
       "name": "Matcher-scenariokaart",
       "settings": [
-        { "type": "paragraph", "content": "Voor de pakket-matcher die onder de Langer Thuis-pakketten wordt getoond. Dezelfde 9 kaarten als op de Vergelijk pakketten-pagina — zie snippets/zv-pakket-matcher.liquid." },
+        { "type": "paragraph", "content": "Voor de pakket-matcher die onder de Langer Thuis-pakketten wordt getoond. Dezelfde 8 kaarten als op de Vergelijk pakketten-pagina — zie snippets/zv-pakket-matcher.liquid." },
         { "type": "text", "id": "title", "label": "Titel" },
         { "type": "text", "id": "quote", "label": "Voorbeeldmelding (cursief)" },
         { "type": "select", "id": "package", "label": "Past bij pakket", "options": [
@@ -2552,7 +2553,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
       "settings": [
         { "type": "paragraph", "content": "Wordt getoond op het Langer Thuis-tabblad, naast de pakket-matcher (vanaf 1100px breed; smaller onder de vergelijkingstabel). Anker: #mantelzorgdashboard — zie snippets/zv-mantelzorgdashboard.liquid." },
         { "type": "text", "id": "heading", "label": "Kop", "default": "Het mantelzorgdashboard" },
-        { "type": "text", "id": "badge", "label": "Label onder de kop (optioneel)", "default": "Bij alle Langer Thuis-pakketten: Inzicht, Zeker en Beschermd", "info": "Leeg: geen label." },
+        { "type": "text", "id": "badge", "label": "Label onder de kop (optioneel)", "default": "Bij de Langer Thuis-pakketten Inzicht en Zeker", "info": "Leeg: geen label." },
         { "type": "textarea", "id": "intro", "label": "Intro", "default": "Via de Familie-app ziet u als mantelzorger in één oogopslag hoe het gaat. Het dashboard is gebouwd op het Wellness-platform van Alarm.com." },
         { "type": "header", "content": "Onderdeel 1" },
         { "type": "text", "id": "item_1_title", "label": "1 · Titel", "default": "Dashboard" },
