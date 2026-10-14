@@ -32,8 +32,8 @@
     aware_plus: { seg: 'B', segLabel: 'Langer Thuis', name: 'Zeker', platform: 'NAMI aiCare', popular: true, h1: 'Zie subtiele veranderingen voordat het misgaat.', sub: 'NAMI aiCare · 3 Wi-Fi activity sensoren (~100 m²), deursensor per toegang en 2 PIR · geen meldkamer' },
     care: { seg: 'B', segLabel: 'Langer Thuis', name: 'Beschermd', platform: 'Climax', h1: 'Complete bescherming met 24/7 meldkamer.', sub: 'Climax · centrale, magneetcontacten, PIR, paniekknoppen en rookmelders · incl. meldkamer' },
     // ── VEILIG ONDERWEG (onderweg) · prijzen volgen ──
-    liogo_solo: { seg: 'C', segLabel: 'Veilig Onderweg', name: 'Paniek Meldkamer', platform: 'Indigo', h1: 'Eén druk verbindt u met de meldkamer.', sub: 'Prijs en specs volgen' },
-    liogo_guard: { seg: 'C', segLabel: 'Veilig Onderweg', name: 'Zorgmeldkamer', platform: 'Indigo', h1: '24/7 zorgprofessionals regelen opvolging.', sub: 'Prijs en specs volgen' }
+    liogo_solo: { seg: 'C', segLabel: 'Veilig Onderweg', name: 'Paniek Meldkamer', platform: 'Indigo', anchor: 'veilig-onderweg', h1: 'Eén druk verbindt u met de meldkamer.', sub: 'Prijs en specs volgen' },
+    liogo_guard: { seg: 'C', segLabel: 'Veilig Onderweg', name: 'Zorgmeldkamer', platform: 'Indigo', anchor: 'veilig-onderweg', h1: '24/7 zorgprofessionals regelen opvolging.', sub: 'Prijs en specs volgen' }
   };
 
   var LINE = {
