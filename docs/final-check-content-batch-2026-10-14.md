@@ -34,9 +34,10 @@ Branch `fix/final-check-content-batch-2026-10-14`. The investigation behind it i
 - **Mantelzorgdashboard badge** (`page.oplossingen.json` and the schema default): "Bij alle
   Langer Thuis-pakketten: Inzicht, Zeker en Beschermd" is now "Bij de Langer
   Thuis-pakketten Inzicht en Zeker". The dashboard is reached through the Familie-app, so
-  removing the Familie-app from Beschermd everywhere includes this badge. **This reverses
-  Thijs's 2026-09-24 decision (spec §12 addendum). Revert this one line if that decision
-  should stand.**
+  removing the Familie-app from Beschermd everywhere includes this badge. **Confirmed by
+  Thijs (2026-10-14).** The dashboard's trend view tracks the daily activity-level pattern
+  and detects irregularities. That matches Inzicht and Zeker, not Beschermd. This
+  supersedes the 2026-09-24 decision (spec §12 addendum); nothing to revert.
 
 **L-04, Zeker claims.**
 
@@ -85,14 +86,16 @@ Branch `fix/final-check-content-batch-2026-10-14`. The investigation behind it i
   - Removing s9 needed no logic change. `recommend()` in `assets/zv-vergelijk-pakketten.js`
     is generic and has no reference to s9, a tile count or a care partner. s7/s8 still lead
     to Beschermd.
-  - **Judgment call, not fixed:** the matcher still assumes Inzicht ⊂ Zeker ⊂ Beschermd. It
-    recommends the highest tier among the selected tiles. With Beschermd no longer framed as
-    "Alles van Zeker", that is wrong for mixed selections. For example, s6 "Melding wanneer
-    een routine verandert" plus s7 "Snelle hulp wanneer het telt" gives "Ons advies:
-    Beschermd" (checked in preview). The table now shows Beschermd with a – for routine
-    alerts. Fixing it means deciding what to recommend when no single package covers the
-    selection (multi-package tiles, a "combineer" message, or Zeker plus a note). That is a
-    product decision.
+  - **Known, accepted limitation, deliberately not fixed in this branch (Thijs,
+    2026-10-14):** the matcher still assumes Inzicht ⊂ Zeker ⊂ Beschermd. It recommends the
+    highest tier among the selected tiles. With Beschermd no longer framed as "Alles van
+    Zeker", that is imprecise for mixed selections. For example, s6 "Melding wanneer een
+    routine verandert" plus s7 "Snelle hulp wanneer het telt" gives "Ons advies:
+    Beschermd" (checked in preview), while the table shows Beschermd with a – for routine
+    alerts. Thijs's call: this is a broader imprecision in the scoring model, not specific to
+    this fix, so it isn't addressed here. It stays documented. It is not resolved. A future
+    fix means deciding what to recommend when no single package covers the selection
+    (multi-package tiles, a "combineer" message, or Zeker plus a note).
   - Related: practice case "Voor mensen met dementie" ("Dwaaldetectie en een meldkamer")
     still points to Beschermd, which has the meldkamer. Wandering detection is an
     Inzicht-tier tile (s4). Not changed.
@@ -102,12 +105,12 @@ Branch `fix/final-check-content-batch-2026-10-14`. The investigation behind it i
   here.
 - **Kept deliberately:** Beschermd keeps ✓ on "Meerdere contactpersonen", because the
   meldkamer calls the contact persons.
-- **Out of scope:**
+- **Out of scope (confirmed by Thijs, 2026-10-14; left as is):**
   - Climax/NAMI hardware specs in the Beschermd and Protect modals are untouched.
   - Protect's modal still shows the shared rookmelder tagline ("…én in de familie-app") and
     the shared PIR tagline ("…afwijkingen in de routine").
-- **Layout:** the Kenniscentrum case grid now has 7 cards, so its last row on desktop holds
-  one card. No overflow on mobile (390px).
+- **Layout (confirmed by Thijs, 2026-10-14; left as is):** the Kenniscentrum case grid now
+  has 7 cards, so its last row on desktop holds one card. No overflow on mobile (390px).
 
 ## Validation
 
