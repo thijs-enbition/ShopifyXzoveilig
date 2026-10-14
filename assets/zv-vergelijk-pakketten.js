@@ -10,8 +10,9 @@
    Generalization added two per-instance concepts, both read from [data-pm-root] attributes
    the Liquid snippet emits (defaults reproduce the original Langer Thuis-only behavior when
    a caller doesn't emit them, so nothing here changed for that call site):
-     data-pm-tier / data-pm-names  "id:value,id:value,…" — tie-break precedence (higher wins
-                                    a tie) and display-name maps, in place of the old hardcoded
+     data-pm-tier / data-pm-names  "id:value,id:value,…" — tier order (the recommendation is
+                                    the highest tier among the selected cards, see recommend())
+                                    and display-name maps, in place of the old hardcoded
                                     { inzicht: 1, zeker: 2, beschermd: 3 } / … NAMES object.
      data-pm-lead-pkgs / -lead-url a comma list of package ids that have no cart action (e.g.
                                     Mijn Thuis's Vista — no fixed price, no purchasable variant
@@ -60,11 +61,26 @@
     var leadPkgs = (root.getAttribute('data-pm-lead-pkgs') || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     var leadUrl = root.getAttribute('data-pm-lead-url') || '';
 
-    /* Universal one-time "Activatie en installatie" variant (see pricing.config.json
-       activation.productHandle/sku) — deduped against the live cart so it's only ever
-       added once, same as the Oplossingen page. */
-    function activationLineToAdd(cart) {
-      if (!activationVariantId) return null;
+    /* package product handle -> installGroup ('nami' | 'climax'), from the pricing config
+       JSON island the zv-pricing include renders on every page that uses this matcher. */
+    var installGroupByHandle = {};
+    /* The package line's cart quantity: promo.packageCartQuantity (the 3 prepaid months). */
+    var pkgQty = 0;
+    try {
+      var pricingEl = document.getElementById('zv-pricing-config');
+      var pricingCfg = pricingEl && JSON.parse(pricingEl.textContent || '{}');
+      pkgQty = (pricingCfg && pricingCfg.promo && pricingCfg.promo.packageCartQuantity) || 0;
+      (pricingCfg && pricingCfg.packages || []).forEach(function (p) {
+        if (p && p.productHandle) installGroupByHandle[p.productHandle] = p.installGroup;
+      });
+    } catch (e) { installGroupByHandle = {}; }
+
+    /* One-time Climax installation variant (see pricing.config.json
+       activation.productHandle/sku) — added for a CLIMAX package only, never a NAMI one
+       (NAMI installation is the customer's choice on Overzicht), and deduped against the
+       live cart so it's only ever added once, same as the Oplossingen page. */
+    function activationLineToAdd(cart, prod) {
+      if (!activationVariantId || !prod || installGroupByHandle[prod.handle] !== 'climax') return null;
       var already = (cart && cart.items || []).some(function (it) { return String(it.variant_id) === String(activationVariantId); });
       return already ? null : activationVariantId;
     }
@@ -74,25 +90,35 @@
       return td ? td.textContent.trim() : '';
     }
 
+    /* Recommends the smallest package that covers ALL selected scenarios. A card's
+       data-pm-pkg is the LOWEST tier that has that scenario (see the scenario blocks'
+       `package` setting), so the answer is the highest of those minimum tiers among the
+       selected cards (TIER order, e.g. inzicht < zeker < beschermd). A card whose package
+       is blank or not in TIER is ignored; a selection of only such cards counts as empty.
+       Returns null when nothing (known) is selected. */
     function recommend() {
       var score = {};
-      cards.forEach(function (c) { score[c.getAttribute('data-pm-pkg')] = 0; });
+      cards.forEach(function (c) {
+        var p = c.getAttribute('data-pm-pkg');
+        if (TIER.hasOwnProperty(p)) score[p] = 0;
+      });
       var any = false;
       cards.forEach(function (c) {
-        if (c.getAttribute('aria-pressed') === 'true') {
-          score[c.getAttribute('data-pm-pkg')] += 1;
+        var p = c.getAttribute('data-pm-pkg');
+        if (c.getAttribute('aria-pressed') === 'true' && score.hasOwnProperty(p)) {
+          score[p] += 1;
           any = true;
         }
       });
       if (!any) return null;
 
       /* A leadPkgs package (no cart action — see the file header) may only win by an
-         outright majority: strictly higher than every other scored package. If it doesn't
-         clear that bar it's removed from consideration entirely for this call — a tie
-         involving it never lets it win — and the remaining packages fall back to the
-         ordinary highest-score/higher-tier-wins-a-tie rule below. leadPkgs is empty for
-         Langer Thuis, so this is a no-op there: `outright` stays null and `eligible`
-         is every scored package, same as before generalization. */
+         outright majority: strictly more selected cards than every other package. If it
+         doesn't clear that bar it's removed from consideration entirely for this call — a
+         tie involving it never lets it win — and the remaining packages fall back to the
+         highest-selected-tier rule below. This is the only place the per-package card
+         count still matters. leadPkgs is empty for Langer Thuis, so this is a no-op there:
+         `outright` stays null and `eligible` is every known package. */
       var ids = Object.keys(score);
       var outright = null;
       leadPkgs.forEach(function (lp) {
@@ -105,8 +131,14 @@
       var eligible = ids.filter(function (p) { return leadPkgs.indexOf(p) === -1; });
       var best = null;
       eligible.forEach(function (p) {
-        if (best === null || score[p] > score[best] || (score[p] === score[best] && TIER[p] > TIER[best])) best = p;
+        if (score[p] > 0 && (best === null || TIER[p] > TIER[best])) best = p;
       });
+      /* Only reachable if every selected card belongs to a leadPkgs package that didn't
+         win outright (not possible with one lead package): keep the old all-zero-tie
+         result, the highest-tier eligible package. */
+      if (best === null) {
+        eligible.forEach(function (p) { if (best === null || TIER[p] > TIER[best]) best = p; });
+      }
       return best;
     }
 
@@ -187,14 +219,17 @@
     }
 
     /* Shared add-to-cart: resolves the real product for `pkg` via the finder_key mapping
-       (data-pm-products), bumps an existing line instead of duplicating it (matches
-       Shopify's merge-on-repeat-add behaviour on the Oplossingen page's own cards), and
-       dedupes the universal activation fee the same way as sections/oplossingen.liquid's
-       addToCart(). Used by both the advies-bar's own add button and, when embedded on
-       Oplossingen, the comparison table's "Kies Inzicht/Zeker/Beschermd" buttons. */
+       (data-pm-products) and adds it at quantity pkgQty — the 3 prepaid months, which
+       Shopify's automatic "Eerste 3 maanden" discount takes 50% off by itself. A package
+       already in the cart is never bumped (that would add months, and the cart guard
+       resets any package line to pkgQty anyway); only a missing Climax installation line
+       is added then. The Climax installation line is added for a CLIMAX package only,
+       deduped the same way as sections/oplossingen.liquid's addToCart(). No pkgQty
+       (pricing config missing) fails closed. Used by both the advies-bar's own add button
+       and, when embedded on Oplossingen, the comparison table's "Kies …" buttons. */
     function addPackageToCart(pkg, btn, opts) {
       var prod = pkg && products[pkg];
-      if (!prod || !btn || btn.dataset.busy === '1') return;
+      if (!prod || !btn || btn.dataset.busy === '1' || !pkgQty) return;
       var cfg = opts || {};
       var ctaLocation = cfg.ctaLocation || 'vergelijk_pakketten', bron = cfg.bron || 'Vergelijk pakketten';
       btn.dataset.busy = '1'; btn.disabled = true; btn.setAttribute('aria-busy', 'true');
@@ -203,26 +238,15 @@
         .then(function (r) { return r.json(); })
         .then(function (cart) {
           var line = (cart && cart.items || []).filter(function (it) { return String(it.variant_id) === vid; })[0];
-          var activationId = activationLineToAdd(cart);
-          if (line) {
-            var changePromise = window.fetch('/cart/change.js', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: line.key, quantity: line.quantity + 1 })
-            });
-            if (!activationId) return changePromise;
-            // Package line already exists but the activation fee doesn't yet (e.g. it was
-            // removed from the cart separately) — bump the package, then add the fee.
-            return changePromise.then(function (r) { if (!r.ok) throw new Error(r.status); return r; }).then(function () {
-              return window.fetch('/cart/add.js', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ items: [{ id: activationId, quantity: 1 }] })
-              });
-            });
+          var activationId = activationLineToAdd(cart, prod);
+          var items = [];
+          if (!line) {
+            items.push({ id: prod.variantId, quantity: pkgQty, properties: {
+              'Pakket': prod.name || NAMES[pkg], 'SKU': prod.sku || '', 'Oplossing': prod.line || '', 'Bron': bron
+            } });
           }
-          var items = [{ id: prod.variantId, quantity: 1, properties: {
-            'Pakket': prod.name || NAMES[pkg], 'SKU': prod.sku || '', 'Oplossing': prod.line || '', 'Bron': bron
-          } }];
           if (activationId) items.push({ id: activationId, quantity: 1 });
+          if (!items.length) return { ok: true, json: function () { return {}; } };
           return window.fetch('/cart/add.js', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ items: items })

@@ -36,7 +36,7 @@
           <form id="zv-contact-form" novalidate data-capture-lead-endpoint="{{ section.settings.capture_lead_endpoint | escape }}" data-capture-lead-key="{{ section.settings.capture_lead_anon_key | escape }}">
             <div class="fld-row">
               <div class="fld"><label for="c-naam">Naam</label><input id="c-naam" name="Naam" placeholder="Voor- en achternaam" required></div>
-              <div class="fld"><label for="c-tel">Telefoon</label><input id="c-tel" name="Telefoon" type="tel" placeholder="06 12 34 56 78" required></div>
+              <div class="fld"><label for="c-tel">Telefoon</label><input id="c-tel" name="Telefoon" type="tel" placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}" required></div>
             </div>
             <div class="fld-row">
               <div class="fld"><label for="c-mail">E-mailadres</label><input id="c-mail" name="email" type="email" placeholder="uw@email.nl" required></div>
@@ -47,9 +47,10 @@
                 <option value="veilig_onderweg">Veilig Onderweg (personenalarm)</option>
                 <option value="zakelijk">Zakelijk</option>
                 <option value="bestaand_klant">Bestaande klant / service</option>
+                <option value="aankoop_herroepen">Aankoop herroepen</option>
               </select></div>
             </div>
-            <div class="fld"><label for="c-tijd">Wanneer belt u het liefst?</label><select id="c-tijd" name="Voorkeurstijd">
+            <div class="fld"><label for="c-tijd">{% render 'zv-form-copy', key: 'callback_time' %}</label><select id="c-tijd" name="Voorkeurstijd">
               <option value="any">Maakt niet uit</option>
               <option value="morning">Ochtend (09:00 - 12:00)</option>
               <option value="afternoon">Middag (12:00 - 17:00)</option>
@@ -59,7 +60,7 @@
             <div class="fld fld-consent">
               <label class="cn-consent">
                 <input type="checkbox" id="c-consent" required>
-                <span>Ik geef toestemming dat Zo Veilig contact met mij opneemt over mijn aanvraag.</span>
+                <span>{% render 'zv-form-copy', key: 'consent' %}</span>
               </label>
             </div>
             <input type="hidden" name="Bron" value="Contactpagina">
@@ -114,6 +115,7 @@
 .zv-contact .fld-consent .cn-consent input { width:19px; height:19px; margin-top:2px; flex:none; accent-color:var(--indigo); }
 .zv-contact .fld-consent .cn-consent span { font-size:13.5px; font-weight:600; color:var(--muted); line-height:1.5; }
 .zv-contact .fld--invalid.fld-consent .cn-consent span { color:#9a2b2b; }
+.zv-contact .fld-consent .cn-consent a { color:var(--indigo); font-weight:800; }
 .zv-contact .cn-submit { margin-top:22px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
 .zv-contact .cn-priv { font-size:12.5px; font-weight:600; color:var(--muted); max-width:34ch; line-height:1.45; }
 .zv-contact .cn-priv a { color:var(--indigo); font-weight:800; }

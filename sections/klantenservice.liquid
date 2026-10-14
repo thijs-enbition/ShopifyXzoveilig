@@ -287,8 +287,14 @@
   });
 
   function runSearch() { term = (search.value || '').trim().toLowerCase(); apply(); }
+  function scrollToFaq() {
+    var faq = scope.querySelector('#veelgestelde-vragen');
+    if (faq) faq.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function submitSearch() { runSearch(); scrollToFaq(); }
   if (search) search.addEventListener('input', runSearch);
-  if (searchBtn) searchBtn.addEventListener('click', runSearch);
+  if (search) search.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); submitSearch(); } });
+  if (searchBtn) searchBtn.addEventListener('click', submitSearch);
 
   scope.querySelectorAll('.svc-pop').forEach(function (p) {
     p.addEventListener('click', function () {
@@ -296,9 +302,7 @@
       // popular pill resets the category filter, like the design
       cats.forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-cat') === '__all'); b.setAttribute('aria-pressed', b.getAttribute('data-cat') === '__all' ? 'true' : 'false'); });
       activeCat = '__all';
-      runSearch();
-      var faq = scope.querySelector('#veelgestelde-vragen');
-      if (faq) faq.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      submitSearch();
     });
   });
 

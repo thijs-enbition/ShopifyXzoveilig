@@ -9,30 +9,28 @@ Winkelwagen → Overzicht → Shopify checkout.
 - `/cart?view=overzicht` — `templates/cart.overzicht.json` → `sections/zv-checkout-overview.liquid`.
   Read-only final review of the live `{{ cart }}` (package, pricing breakdown, AV consent).
   Empty cart redirects (client-side) back to `/cart`.
-- On "Verder naar veilig afrekenen", the page POSTs to `/cart/update.js` with two cart
-  `attributes` (so they land on the order), then navigates to `/checkout`:
+- On "Verder naar veilig afrekenen", the page first re-reads `/cart.js`. If the cart differs
+  from the one the page was rendered with (`data-cart-sig`, line key:quantity) or the cart
+  guard's rules (`window.zvCartGuard.planFix`) find a fix, it reloads Overzicht instead of
+  going on. Otherwise it POSTs to `/cart/update.js` with two cart `attributes` (so they land on
+  the order), then navigates to `/checkout`:
   - `av_akkoord` — `"ja"` once the Algemene Voorwaarden checkbox is ticked.
   - `av_akkoord_tijdstip` — ISO 8601 timestamp of that click.
 
 Pricing on the Overzicht page never hardcodes an amount or duration (enforced by
-`scripts/check_pricing.py` check #9). "Vandaag te betalen" (today's total) always reads the
-live cart (`item.final_line_price`) — that never changes. Every recurring "per maand" figure
-(item-row prices, "Maandbedrag", "Daarna per maand", the promo-period rate) instead comes from
-the confirmed per-package monthly rate via `{%- include 'zv-pricing' -%}` +
-`snippets/zv-package-monthly-cents.liquid`, scaled by `item.quantity` — **not** from
-`item.final_line_price` — see **Pricing pipeline → Interim intro-promo repricing** below for
-why. Package-specific commercial terms (activation, intro-promo discount, contract duration,
-indicative contract value) come from the same confirmed model, matched to the cart's
-subscription line item (see **Product data** below for how a subscription is identified)
-through its `custom.finder_key` product metafield. See the comment at the top of
-`sections/zv-checkout-overview.liquid` for the finder_key → package id mapping.
+`scripts/check_pricing.py` check #10). "Vandaag te betalen" and every row of its itemized
+breakdown are read from the live cart (`item.final_line_price`, after Shopify's own discount
+allocation), so the rows always add up to what Shopify charges; nothing is recomputed. "Daarna
+€X/mnd" is the package line's **unit** price before the discount (`item.original_price`), never
+unit × 3. Package-specific commercial terms (installation group, contract duration, indicative
+contract value) come from the confirmed model in `pricing.config.json`, matched to the cart's
+package line (see **Product data** below) through its `custom.finder_key` product metafield.
 **If the cart holds more than one distinct recognized package** (e.g. Langer Thuis Inzicht +
 Mijn Thuis Alert together), the commercial-terms rows are hidden entirely rather than
-picking one package's numbers — a 36-month Inzicht contract and a 12-month Alert contract
+picking one package's numbers — a 36-month Beschermd contract and a 12-month Alert contract
 can't both be represented by a single set of rows, and showing either alone would be wrong,
-not just incomplete. The "per maand" total is unaffected by this restriction — it's just a sum
-of each recognized line's own confirmed rate, so it stays correct even across multiple
-distinct packages in one cart.
+not just incomplete. The "Daarna" total is unaffected by this restriction — it's just a sum
+of each package line's own unit price, so it stays correct across multiple packages.
 
 **Every checkout entry point must land on `/cart?view=overzicht` first, never straight on
 Shopify's own `/checkout`** — Overzicht is where `av_akkoord` consent is captured, so
@@ -44,19 +42,53 @@ modal's "Direct afrekenen" button both linked straight to `/checkout`. Both now 
 in the theme, it must go through Overzicht the same way; grep for a literal `/checkout` string
 outside `sections/zv-checkout-overview.liquid` itself as a quick regression check.
 
-**A subscription package must never sit in cart without the activation fee** (see **Pricing
-pipeline** below for what that is). Enforced twice, since nothing stops the fee being removed
-after the fact or a package reaching cart through an entry point that doesn't add it (e.g. the
-standalone Shopify product page): client-side, `snippets/zv-cart-guard.liquid` (rendered on
-`/cart` and `/cart?view=overzicht`) checks the live cart on load and auto-adds the fee, then
-reloads, if a subscription line exists without it; server-side, `zv-checkout-overview.liquid`
-computes `cart_needs_activation` and disables the checkout button outright as a fail-safe if
-the client-side fix hasn't run yet or fails. The standalone product page's own Dynamic
-Checkout buttons (Shop Pay etc., `show_dynamic_checkout` in `templates/product.json`) skip
-straight to Shopify checkout with no chance for either guard to run, so they're switched off
-entirely (2026-09-09) rather than patched — there's no client-side hook into that flow.
+**A package must never reach checkout in any shape other than "package × 3 + one installation
+line"**, plus, for NAMI packages with a Woning choice, one Woning line (N0008) at 3 x the floors
+(see **Pricing pipeline** below). Enforced twice, since nothing stops a line being changed
+after the fact or a package reaching the cart through an unexpected route:
+- **Client-side:** `snippets/zv-cart-guard.liquid` (rendered on `/cart` and `/cart?view=overzicht`)
+  checks the live cart on load, fixes one thing and reloads:
+  - a package line at any quantity other than 3 is reset to 3;
+  - a duplicate package line is removed;
+  - an installation line is reset to quantity 1;
+  - a **climax** package gets the Climax installation line (CL003) added;
+  - CL003 is removed from a cart without a climax package;
+  - (lowest priority, since 2026-09-25) the **Woning line** (N0008, see **Pricing pipeline**) is
+    kept at `pkg_qty` x the floors over the NAMI package lines' `Woning` properties: several
+    lines are merged into one, a wrong quantity is set, target 0 removes it, and a legacy NAMI
+    cart with Woning but no line gets it added;
+  - a **climax** package line that still carries a `Woning` property (legacy carts) has it
+    deleted via `/cart/change.js`, quantity kept. A legacy `Abonnement` property is left alone.
 
-## Product data (confirmed from the real store, 2026-09-09)
+  It never picks one of the three **nami** install options on the customer's behalf; that's
+  the customer's choice in the required radio group on Overzicht. The Woning line never
+  matches the package or installation rules (product type `NAMI_abonnementen`, not
+  `Beveiligingsabonnement`).
+- **Server-side:** `zv-checkout-overview.liquid` disables the checkout button while any of
+  these is true:
+  - `cart_needs_activation`: an installation line is missing;
+  - `cart_needs_fix`: something the guard is still fixing (including Woning on a climax line);
+  - `cart_pkg_undiscounted`: a package line carries no discount at all. The guard can't fix
+    that, so checkout stays blocked with a contact message. A customer must never pay 3 full
+    months;
+  - `cart_woning_bad` (only when the N0008 product resolves, same contact message): the Woning
+    line's quantity isn't `pkg_qty` x the NAMI floors, it carries no discount, or its unit
+    `original_price` isn't `zv_woning_unit_cents`. Never overcharge for Woning.
+
+**Known limitation: both checks run in the theme, so any route to Shopify checkout that skips
+Overzicht bypasses them.** A cart permalink (`/cart/<variant>:<qty>`) and typing or bookmarking
+`/checkout` directly go straight to Shopify's checkout: no guard, no gate, no `av_akkoord`. The
+other sales channels where N0001 (Inzicht), N0003 (Alert) and the installation products (CL003,
+N0004/N0005/N0006) are published (Shop, Point of Sale, Google & YouTube, Inbox; Admin API,
+2026-09-23) don't run this theme either. A real server-side block needs a Shopify checkout
+(cart/checkout validation) function, which is a separate decision; the theme can't close this.
+
+The standalone product page doesn't render a buy form for a package (`sections/main-product.liquid`).
+Its Dynamic Checkout buttons (Shop Pay etc., `show_dynamic_checkout` in `templates/product.json`)
+skip straight to Shopify checkout with no chance for either guard to run, so they're switched off
+entirely (2026-09-09) rather than patched.
+
+## Product data (confirmed from the real store, 2026-09-09; SKUs/titles updated 2026-09-23)
 
 Pulled live via `shopify theme dev`'s local proxy (`/products.json`) and `shopify theme
 console` against `zoveiligdev.myshopify.com` — not guessed. Re-pull if this ever looks stale;
@@ -68,14 +100,66 @@ none of them carry `abonnement`:
 
 | Product (title) | handle | type | tags | `custom.finder_key` | SKU |
 |---|---|---|---|---|---|
-| Langer Thuis Inzicht | `langer-thuis-inzicht` | Beveiligingsabonnement | keuzehulp, Langer Thuis | `aware` | LT-INZ |
-| Langer Thuis Zeker | `langer-thuis-zeker` | Beveiligingsabonnement | keuzehulp, Langer Thuis | `aware_plus` | LT-ZEK |
+| Nami Langer Thuis Inzicht | `langer-thuis-inzicht` | Beveiligingsabonnement | keuzehulp, Langer Thuis | `aware` | N0001 |
+| Nami Langer Thuis Zeker | `langer-thuis-zeker` | Beveiligingsabonnement | keuzehulp, Langer Thuis | `aware_plus` | N0002 |
 | Langer Thuis Beschermd | `langer-thuis-beschermd` | Beveiligingsabonnement | keuzehulp, Langer Thuis | `care` | LT-BES |
-| Mijn Thuis Alert | `mijn-thuis-alert` | Beveiligingsabonnement | keuzehulp, Mijn Thuis | `secure` | MT-ALE |
+| Nami Mijn Thuis Alert | `mijn-thuis-alert` | Beveiligingsabonnement | keuzehulp, Mijn Thuis | `secure` | N0003 |
 | Mijn Thuis Protect | `mijn-thuis-protect` | Beveiligingsabonnement | keuzehulp, Mijn Thuis | `guard` | MT-PRO |
 | Mijn Thuis Vista | `mijn-thuis-vista` | Beveiligingsabonnement | keuzehulp, Mijn Thuis | `secure_plus` | MT-VIS |
 | Veilig Onderweg Paniek Meldkamer | `veilig-onderweg-paniek-meldkamer` | Beveiligingsabonnement | keuzehulp, prijs-volgt, Veilig Onderweg | `liogo_solo` | — |
 | Veilig Onderweg Zorgmeldkamer | `veilig-onderweg-zorgmeldkamer` | Beveiligingsabonnement | keuzehulp, prijs-volgt, Veilig Onderweg | `liogo_guard` | — |
+| Extra etage of >100m2 (the Woning line, not a package) | `extra-etage-of-100m2` | NAMI_abonnementen | — | — | N0008 |
+
+N0008 (created in Shopify Admin on 2026-09-25, not from this repo): one variant, inventory
+**untracked**, published to the Online Store. It is the priced Woning line for the NAMI packages
+only (see **Pricing pipeline**), resolved by `surcharges[extra-etage].shopify` handle + SKU.
+Preflight 2026-09-25: its price is **€40,00** (the config unit is €4,00) and it is **not** in the
+"Eerste 3 maanden" discount yet; Overzicht blocks checkout on both (`cart_woning_bad`). See
+`docs/woning-n0008-line-2026-09-25.md`.
+
+Installation products (2026-09-23): NAMI `geen-installatie-nami` N0006 €0,
+`telefonische-ondersteuning-installatie-nami` N0005 €35, `installatie-nami` N0004 €99 (customer
+picks one on Overzicht); Climax `climax-instalatie` CL003 €99 (Beschermd/Protect only, never in a
+NAMI cart). Full table with variant ids: `docs/prepay-qty3-2026-09-23.md`.
+
+**Odoo's product sync can replace Shopify products.** On 2026-09-23 it swapped Inzicht and Alert
+for new products under the same handles (old ones archived with `-oud-` handles), changed SKUs
+to N000x, renamed titles to "Nami …", **dropped `custom.finder_key`** from the new products and
+**switched inventory tracking on** (0 stock, overselling denied: Shopify reports them "sold out"
+and they can't be added to a cart). After any product swap, check read-only (Admin API) on **all
+sold products**: `custom.finder_key` on all 5 packages (`aware` / `aware_plus` / `care` /
+`secure` / `guard`) and `inventoryItem.tracked == false` on every package and installation
+product and on N0008. Fixing either is a product change — flag it to Thijs, never make it from here.
+(It happened again: on 2026-09-25 N0001-N0003 were `tracked: true` with DENY and stock <= 0,
+last updated 2026-09-24 13:51 UTC, so the three NAMI cards rendered without a buy button, on
+live too.)
+
+**Packages come from pricing.config.json handles, never from a collection or its tags.**
+Since `fix/packages-by-handle` (2026-09-24), the Oplossingen cards in
+`sections/oplossingen.liquid` and the product map in `snippets/zv-pakket-matcher.liquid` (also
+used on Vergelijk pakketten) loop the config's `lines[].packages[]` handles in config order and
+look each one up with `all_products[handle]`. The Oplossingen section reads `zv_line_<line>_handles/_skus` from
+`zv-pricing`; render'ed snippets use the generated `snippets/zv-package-handles.liquid`. A
+product that's missing or whose first variant's SKU isn't the config's `sku` skips just that
+card or map entry (`<!-- zv: package <handle> missing or SKU mismatch -->` in the card grid);
+an unavailable product still renders without a buy button. The `collection` settings now only
+pick which product line a tab or matcher shows. Tagged smart collections (`langer-thuis`,
+`mijn-thuis`, `veilig-onderweg`) no longer drive the cards: on 2026-09-24 the Odoo sync cleared
+the tags on N0001-N0003 and the packages vanished from the site, and Odoo swaps append new
+products to the end of a collection, which reordered grids. The homepage finder map in
+`sections/finder-preview.liquid` reads all lines the same way (`zv-package-handles`,
+`line: 'all'`) since `fix/finder-by-handle` (2026-09-24); before that it read
+`keuzehulp-pakketten`, which is not published to the Online Store, so every finder result
+showed "Prijs volgt". `assets/zv-finder.js` shows each package's product price, except Vista
+(secure_plus): no price but "Op maat, na een vrijblijvend adviesgesprek", and its link goes to
+the Vista card (`#mijn-thuis-vista`), like the matcher's. Veilig Onderweg (product price 0)
+shows "Prijs volgt".
+**When Odoo replaces a product, update its `productHandle` (and `sku`) in
+pricing.config.json and rebuild**; `check_pricing.py` section 14 fails if a package has no
+handle or sku. `all_products` allows 20 unique handles per page, so keep lookups well under
+that. Never build the list with `slice`/`concat` on `collection.products`: PR #95 did that,
+rendered 0 package cards on live (a paginated drop, not a plain array, see `bd57117`) and was
+reverted in PR #96.
 
 `sections/zv-cart.liquid` and `sections/zv-checkout-overview.liquid` both classify a line item
 as a subscription via `item.product.type == sub_type or item.product.tags contains sub_tag`
@@ -100,11 +184,15 @@ its own package cards and links here via `zv-route` key `vergelijk-pakketten`.
 - Each card is a `scenario` block; its `package` setting (inzicht/zeker/beschermd) is the scoring
   mapping and is editable in the theme editor. **The shipped mapping is a placeholder and still
   needs product sign-off (Robi/Robert)** — it was guessed from the card wording, not confirmed.
-- Scoring is pure client-side (`{% javascript %}` in the section): most selected cards per package
-  wins; ties go to the higher tier (beschermd > zeker > inzicht); zero selected → nothing highlighted.
+- Scoring is pure client-side (`recommend()` in `assets/zv-vergelijk-pakketten.js`): each card's
+  `package` is the lowest tier that has that scenario, and the advice is the highest of those tiers
+  among the selected cards, i.e. the smallest package that covers all of them (inzicht < zeker <
+  beschermd). A `lead_only_pkgs` package (Mijn Thuis Vista) wins only with strictly more selected
+  cards than every other package; otherwise it is excluded. Zero selected → nothing highlighted.
 - The advice bar's add-to-cart resolves package → real product through the same
   `custom.finder_key` metafield mapping the Overzicht page uses (`aware`→inzicht, `aware_plus`→zeker,
-  `care`→beschermd) on the section's `collection` setting (default `langer-thuis`). No variant ids in
+  `care`→beschermd) over the config handles of the line the `collection` setting names (default
+  `langer-thuis`), see "Packages come from pricing.config.json handles" above. No variant ids in
   code. If the same variant is already in the cart it bumps that line via `/cart/change.js` instead
   of adding a second line (Shopify only merges lines whose properties match exactly, and the
   Oplossingen card-add attaches `Bron: Oplossingen` while this one attaches `Bron: Vergelijk pakketten`).
@@ -116,65 +204,136 @@ its own package cards and links here via `zv-route` key `vergelijk-pakketten`.
 ## Pricing pipeline
 
 `pricing/pricing.config.json` is the single source of truth for activation fee, intro promo,
-contract terms and indicative contract value. `python3 scripts/build_pricing.py` regenerates
-`pricing/pricing.generated.json` and `snippets/zv-pricing.liquid` (committed, generated —
-don't hand-edit). `python3 scripts/check_pricing.py` verifies the maths and that no theme
+contract terms, indicative contract value and the names the theme shows. `python3
+scripts/build_pricing.py` regenerates `pricing/pricing.generated.json`, `snippets/zv-pricing.liquid`
+and `snippets/zv-item-names.liquid` (committed, generated — don't hand-edit). `python3 scripts/check_pricing.py` verifies the maths and that no theme
 file carries an independent literal price or duration; CI runs both on every push/PR.
 
-**Activation fee**: `activation.productHandle`/`sku` in the config identify the real Shopify
-product ("Activatie en installatie", confirmed live 2026-09-09) — add-to-cart flows resolve it
-by handle (`all_products[zv_activation_handle]`), never a hardcoded variant id, same pattern as
-package lookup via `finder_key`. See **Checkout flow** above for how its presence in cart is
-enforced.
+**HARD RULE (Thijs, 2026-09-23): never create products.** The only products sold on this site
+are the 5 packages and their installation products listed in `docs/prepay-qty3-2026-09-23.md`,
+plus the Woning line N0008 (created in Shopify Admin on 2026-09-25, never from here).
+Odoo's contract automation keys off these products, and every new Shopify product becomes a stub
+product in Odoo (the retired PROMO-* products left a `PROMO-ZEK` stub there). Never create
+products, and never modify products or the "Eerste 3 maanden" discount from this repo either. If
+something seems to need a new product, stop and flag it.
 
-**Intro promo, live on/off switch**: `promo.enabled` in the config means "this promo mechanism
-is a confirmed, computed part of the pricing model" (build_pricing.py won't compute
-`promoMonthly`/`promoDiscountTotal` at all if it's `false`) — it is **not** the day-to-day
-toggle and should almost never change. Whether the discount is actually showing on the
-storefront right now is controlled entirely by the Shopify **theme setting** `zv_promo_live`
-("Zo Veilig · Introductiekorting" in the theme editor, schema in
-`config/settings_schema.json`), a checkbox Thijs can flip himself with **no code change or
-redeploy** — every promo-specific render (`zv_promo_active` in `zv-checkout-overview.liquid`
-and `actie-korting.liquid`) is gated on `promo.enabled`/`ratePercent` from config AND this live
-setting both being true. Default is off (2026-09-09: the promo product doesn't exist in
-Shopify yet), with the real 50%/3-months figures already computed and waiting in
-`zv-pricing.liquid` — turning the setting on shows them immediately, nothing else to do.
+**The intro promo: package at quantity 3 (live model, 2026-09-23).** A package purchase is
+exactly two cart lines:
 
-**Interim intro-promo repricing (planned, not yet live as of 2026-09-10)**: rather than a
-dedicated 3-month-bundle SKU, the plan is to reprice the *existing* package product itself —
-its live Shopify price becomes the 3-month bundle total (`monthly × promo.months`), with a
-real Shopify Discount taking `promo.ratePercent` off that, scoped to package products only
-(never activation) — charged in full today. Ongoing monthly SEPA billing is owned entirely by
-Odoo after the order; Shopify never sees it again. Consequence: once this repricing is live,
-`item.final_line_price` on a package line stops meaning "one month's rate" and starts meaning
-"this bundle's price" — any UI that read that value as a monthly figure would be showing a
-multi-month bundle price labelled as monthly, which is exactly the bug this section's
-`item.final_line_price`-based "per maand" displays used to have.
+```
+installation product  x 1   full price, never discounted (CL003 for climax; N0006/N0005/N0004 for nami)
+package product       x 3   the first 3 months, prepaid; Shopify's automatic "Eerste 3 maanden"
+                            discount (50%, scoped to the package products only) takes 50% off
+```
 
-**Fix**: `sections/zv-cart.liquid` and `sections/zv-checkout-overview.liquid` now source every
-"per maand" figure from the confirmed monthly rate (`zv_{pkg}_monthly_cents` /
-`zv_{pkg}_promo_monthly_cents`, emitted by `build_pricing.py`) via the shared
-`snippets/zv-package-monthly-cents.liquid` (finder_key → cents lookup, one place instead of
-duplicated per call site), scaled by `item.quantity` — the cart's `+`/`−` stepper works on
-package lines same as anything else, so a flat per-unit figure would silently under-report a
-qty-2 line by half. A line whose finder_key can't be resolved falls back to its own live price
-(degraded, same convention as an unrecognized product elsewhere). "Vandaag te betalen" is
-untouched — it stays 100% live, since it's just today's real charge, bundle price included.
+Nothing in the theme computes the discount. Every add-to-cart flow adds the real package variant
+at `promo.packageCartQuantity` (= `promo.months`, emitted as `zv_promo_package_qty`), never adds
+a package twice, and adds CL003 only for a climax package (`installGroup` in the config). The
+monthly rate is billed by Odoo over SEPA from month 4. Whether Odoo actually does that (one
+contract at the plain rate, not quantity 3, SEPA from month 4) is **unconfirmed**:
+`unresolved.ODOO_PROMO_DISCOUNT`, documentation only: Odoo is out of scope for this repo and
+Thijs handles it with Alex. The Shopify discount is the
+**only** on/off switch; the `zv_promo_live` theme setting is gone. `promo.enabled` only means
+"the mechanism is part of the pricing model". It supersedes the 2026-09-22 PROMO-* product
+model (`docs/prepay-promo-lineitems-2026-09-22.md`); see `docs/prepay-qty3-2026-09-23.md` for
+why that was abandoned.
 
-**Known gap, accepted as unavoidable for now**: this makes `pricing.config.json`'s
-`monthlyRecurringPrice` the sole source for "the ongoing monthly rate" shown to the customer,
-with no live signal left in Shopify to cross-check it against (Shopify only ever sees the
-bundle price; the true monthly rate lives in Odoo's subscription setup). If config and Odoo
-ever drift apart, nothing here would catch it — that has to stay a manually-verified sync
-point between this repo and whoever configures Odoo's recurring billing, not an automated
-check. Re-verify this section is still accurate once the repricing actually ships.
+**Rounding follows Shopify: per unit, then x 3** (Thijs, 2026-09-23). Shopify prices each unit
+of the package line on its own (50% of €24,95 → €12,48), so the prepaid amount is `months ×
+ROUND_HALF_UP(monthly × rate)` (Zeker €37,44), never `ROUND_HALF_UP(months × monthly × rate)`
+(€37,43). `build_pricing.py` computes it that way, and the ICV uses the same figure (installation
++ prepaid amount + monthly × (term − 3)). `check_pricing.py` asserts all 11 "vandaag"
+amounts. They were measured equal to real carts on 2026-09-23.
+
+**Names come from `pricing.config.json`, never the Shopify product title.** Odoo's product sync
+renames products ("Nami Langer Thuis Zeker", "Nami Geen Instalatie") and can do it again.
+- **Packages:** by `custom.finder_key` via `snippets/zv-package-name.liquid`
+  (`zv_package_names_by_fk`; each config package has a `finderKey`).
+- **Installation products:** by handle via `snippets/zv-install-name.liquid`
+  (`zv_install_names_by_handle`).
+- **JS that only has Cart AJAX data** (the cart drawer, GA4 `item_name` in `assets/zv-track.js`)
+  uses the generated `#zv-item-names` island (handle → name) that `layout/theme.liquid` renders.
+
+Use these on any surface that shows a product name. GA4 `item_id` stays the SKU. **Shopify's own
+checkout page and order e-mails show the Shopify product title** (the formal Odoo name). That's
+intended (Thijs, 2026-09-23); don't work around it in the theme.
+
+**Woning surcharge: NAMI only, collected by one priced N0008 line (Thijs, 2026-09-25).** It
+supersedes "property only, never a priced line" (2026-09-24). `surcharges[extra-etage]` holds the
+unit (400 cents), `shopify` {handle `extra-etage-of-100m2`, sku N0008}, `appliesTo` (Inzicht,
+Zeker, Alert handles; `check_pricing.py` fails on a Climax package there) and `woning` (heading,
+the two option values, the legacy prefix).
+- The `Woning` line-item property on a NAMI package line is unchanged (same values, same legacy
+  prefix, same three writers in `sections/oplossingen.liquid`): the per-package record for Odoo.
+- The cart also carries ONE N0008 line at `promo.months` x the floors over all NAMI package lines
+  (1 floor = 3, 2 floors = 6, none = no line). It is meant to be in the "Eerste 3 maanden"
+  discount, so a floor costs 3 x half_up(400 x 50%) = 600 cents today; Odoo bills 400 per floor
+  per month from month 4.
+- `build_pricing.py` emits `zv_woning_handle`, `zv_woning_sku`, `zv_woning_applies_handles` and,
+  for the NAMI packages only, `zv_<pakket>_woning_<n>_icv_cents` = n x (3 x half_up(unit x rate)
+  + unit x (term - 3)): +4200 / +8400. There are no Climax Woning assigns.
+- The theme resolves N0008 with `all_products[zv_woning_handle]` and checks its first variant's SKU.
+  Unresolved: property only, no line, no Woning gate, one `console.warn` on Oplossingen.
+- Oplossingen: `syncWoningLine(cart)` (card add, where N0008 rides in the same `/cart/add.js`
+  items array right after the package; modal add/buy; the drawer's Woning choice and remove)
+  applies one add/change/remove. The drawer never shows N0008 as a row.
+- `/cart` and Overzicht show it as one non-editable row "Woning: <option value>"; its
+  `final_line_price` counts in "Vandaag te betalen", while "Daarna" and the ICV keep counting
+  the surcharge from the NAMI property only (never the line too). Woning on a Climax line is
+  ignored there and deleted by the guard.
+- No theme file outside the generated snippets names the N0008 SKU or handle (`check_pricing.py`).
+
+**Climax packages (Beschermd, Protect) have no Woning and no Uitbreidingen panel** (Thijs,
+2026-09-25). Their Oplossingen cards show "Uitbreiding hardware" (link to
+`/pages/camera-hardware?pakket=beschermd|protect#grotere-woning`) plus a hint in `.ltc__links`
+instead, and so does their Meer informatie modal. The hardware page's `#grotere-woning` block
+lists the extra sensors per verdieping, mapped to its HW rows. So Beschermd and Protect no longer
+offer the Ontzorgpakket either. The NAMI cards keep the panel, byte-identical.
+
+**Activation fee** (`activation` in the config) is the **Climax** installation product:
+`climax-instalatie`, CL003, €99, since 2026-09-23 (it replaced `activatie-en-installatie` /
+ACT-INSTALL, which no longer exists). It is resolved by handle (`all_products[zv_activation_handle]`),
+never a hardcoded variant id, for Beschermd/Protect only. NAMI packages use
+`installationOptions.nami` instead, chosen by the customer on Overzicht.
+
+**Videodeurbel (ADC-750, `koop-video-deurbel-750`) and Afstandsbediening (H0010,
+`huur-afstandsbediening`)** are real Shopify products with a live-priced checkbox in the
+Uitbreidingen accordion. Climax (Beschermd/Protect) shows both; since 2026-10-13 the NAMI cards
+(Inzicht/Zeker/Alert) show only Videodeurbel, and Vista shows neither. Climax has one
+accordion holding the two checkboxes plus, as its last row below a divider, the existing
+"Uitbreiding hardware" link (folded in 2026-09-26 — there is no separate hardware button or
+"Extra uitbreidingen" link any more, on any card); it renders even with no add-on resolved,
+since the hardware link alone still needs the panel. NAMI keeps its existing accordion (Woning +
+the Videodeurbel checkbox + Ontzorgpakket), no hardware link.
+Checking a box keeps one shared cart line at `zv_promo_package_qty`, same discount mechanic as
+Woning. Both were confirmed "sold out" (inventory tracked, DENY, stock <= 0) on 2026-09-26 —
+the checkbox and its live price still work, but no line can be added until that's fixed in
+Shopify Admin. Clean names come from a name-only `addonNames` array in pricing.config.json
+(deliberately not the pre-existing
+`addons[]` array, which hardcodes a price). See `docs/uitbreidingen-checkboxes-2026-09-26.md`.
+
+**Package identity comes from the package line**: `product.type == "Beveiligingsabonnement"`
+plus its `custom.finder_key` (Liquid), or product type + handle in the Cart AJAX guard, which
+can't see metafields. It drives Overzicht's contract duration, ICV, consent copy and nami-vs-climax
+install branching, and `zv-cart.liquid`'s summary.
+
+**Where each figure comes from.** "Vandaag te betalen" and its breakdown come from the live cart
+(`final_line_price`). "Daarna €X/mnd" is the package line's unit price (`original_price`).
+The actie page and add-to-cart analytics use the config's `monthlyRecurringPrice`, which must
+match the Shopify variant price: both confirmed equal on 2026-09-23 (Alert €24,95, Protect
+€37,95). What Odoo bills monthly is a separate, manually-verified sync point; nothing here can
+check it.
 
 ## Shopify store
 
 The test store is **`zoveiligdev.myshopify.com`** (admin: `admin.shopify.com/store/zoveiligdev`).
-The live/synced theme on it is named "Zoveilig-Test-shopify/main" (a theme *name*, matching the
-GitHub repo name — **not** the store's domain; `zoveilig-test-shopify.myshopify.com` does not
-exist and returns a 404). Always pass `--store zoveiligdev.myshopify.com` on every `shopify
+The live theme on it is `#188704719229`, named "Zoveilig-Test-shopify/main" (a theme *name*,
+matching the GitHub repo and branch — **not** the store's domain; `zoveilig-test-shopify.myshopify.com`
+does not exist and returns a 404). It is the published theme **and** the theme Shopify's GitHub
+integration connects to this repo's `main` branch, so **merging a PR to `main` deploys it live
+immediately**. No separate or scoped `shopify theme push` to the live theme is needed to ship a
+merged change; theme-editor edits on it come back to `main` as "Update from Shopify for theme
+Zoveilig-Test-shopify/main" commits. Always pass `--store zoveiligdev.myshopify.com` on every `shopify
 theme` CLI command, or `--environment zoveiligdev` to read it from `shopify.theme.toml` at the
 repo root. Never guess the store handle from the repo or theme name again — a wrong guess gets
 silently cached as this project's default store in `~/Library/Preferences/shopify-cli-theme-conf-
@@ -201,7 +360,8 @@ zoveiligdev.myshopify.com` explicitly on every command instead).
   validator, not just `shopify theme check`** — e.g. `shopify theme push --unpublished
   --theme "<throwaway-name>" --only <changed files>` against a disposable unpublished
   theme, then delete it. `origin main` is connected to Shopify's GitHub sync for the live
-  test theme, so a rejected file there is a live regression, not just a failed CI check.
+  theme (`#188704719229`), so a merge to `main` is a live deploy and a rejected file there is a
+  live regression, not just a failed CI check.
 - **If the Shopify CLI prompts for an interactive login (a `User verification code` /
   `activate-with-code` device-code flow), stop and wait.** Print the link and the code,
   tell the user you're waiting, and do not kill the process, work around it, or push

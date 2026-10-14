@@ -1,0 +1,37 @@
+{%- comment -%}
+  Shared lead/contact-form copy — the single source for the text every Zo Veilig lead form
+  repeats, so the forms can't drift apart again (S-10, 2026-10-12). Only the visible text
+  lives here; each form keeps its own markup, field names, ids, required-ness and submit JS.
+
+  Usage:
+    <span>{% render 'zv-form-copy', key: 'consent' %}</span>        consent line + Privacy link (HTML)
+    data-consent-error="{% render 'zv-form-copy', key: 'consent_error' %}"
+                                                                    JS message when consent is unticked
+    {% render 'zv-form-copy', key: 'callback_time' %}               "when may we call" question
+    placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}"
+
+  JS that shows the consent error reads it from a data-consent-error attribute filled
+  from this snippet (never a literal in the JS). Keep every value free of double quotes,
+  since consent_error, callback_time and phone_placeholder are rendered into attributes.
+
+  Rendered by: sections/contact-page.liquid, sections/oplossingen.liquid (Vista form and
+  the Veilig Onderweg "Blijf op de hoogte" form), sections/zakelijk.liquid,
+  sections/camera-hardware.liquid and snippets/zv-callback-form.liquid.
+{%- endcomment -%}
+{%- liquid
+  case key
+    when 'consent'
+      capture privacy_url
+        render 'zv-route', key: 'privacyverklaring'
+      endcapture
+      echo 'Ik geef toestemming dat Zo Veilig contact met mij opneemt over mijn aanvraag. Lees hoe wij met uw gegevens omgaan: <a href="'
+      echo privacy_url
+      echo '" target="_blank" rel="noopener">Privacy</a>.'
+    when 'consent_error'
+      echo 'Geef toestemming dat Zo Veilig contact met u opneemt over uw aanvraag.'
+    when 'callback_time'
+      echo 'Wanneer belt u het liefst?'
+    when 'phone_placeholder'
+      echo '06 12 34 56 78'
+  endcase
+-%}

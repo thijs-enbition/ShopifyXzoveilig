@@ -25,22 +25,20 @@
   longer subtracts anything from "Vandaag te betalen". Header/footer come
   from the theme layout.
 
-  The "p/m" price and "Maandbedrag" total are NOT read from `item.final_line_price` —
-  they come from the confirmed per-package monthly rate in the central pricing model
-  (via zv-pricing + snippets/zv-package-monthly-cents), scaled by `item.quantity`. This is
-  deliberate, not a stray literal: once the interim intro-promo mechanism is live, the
-  package product's live Shopify price represents a discounted multi-month bundle (charged
-  in full today), not one month — see zv-checkout-overview.liquid's header comment for the
-  full rationale and the known gap this leaves (no live signal left to catch the confirmed
-  monthly rate drifting from whatever Odoo actually bills). A line whose finder_key can't be
-  resolved falls back to its own live price (degraded, same convention as an unrecognized
-  package elsewhere in the theme). "Vandaag te betalen" is untouched by any of this — it
-  stays 100% live, per the paragraph above.
+  Package lines (2026-09-23 model, CLAUDE.md Pricing pipeline): a package sits in the cart as
+  the real package product at quantity zv_promo_package_qty (the 3 prepaid months), with
+  Shopify's automatic "Eerste 3 maanden" discount taking 50% off that line. Its "p/m" figure
+  is the line's UNIT price before the discount (item.original_price) — the plain monthly
+  rate, never unit x 3 — and its summary row is the line's real final_line_price, so the
+  summary rows add up to "Vandaag te betalen". Package and installation lines have no +/−
+  quantity controls: the package's quantity is the prepaid period, not something the
+  customer picks, and zv-cart-guard resets any other quantity (package to 3, installation
+  to 1) and reloads.
 
-  Renders zv-cart-guard: if a subscription package ever ends up in the cart
-  without the activation fee (e.g. added via the standalone Shopify product
-  page, which doesn't wire the fee in), it's added automatically and the
-  page reloads. See snippets/zv-cart-guard.liquid.
+  Renders zv-cart-guard: keeps the package line at quantity 3, adds the Climax installation
+  line to a Climax package that lacks it, and removes it from a cart without one; keeps the
+  Woning line at 3 x the NAMI floors and strips Woning from a Climax line. See
+  snippets/zv-cart-guard.liquid.
 {%- endcomment -%}
 
 {%- include 'zv-pricing' -%}
@@ -50,7 +48,64 @@
 {%- assign nami_install_geen_variant_id = all_products[zv_nami_install_geen_handle].selected_or_first_available_variant.id -%}
 {%- assign nami_install_telefonisch_variant_id = all_products[zv_nami_install_telefonisch_handle].selected_or_first_available_variant.id -%}
 {%- assign nami_install_huis_variant_id = all_products[zv_nami_install_huis_handle].selected_or_first_available_variant.id -%}
-{%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id -%}
+{%- comment -%}
+  Videodeurbel/Afstandsbediening add-on lines (2026-09-26): resolved by handle only, never a
+  hardcoded variant id or price — see CLAUDE.md. Each shows as a normal line (own name via
+  zv_install_names_by_handle below, no +/- stepper since its quantity is fixed at the same
+  qty-3/discount mechanic the package line uses, same as an installation line) — but, unlike
+  the Woning line above, it keeps its remove link: it's a standalone product a customer might
+  simply not want any more, not a per-package attribute.
+{%- endcomment -%}
+{%- assign zv_addon_videodeurbel_variant_id = all_products['koop-video-deurbel-750'].variants.first.id -%}
+{%- assign zv_addon_afstandsbediening_variant_id = all_products['huur-afstandsbediening'].variants.first.id -%}
+{%- comment -%}
+  Ontzorgpakket Inzicht (2026-10-13): same treatment as the two add-ons above — resolved by
+  handle only, name via zv-install-name/zv_install_names_by_handle. It's a confirmed monthly
+  service (Thijs, EUR 5,95/mnd), so its unit price also counts toward "Daarna" below — see the
+  true_month_cents addition further down. NOTE: Afstandsbediening (huur-afstandsbediening,
+  productType "Huur Componenten") may also be a recurring monthly rental rather than a one-off
+  — unconfirmed, and if so it has the same "Daarna" gap this fix closes for Ontzorgpakket.
+  Worth checking with Alex; not addressed here since it predates this change.
+{%- endcomment -%}
+{%- assign zv_addon_ontzorg_inzicht_variant_id = all_products['ontzorgpakket-inzicht'].variants.first.id -%}
+{%- comment -%}
+  Woning line (2026-09-25, NAMI packages only): resolved like the packages, by handle and only
+  if its first variant's SKU is zv_woning_sku. It renders as one non-editable row, "Woning:
+  <option value>", from the NAMI package lines' Woning properties (zv_woning_* values, never
+  the product title). Its final_line_price counts in "Vandaag te betalen" like every line;
+  "Daarna" keeps counting the surcharge from the property on the NAMI package lines only, never
+  the line itself as well. Woning on a Climax line is ignored (zv-cart-guard removes it).
+{%- endcomment -%}
+{%- liquid
+  assign woning_variant_id = nil
+  assign woning_product = all_products[zv_woning_handle]
+  if zv_woning_handle != blank and woning_product != blank and woning_product.id != blank and woning_product.variants.first.sku == zv_woning_sku
+    assign woning_variant_id = woning_product.variants.first.id
+  endif
+  assign woning_applies_list = zv_woning_applies_handles | split: '|'
+  assign woning_label = ''
+  for item in cart.items
+    if woning_applies_list contains item.product.handle
+      capture pre_wf
+        render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix
+      endcapture
+      assign pre_wf = pre_wf | strip | plus: 0
+      assign pre_wl = ''
+      if pre_wf == 2
+        assign pre_wl = zv_woning_2_value
+      elsif pre_wf == 1
+        assign pre_wl = zv_woning_1_value
+      endif
+      if pre_wl != ''
+        if woning_label != ''
+          assign woning_label = woning_label | append: ' + '
+        endif
+        assign woning_label = woning_label | append: pre_wl
+      endif
+    endif
+  endfor
+-%}
+{%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_id: woning_variant_id, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles -%}
 <div class="zv-cart">
   <section class="cartbar">
     <div class="wrap">
@@ -66,50 +121,82 @@
         <form action="{{ routes.cart_url }}" method="post" id="cart-form" class="clayout">
           <div class="citems">
             {%- for item in cart.items -%}
+              {%- if woning_variant_id != blank and item.variant_id == woning_variant_id -%}
+                {%- comment -%} The Woning line: not editable here (no quantity, no remove, no product link); zv-cart-guard keeps its quantity at 3 x the NAMI floors. Labelled from the NAMI lines' Woning values; an orphan line (no NAMI Woning, the guard removes it) reads just "Woning". {%- endcomment -%}
+                <div class="citem citem--woning">
+                  <div class="ci-thumb">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11l9-7 9 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </div>
+                  <div>
+                    <div class="ci-name">Woning{% if woning_label != '' %}: {{ woning_label | escape }}{% endif %}</div>
+                    <div class="ci-meta">Eerste {{ zv_promo_months }} maanden vandaag, daarna in het maandbedrag van uw pakket.</div>
+                  </div>
+                  <div class="ci-right">
+                    <div class="ci-price">{{ item.final_line_price | money }}</div>
+                    {%- if item.original_line_price > item.final_line_price -%}<span class="ci-note">Korting toegepast</span>{%- endif -%}
+                  </div>
+                </div>
+                {%- continue -%}
+              {%- endif -%}
               {%- assign is_sub = false -%}
               {%- if item.product.type == sub_type or item.product.tags contains sub_tag -%}{%- assign is_sub = true -%}{%- endif -%}
+              {%- comment -%} Package and installation lines show their pricing.config.json name (package via finder_key, installation via handle), never the Shopify product title. {%- endcomment -%}
+              {%- assign item_name = item.product.title -%}
               {%- if is_sub -%}
-                {%- assign item_fk = item.product.metafields.custom.finder_key.value -%}
-                {%- capture li_monthly_cents_raw -%}{%- render 'zv-package-monthly-cents', finder_key: item_fk, inzicht: zv_inzicht_monthly_cents, zeker: zv_zeker_monthly_cents, beschermd: zv_beschermd_monthly_cents, alert: zv_alert_monthly_cents, protect: zv_protect_monthly_cents -%}{%- endcapture -%}
-                {%- assign li_monthly_cents = li_monthly_cents_raw | strip | plus: 0 -%}
-                {%- if li_monthly_cents > 0 -%}
-                  {%- assign li_month_total_cents = li_monthly_cents | times: item.quantity -%}
-                {%- else -%}
-                  {%- assign li_month_total_cents = item.final_line_price -%}
-                {%- endif -%}
+                {%- capture cfg_name -%}{%- render 'zv-package-name', finder_key: item.product.metafields.custom.finder_key.value, names: zv_package_names_by_fk -%}{%- endcapture -%}
+              {%- else -%}
+                {%- capture cfg_name -%}{%- render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle -%}{%- endcapture -%}
               {%- endif -%}
+              {%- assign cfg_name = cfg_name | strip -%}
+              {%- if cfg_name != blank -%}{%- assign item_name = cfg_name -%}{%- endif -%}
+              {%- assign is_install = false -%}
+              {%- if item.variant_id == activation_variant_id or item.variant_id == nami_install_geen_variant_id or item.variant_id == nami_install_telefonisch_variant_id or item.variant_id == nami_install_huis_variant_id -%}{%- assign is_install = true -%}{%- endif -%}
+              {%- assign is_addon = false -%}
+              {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_addon_ontzorg_inzicht_variant_id -%}{%- assign is_addon = true -%}{%- endif -%}
               <div class="citem">
                 <div class="ci-thumb">
                   {%- if item.image -%}
-                    <img src="{{ item.image | image_url: width: 176 }}" alt="{{ item.product.title | escape }}" width="88" height="88" loading="lazy">
+                    <img src="{{ item.image | image_url: width: 176 }}" alt="{{ item_name | escape }}" width="88" height="88" loading="lazy">
                   {%- else -%}
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8l9-4 9 4-9 4-9-4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 8v8l9 4 9-4V8M12 12v8" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
                   {%- endif -%}
                 </div>
                 <div>
-                  {%- if item.product.type != blank -%}<span class="ci-line">{{ item.product.type | escape }}</span>{%- endif -%}
-                  <div class="ci-name"><a href="{{ item.url }}">{{ item.product.title | escape }}</a></div>
+                  {%- if is_addon -%}<span class="ci-line">Uitbreiding</span>{%- elsif item.product.type != blank -%}<span class="ci-line">{{ item.product.type | escape }}</span>{%- endif -%}
+                  <div class="ci-name"><a href="{{ item.url }}">{{ item_name | escape }}</a></div>
                   {%- unless item.variant.title contains 'Default' -%}<div class="ci-meta">{{ item.variant.title | escape }}</div>{%- endunless -%}
                   {%- if item.selling_plan_allocation -%}<div class="ci-meta">{{ item.selling_plan_allocation.selling_plan.name | escape }}</div>{%- endif -%}
+                  {%- if is_sub and woning_applies_list contains item.product.handle -%}
+                    {%- comment -%} Woning (spec §7): its own line, not a generic property tag, on NAMI package lines only (a Climax line's Woning is ignored). The generic tags below never render (item.properties has no .size), and enabling them would also show internal keys like SKU and Bron. A legacy "Groter dan 100 m²…" value reads as option 1. {%- endcomment -%}
+                    {%- capture ci_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
+                    {%- assign ci_wf = ci_wf | strip | plus: 0 -%}
+                    {%- if ci_wf > 0 -%}
+                      {%- if ci_wf == 2 -%}{%- assign ci_wl = zv_woning_2_value -%}{%- else -%}{%- assign ci_wl = zv_woning_1_value -%}{%- endif -%}
+                      {%- assign ci_wc = zv_woning_unit_cents | times: ci_wf -%}
+                      <div class="ci-meta">Woning: {{ ci_wl | escape }} (+{{ ci_wc | money_without_trailing_zeros }}/mnd)</div>
+                    {%- endif -%}
+                  {%- endif -%}
                   {%- if item.properties.size > 0 -%}
                     <div class="ci-tags">
                       {%- for p in item.properties -%}{%- unless p.last == blank or p.first contains '_' -%}<span class="ci-tag">{{ p.first | escape }}: {{ p.last | escape }}</span>{%- endunless -%}{%- endfor -%}
                     </div>
                   {%- endif -%}
                   <div class="ci-actions">
+                    {%- unless is_sub or is_install or is_addon -%}
                     <div class="qty">
                       <a href="{{ routes.cart_change_url }}?id={{ item.key }}&quantity={{ item.quantity | minus: 1 }}" aria-label="Aantal verlagen" class="qbtn">−</a>
                       <span>{{ item.quantity }}</span>
                       <a href="{{ routes.cart_change_url }}?id={{ item.key }}&quantity={{ item.quantity | plus: 1 }}" aria-label="Aantal verhogen" class="qbtn">+</a>
                     </div>
+                    {%- endunless -%}
                     <a class="ci-remove" href="{{ routes.cart_change_url }}?id={{ item.key }}&quantity=0"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Verwijderen</a>
                   </div>
                 </div>
                 <div class="ci-right">
                   {%- if is_sub -%}
-                    <div class="ci-price" style="color:var(--indigo)">{{ li_month_total_cents | money }} <span>p/m</span></div>
+                    <div class="ci-price" style="color:var(--indigo)">{{ item.original_price | money }} <span>p/m</span></div>
                     <span class="ci-badge">Abonnement</span>
-                    <span class="ci-note">Inbegrepen bij vandaag te betalen.<br>Loopt daarna door via SEPA-incasso.</span>
+                    <span class="ci-note">Eerste {{ item.quantity }} maanden vandaag: {{ item.final_line_price | money }} ({{ zv_promo_badge }}).<br>Loopt daarna door via SEPA-incasso.</span>
                   {%- else -%}
                     <div class="ci-price">{{ item.final_line_price | money }}</div>
                     {%- if item.original_line_price > item.final_line_price -%}<span class="ci-note">Korting toegepast</span>{%- endif -%}
@@ -127,19 +214,53 @@
               {%- assign li_sub = false -%}
               {%- if item.product.type == sub_type or item.product.tags contains sub_tag -%}{%- assign li_sub = true -%}{%- endif -%}
               {%- assign today_cents = today_cents | plus: item.final_line_price -%}
+              {%- comment -%}
+                Ontzorgpakket Inzicht (2026-10-13): a confirmed recurring monthly service
+                (EUR 5,95/mnd), so its unit price counts toward "Daarna" too — see the note on
+                Afstandsbediening's own billing nature further up this file. Added independently
+                of the row-classification chain below, so this true_month_cents addition doesn't
+                depend on which branch renders its row — it now has its own elsif branch there
+                (the "× 3 — eerste 3 maanden" row), not the generic zv-install-name fallback.
+              {%- endcomment -%}
+              {%- if zv_addon_ontzorg_inzicht_variant_id != blank and item.variant_id == zv_addon_ontzorg_inzicht_variant_id -%}
+                {%- assign true_month_cents = true_month_cents | plus: item.original_price -%}
+              {%- endif -%}
+              {%- comment -%}
+                Every row is the line's real final_line_price, so the rows add up to
+                "Vandaag te betalen". A package row is labelled "<pakket> × 3 — eerste 3
+                maanden (50% korting)"; "Daarna" sums the package lines' unit prices.
+              {%- endcomment -%}
+              {%- assign row_pkg_name = blank -%}
               {%- if li_sub -%}
-                {%- assign item_fk = item.product.metafields.custom.finder_key.value -%}
-                {%- capture li_monthly_cents_raw -%}{%- render 'zv-package-monthly-cents', finder_key: item_fk, inzicht: zv_inzicht_monthly_cents, zeker: zv_zeker_monthly_cents, beschermd: zv_beschermd_monthly_cents, alert: zv_alert_monthly_cents, protect: zv_protect_monthly_cents -%}{%- endcapture -%}
-                {%- assign li_monthly_cents = li_monthly_cents_raw | strip | plus: 0 -%}
-                {%- if li_monthly_cents > 0 -%}
-                  {%- assign li_month_total_cents = li_monthly_cents | times: item.quantity -%}
-                {%- else -%}
-                  {%- assign li_month_total_cents = item.final_line_price -%}
+                {%- assign row_fk = item.product.metafields.custom.finder_key.value -%}
+                {%- if row_fk == 'aware' or row_fk == 'aware_plus' or row_fk == 'care' or row_fk == 'secure' or row_fk == 'guard' -%}
+                  {%- capture row_pkg_name -%}{%- render 'zv-package-name', finder_key: row_fk, names: zv_package_names_by_fk -%}{%- endcapture -%}
+                  {%- assign row_pkg_name = row_pkg_name | strip -%}
                 {%- endif -%}
-                {%- assign true_month_cents = true_month_cents | plus: li_month_total_cents -%}
-                <div class="srow"><span>{{ item.product.title | escape }}<br><span class="s-sub">Maandelijks · via SEPA-incasso</span></span><b>{{ li_month_total_cents | money }}<span style="font-size:12px;color:var(--muted)"> p/m</span></b></div>
+              {%- endif -%}
+              {%- if woning_variant_id != blank and item.variant_id == woning_variant_id -%}
+                {%- comment -%} The Woning line: its row counts in "Vandaag te betalen" (today_cents above), never in "Daarna" (the NAMI package line's Woning property already carries the surcharge there). {%- endcomment -%}
+                <div class="srow"><span>Woning{% if woning_label != '' %}: {{ woning_label | escape }}{% endif %}</span><b>{{ item.final_line_price | money }}</b></div>
+              {%- elsif row_pkg_name != blank -%}
+                {%- assign li_wc = 0 -%}
+                {%- if woning_applies_list contains item.product.handle -%}
+                  {%- capture li_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
+                  {%- assign li_wc = li_wf | strip | plus: 0 | times: zv_woning_unit_cents -%}
+                {%- endif -%}
+                {%- assign true_month_cents = true_month_cents | plus: item.original_price | plus: li_wc -%}
+                <div class="srow"><span>{{ row_pkg_name }} × {{ item.quantity }} — {{ zv_label_commitment }}</span><b>{{ item.final_line_price | money }}</b></div>
+              {%- elsif zv_addon_ontzorg_inzicht_variant_id != blank and item.variant_id == zv_addon_ontzorg_inzicht_variant_id -%}
+                {%- comment -%}
+                  Ontzorgpakket Inzicht (2026-10-13): same "× 3 — eerste 3 maanden" shape as a
+                  package row, so the 3-months-prepaid structure is explained the same way, but
+                  with zv_label_commitment_no_discount (no "(50% korting)") since this line isn't
+                  discounted — see pricing.config.json labels.forbidden.
+                {%- endcomment -%}
+                <div class="srow"><span>Ontzorgpakket × {{ item.quantity }} — {{ zv_label_commitment_no_discount }}</span><b>{{ item.final_line_price | money }}</b></div>
               {%- else -%}
-                <div class="srow"><span>{{ item.product.title | escape }}</span><b>{{ item.final_line_price | money }}</b></div>
+                {%- capture row_name -%}{%- render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle -%}{%- endcapture -%}
+                {%- assign row_name = row_name | strip | default: item.product.title -%}
+                <div class="srow"><span>{{ row_name | escape }}</span><b>{{ item.final_line_price | money }}</b></div>
               {%- endif -%}
             {%- endfor -%}
             {%- if cart.cart_level_discount_applications.size > 0 -%}
@@ -168,7 +289,7 @@
           <div class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 4h3l2.2 12.2a2 2 0 0 0 2 1.6h7.1a2 2 0 0 0 2-1.55L22 8H6.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="21" r="1.6" fill="currentColor"/><circle cx="19" cy="21" r="1.6" fill="currentColor"/></svg></div>
           <h2>Uw winkelwagen is leeg</h2>
           <p>Nog niets gekozen? Doe de Keuzehulp, dan vinden we samen de oplossing die bij uw situatie past.</p>
-          <div class="ce-cta"><a class="btn btn--gold" href="{% render 'zv-route', key: 'keuzehulp' %}">Vind uw oplossing <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a><a class="btn btn--ghost" href="{% render 'zv-route', key: 'oplossingen' %}">Bekijk oplossingen</a></div>
+          <div class="ce-cta"><a class="btn btn--gold" href="{% render 'zv-route', key: 'keuzehulp' %}">Keuzehulp <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a><a class="btn btn--ghost" href="{% render 'zv-route', key: 'oplossingen' %}">Bekijk oplossingen</a></div>
         </div>
       {%- endif -%}
     </div>

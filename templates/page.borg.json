@@ -1,3 +1,12 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
   "sections": {
     "main": {
@@ -88,9 +97,40 @@
           }
         }
       },
-      "block_order": ["cert1", "cert2", "cert3", "cert4", "cert5", "cert6", "cert7", "cert8", "cert9", "cert10", "cert11", "cert12"],
+      "block_order": [
+        "cert1",
+        "cert2",
+        "cert3",
+        "cert4",
+        "cert5",
+        "cert6",
+        "cert7",
+        "cert8",
+        "cert9",
+        "cert10",
+        "cert11",
+        "cert12"
+      ],
+      "settings": {
+        "eyebrow": "Verzekeringscertificaten",
+        "heading": "Inbraakbeveiliging met BORG-keurmerk",
+        "intro_text": "",
+        "intro_image": "shopify://shop_images/Scherm_afbeelding_2026-09-22_om_16.19.22.png",
+        "cta1_label": "",
+        "cta1_url": "",
+        "cta2_label": "",
+        "cta2_url": "",
+        "cta3_label": "",
+        "cta3_url": ""
+      }
+    },
+    "17900870332b6a1058": {
+      "type": "_blocks",
       "settings": {}
     }
   },
-  "order": ["main"]
+  "order": [
+    "main",
+    "17900870332b6a1058"
+  ]
 }

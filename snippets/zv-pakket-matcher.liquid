@@ -29,6 +29,10 @@
                             of linking to opl_url — see assets/zv-vergelijk-pakketten.js's
                             addPackageToCart(). Ignored for a package listed in
                             `lead_only_pkgs` (see below), which is always a plain link.
+    package_names           zv_package_names_by_fk from zv-pricing. Package display names
+                            (products JSON, default pkg_meta) come from it via finder_key,
+                            never the product title. Optional only for backward
+                            compatibility; every caller passes it.
     zv_inzicht_monthly / zv_zeker_monthly / zv_beschermd_monthly, tagline_inzicht /
     tagline_zeker / tagline_beschermd
                             optional. Only used to build the DEFAULT `pkg_meta` (below) when
@@ -43,9 +47,11 @@
                             (never a literal amount — see scripts/check_pricing.py check #9).
                             Leave
                             `unit` empty for a non-recurring price (Vista's "Op maat" has no
-                            "/mnd"). Order = tie-break precedence, ascending (see `recommend()`
-                            in the JS — the LAST package in this list wins a tie against any
-                            earlier one, same convention as today's inzicht<zeker<beschermd).
+                            "/mnd"). Order = tier, ascending (see `recommend()` in the JS: a
+                            scenario's `package` is the lowest tier that has it, and the
+                            advice is the highest of those tiers among the selected cards,
+                            i.e. the smallest package that covers all of them — same
+                            convention as today's inzicht<zeker<beschermd).
                             Also drives the feature-table's column order and the JS's
                             per-instance TIER/NAMES maps (emitted as data attributes, so two
                             matcher instances with different package vocabularies can coexist
@@ -70,8 +76,9 @@
                             sense). Such a package's "Kies X" is always a plain link to
                             `lead_url` (ignoring `embedded`), and — this is the important
                             part, see recommend() — it can only ever WIN the recommendation
-                            by strictly outscoring every other package; a tie involving it
-                            excludes it and falls back to the ordinary rule among the rest.
+                            when more of its cards are selected than of any other package; a
+                            tie involving it excludes it and falls back to the ordinary
+                            highest-selected-tier rule among the rest.
                             Default '' (no such package — Langer Thuis has none).
     lead_url                href for a lead_only_pkgs package's "Kies X" AND for the advice
                             bar's own CTA when that package is the live recommendation (see
@@ -87,22 +94,52 @@
   assign no = '<span class="no" aria-hidden="true">–</span>'
   assign arrow = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   assign opl = opl_url | default: '/pages/oplossingen'
-  assign tag_inzicht = tagline_inzicht | default: 'Rustig eerste inzicht'
-  assign tag_zeker = tagline_zeker | default: 'Vroeg signaleren van veranderingen'
-  assign tag_beschermd = tagline_beschermd | default: 'Snelle hulp bij een val of noodsituatie'
+  assign tag_inzicht = tagline_inzicht | default: 'Rust, weet dat het goed gaat'
+  assign tag_zeker = tagline_zeker | default: 'Vroeg weten geeft rust'
+  assign tag_beschermd = tagline_beschermd | default: 'Snelle hulp bij nood'
   assign match_badge = match_badge | default: 'Past bij uw situatie'
   assign recommended = recommended_pkg | default: 'zeker'
-  assign pm_coll = collections[collection]
-  if pm_coll == blank or pm_coll.products_count == 0
-    assign pm_coll = collections['langer-thuis']
-  endif
+  comment
+    Packages by handle (fix/packages-by-handle, 2026-09-24): `collection` (a collection object
+    or its handle string) only names the product line, default Langer Thuis. The product map
+    below comes from pricing.config.json via zv-package-handles, each product looked up with
+    all_products[handle] in config order, never from a tagged collection. A missing product or
+    a first-variant SKU that isn't the config's is left out of the map; an unavailable one
+    stays in with "available": false, as before.
+  endcomment
+  assign pm_line = collection.handle | default: collection | default: 'langer-thuis'
+  unless pm_line == 'langer-thuis' or pm_line == 'mijn-thuis' or pm_line == 'veilig-onderweg'
+    assign pm_line = 'langer-thuis'
+  endunless
+  capture pm_handles
+    render 'zv-package-handles', line: pm_line, what: 'handles'
+  endcapture
+  capture pm_skus
+    render 'zv-package-handles', line: pm_line, what: 'skus'
+  endcapture
+  capture pm_line_name
+    render 'zv-package-handles', line: pm_line, what: 'name'
+  endcapture
+  assign pm_handle_list = pm_handles | strip | split: '|'
+  assign pm_sku_list = pm_skus | strip | split: '|'
+  assign pm_line_name = pm_line_name | strip
 -%}
 
-{%- comment -%} Default pkg_meta reproduces today's 3 hardcoded Langer Thuis packages exactly {%- endcomment -%}
+{%- comment -%}
+  Default pkg_meta: today's 3 Langer Thuis packages. Their display names come from
+  pricing.config.json via `package_names` (see snippets/zv-package-name.liquid), never the
+  product title; the literal names are only a fallback for a caller that doesn't pass it.
+{%- endcomment -%}
+{%- capture name_inzicht -%}{%- render 'zv-package-name', finder_key: 'aware', names: package_names -%}{%- endcapture -%}
+{%- capture name_zeker -%}{%- render 'zv-package-name', finder_key: 'aware_plus', names: package_names -%}{%- endcapture -%}
+{%- capture name_beschermd -%}{%- render 'zv-package-name', finder_key: 'care', names: package_names -%}{%- endcapture -%}
+{%- assign name_inzicht = name_inzicht | strip | default: 'Inzicht' -%}
+{%- assign name_zeker = name_zeker | strip | default: 'Zeker' -%}
+{%- assign name_beschermd = name_beschermd | strip | default: 'Beschermd' -%}
 {%- assign pkg_meta_str = pkg_meta -%}
 {%- if pkg_meta_str == blank -%}
   {%- capture pkg_meta_str -%}
-    inzicht|Inzicht|{{ zv_inzicht_monthly | remove: ' ' }}|/mnd|{{ tag_inzicht }}§zeker|Zeker|{{ zv_zeker_monthly | remove: ' ' }}|/mnd|{{ tag_zeker }}§beschermd|Beschermd|{{ zv_beschermd_monthly | remove: ' ' }}|/mnd|{{ tag_beschermd }}
+    inzicht|{{ name_inzicht }}|{{ zv_inzicht_monthly | remove: ' ' }}|/mnd|{{ tag_inzicht }}§zeker|{{ name_zeker }}|{{ zv_zeker_monthly | remove: ' ' }}|/mnd|{{ tag_zeker }}§beschermd|{{ name_beschermd }}|{{ zv_beschermd_monthly | remove: ' ' }}|/mnd|{{ tag_beschermd }}
   {%- endcapture -%}
 {%- endif -%}
 {%- assign pkg_meta_arr = pkg_meta_str | strip | split: '§' -%}
@@ -121,7 +158,9 @@
 {%- capture pm_products -%}
   {%- assign first = true -%}
   {
-  {%- for p in pm_coll.products -%}
+  {%- for h in pm_handle_list -%}
+    {%- assign p = all_products[h] -%}
+    {%- if p == blank or p.id == blank or p.variants.first.sku != pm_sku_list[forloop.index0] -%}{%- continue -%}{%- endif -%}
     {%- assign fk = p.metafields.custom.finder_key.value -%}
     {%- assign pid = '' -%}
     {%- for pair in fk_pairs -%}
@@ -130,9 +169,17 @@
     {%- endfor -%}
     {%- if pid != blank -%}
       {%- assign v = p.selected_or_first_available_variant -%}
-      {%- assign short_name = p.title | remove_first: pm_coll.title | strip -%}
+      {%- capture short_name -%}{%- render 'zv-package-name', finder_key: fk, names: package_names -%}{%- endcapture -%}
+      {%- assign short_name = short_name | strip -%}
+      {%- if short_name == blank -%}{%- assign short_name = p.title | remove_first: pm_line_name | strip -%}{%- endif -%}
+      {%- comment -%}
+        variantId is what add-to-cart adds: the real package product, at the promo quantity
+        (the 3 prepaid months, see assets/zv-vergelijk-pakketten.js). handle maps it to its
+        installGroup in the pricing config, which decides whether the Climax installation
+        line is added too (see CLAUDE.md Pricing pipeline).
+      {%- endcomment -%}
       {%- unless first %},{% endunless -%}{%- assign first = false -%}
-      {{ pid | json }}:{"variantId":{{ v.id | json }},"sku":{{ v.sku | json }},"name":{{ short_name | json }},"line":{{ pm_coll.title | json }},"available":{{ p.available | default: false }},"url":{{ p.url | json }}}
+      {{ pid | json }}:{"variantId":{{ v.id | json }},"handle":{{ p.handle | json }},"sku":{{ v.sku | json }},"name":{{ short_name | json }},"line":{{ pm_line_name | json }},"available":{{ p.available | default: false }},"url":{{ p.url | json }}}
     {%- endif -%}
   {%- endfor -%}
   }
@@ -208,7 +255,7 @@
             {%- endfor -%}
           </tr>
           {%- comment -%} feat | small | val1 | val2 | … (one val per pkg_meta_arr entry, same order) — § splits rows, | splits fields {%- endcomment -%}
-          {%- assign rows = feature_rows | default: 'Discrete sensoren|Beweging en routine, geen camera|y|y|y§App voor familie|Meldingen delen met mantelzorgers|y|y|y§Melding bij afwijking|Alleen als er iets verandert|Dag|y|y§Dag- en nachtinzicht|24-uurs patroonherkenning|n|y|y§Meerdere contactpersonen|Familie samen op de hoogte|n|y|y§Meldkameropvolging|Nederlandse meldkamer, 24/7|n|n|y§Alarmknop met opvolging|Directe hulp bij nood|n|n|y§Jaarlijks onderhoud|Systeem blijft betrouwbaar|y|y|y' | strip | split: '§' -%}
+          {%- assign rows = feature_rows | default: 'Discrete sensoren|Beweging en routine, geen camera|y|y|y§App voor familie|Meldingen delen met mantelzorgers|y|y|y§Melding bij afwijking|Alleen als er iets verandert|Dag|y|y§Dag- en nachtinzicht|24-uurs patroonherkenning|y|y|y§Meerdere contactpersonen|Familie samen op de hoogte|n|y|y§Meldkameropvolging|Nederlandse meldkamer, 24/7|n|n|y§Alarmknop met opvolging|Directe hulp bij nood|n|n|y§Jaarlijks onderhoud|Systeem blijft betrouwbaar|y|y|y' | strip | split: '§' -%}
           {%- for row in rows -%}
             {%- assign r = row | split: '|' -%}
             <tr>

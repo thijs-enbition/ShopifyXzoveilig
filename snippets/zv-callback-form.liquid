@@ -27,6 +27,7 @@
   data-item-name="{{ item_name | escape }}"
   data-solution-category="{{ solution_category | escape }}"
   data-monthly-price="{{ monthly_price | escape }}"
+  data-consent-error="{% render 'zv-form-copy', key: 'consent_error' %}"
   {% if keuzehulp_result != blank %}data-keuzehulp-result="{{ keuzehulp_result | escape }}"{% endif %}
   novalidate
 >
@@ -38,11 +39,11 @@
 
     <label class="zv-cb-field">
       <span>Telefoonnummer</span>
-      <input type="tel" name="phone" autocomplete="tel" inputmode="tel" required>
+      <input type="tel" name="phone" placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}" autocomplete="tel" inputmode="tel" required>
     </label>
 
     <label class="zv-cb-field">
-      <span>Wanneer kunnen we u bellen?</span>
+      <span>{% render 'zv-form-copy', key: 'callback_time' %}</span>
       <select name="preferred_callback_time" required>
         <option value="zo-snel-mogelijk">Zo snel mogelijk</option>
         <option value="ochtend">Ochtend (9-12)</option>
@@ -59,7 +60,7 @@
 
   <label class="zv-cb-consent">
     <input type="checkbox" name="consent" required>
-    <span>Ik geef toestemming dat Zo Veilig contact met mij opneemt over mijn aanvraag.</span>
+    <span>{% render 'zv-form-copy', key: 'consent' %}</span>
   </label>
 
   <button type="submit" class="btn btn--gold zv-cb-submit">Bel mij terug</button>

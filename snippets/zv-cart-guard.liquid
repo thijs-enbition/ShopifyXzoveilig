@@ -1,80 +1,208 @@
 {%- comment -%}
-  Zo Veilig — cart guard. Ensures a subscription package never sits in the live cart
-  without its platform's one-time installation fee.
+  Zo Veilig — cart guard. Keeps the live cart in the one shape a package purchase may
+  have (CLAUDE.md, Pricing pipeline):
 
-  Climax (pricing.config.json activation.productHandle/sku, "Activatie en installatie"):
-  UNCHANGED behaviour. The Oplossingen and Vergelijk pakketten add-to-cart flows already add
-  this fee alongside a package, but nothing stops it being removed afterwards in the cart, or
-  a package reaching the cart through an entry point that doesn't add it — e.g. the standalone
-  Shopify product page's default "Toevoegen aan winkelwagen" button (Dawn's stock buy-buttons,
-  no custom wiring). On load, if a subscription line exists with no matching activation-fee
-  line, it adds the fee and reloads — no ambiguity, one fixed fee, one correct answer. Skipped
-  when a nami-install line is already present (a nami cart in good standing must never also
-  pick up the flat climax fee).
+      the real package product at quantity pkg_qty (the 3 prepaid months; Shopify's
+      automatic "Eerste 3 maanden" discount takes 50% off that line by itself)
+    + exactly one installation line at quantity 1 (never discounted)
 
-  Nami (pricing.config.json installationOptions.nami.options, 3 differently-priced variants):
-  this guard must NEVER pick one of the three for the customer — unlike the climax fee, there
-  isn't one correct answer, only the customer's own choice on the Overzicht page (required
-  radio group there, see sections/zv-checkout-overview.liquid). The only nami-specific fix
-  applied here is a consistency dedupe: if more than one of the 3 nami-install variants is
-  present at once (e.g. a stale line left behind by an interrupted swap), keep the most
-  recently added and remove the rest, then reload. A cart with none of the three is left
-  alone — that is the expected, correct state until the customer chooses.
+  A package line is a line whose product_type is `sub_type` and whose handle is one of the
+  5 purchasable package handles from pricing.config.json. The Cart AJAX API doesn't expose
+  product metafields (custom.finder_key) the way server-side Liquid does, but it does expose
+  the handle, and the handle also says which installation model the package uses: Inzicht,
+  Zeker and Alert are NAMI, Beschermd and Protect are Climax.
 
-  Known gap, not fixed here (out of the file list this change touched): the Cart AJAX API
-  doesn't expose a line item's product.metafields (custom.finder_key) the way server-side
-  Liquid does, so this script has no reliable way to tell whether an activation-less
-  subscription line is nami or climax platform by itself. In practice this rarely matters —
-  every current add-to-cart flow (Oplossingen, Vergelijk pakketten) still adds the climax fee
-  unconditionally alongside every package today, nami included, which is itself a separate
-  pre-existing gap outside this file (see docs/nami-install-choice-2026-09-21.md) — but a nami
-  subscription reaching cart with truly no fee line at all (e.g. via the standalone product
-  page, which does no fee wiring either way) would still get the climax fee added by the branch
-  above, same as before this change. Flagged, not silently patched with a guessed fix.
+  Runs on load of /cart and /cart?view=overzicht and applies at most ONE fix per load, then
+  reloads, so each fix is re-checked against the real cart:
+
+  1. More than one of the 3 NAMI install variants at once (e.g. a stale line left behind
+     by an interrupted swap): keep the most recently added, remove the rest.
+  2. Quantities. A package line at any quantity other than pkg_qty is set to pkg_qty; a
+     second line for the same package (e.g. added from two pages with different line
+     properties) is removed, since two lines would be 6 prepaid months; an installation
+     line at any quantity other than 1 is set to 1.
+  3. A Climax package without the Climax installation line (CL003) gets it added — one
+     fixed fee, one correct answer, safe to add on the customer's behalf.
+  4. The Climax installation line in a cart with no Climax package is removed: CL003 must
+     never be charged for a NAMI package.
+  5. The Woning line (2026-09-25, NAMI packages only; the product zv_woning_handle /
+     zv_woning_sku, resolved by the caller into woning_variant_id): its target quantity is
+     pkg_qty x the floors over the NAMI package lines' `Woning` properties (woning_applies
+     handles; zv-woning-floors' values and legacy prefix, so a legacy "Groter dan 100 m²…"
+     value counts as 1 floor). More than one Woning line is merged into one at the target; a
+     single line at another quantity is set to the target; target 0 removes it; a NAMI cart
+     with Woning but no line (e.g. from before 2026-09-25) gets the line added.
+  6. A Climax package line that carries a `Woning` property (legacy carts: Beschermd and
+     Protect offered Woning until 2026-09-25) has it deleted via /cart/change.js, same
+     quantity. A legacy Abonnement/Uitbreidingen property on it is left alone.
+  The Woning line never matches the package or installation rules above (its product type
+  is not sub_type and its variant is none of the installation ids). Without woning_variant_id
+  rule 5 is skipped: the property-only fallback.
+
+  The same rules are exposed as window.zvCartGuard.planFix(cart), which returns the one fix
+  or null. Overzicht's checkout button runs it on a fresh /cart.js before it navigates.
+
+  NAMI packages: this guard must NEVER pick one of the three NAMI install options for the
+  customer — there isn't one correct answer, only the customer's own choice on Overzicht
+  (required radio group, see sections/zv-checkout-overview.liquid). A NAMI cart with none of
+  the three is left alone; that's the expected state until the customer chooses.
+
+  A package line that arrives WITHOUT the 50% discount (e.g. the Shopify discount was
+  deactivated) is not something this script can fix. Overzicht blocks checkout for it
+  server-side instead (`cart_pkg_undiscounted` in zv-checkout-overview.liquid), so a customer
+  can never pay 3 full months.
 
   Silent no-op throughout if a variant id can't be resolved, or if a fetch fails (e.g.
-  offline) — the caller also fails safe server-side (see zv-checkout-overview.liquid's
-  cart_needs_activation gate, which blocks checkout regardless of whether this script runs).
+  offline) — Overzicht also fails safe server-side (its checkout gate blocks regardless of
+  whether this script runs).
 
-  Params: activation_variant_id, sub_type, nami_geen_variant_id, nami_telefonisch_variant_id,
-  nami_huis_variant_id
+  Params: activation_variant_id (Climax installation, CL003), sub_type,
+  nami_geen_variant_id, nami_telefonisch_variant_id, nami_huis_variant_id, pkg_qty
+  (zv_promo_package_qty), and the package product handles inzicht_handle, zeker_handle,
+  alert_handle (NAMI) and beschermd_handle, protect_handle (Climax); for the Woning rules
+  woning_variant_id (nil when unresolved), woning_v1, woning_v2 (zv_woning_1_value /
+  _2_value), woning_legacy (zv_woning_legacy_prefix) and woning_applies
+  (zv_woning_applies_handles, pipe-separated) — passed explicitly because `render` doesn't
+  inherit the caller's scope.
 {%- endcomment -%}
-{%- if activation_variant_id != blank or nami_geen_variant_id != blank or nami_telefonisch_variant_id != blank or nami_huis_variant_id != blank -%}
+{%- if pkg_qty > 0 -%}
 <script>
 (function () {
   if (window.__zvCartGuardRan) return;
   window.__zvCartGuardRan = true;
   var ACTIVATION_ID = {{ activation_variant_id | json }};
   var SUB_TYPE = {{ sub_type | json }};
+  var PKG_QTY = {{ pkg_qty | json }};
   var NAMI_IDS = [{{ nami_geen_variant_id | json }}, {{ nami_telefonisch_variant_id | json }}, {{ nami_huis_variant_id | json }}]
     .filter(function (id) { return id != null; })
     .map(String);
+  var NAMI_PKG_HANDLES = [{{ inzicht_handle | json }}, {{ zeker_handle | json }}, {{ alert_handle | json }}].filter(Boolean);
+  var CLIMAX_PKG_HANDLES = [{{ beschermd_handle | json }}, {{ protect_handle | json }}].filter(Boolean);
+  var WONING_ID = {{ woning_variant_id | json }};
+  if (WONING_ID === '') WONING_ID = null;
+  var WONING_V1 = {{ woning_v1 | json }}, WONING_V2 = {{ woning_v2 | json }}, WONING_LEGACY = {{ woning_legacy | json }};
+  var WONING_APPLIES = String({{ woning_applies | json }} || '').split('|').filter(Boolean);
 
-  window.fetch('/cart.js').then(function (r) { return r.json(); }).then(function (cart) {
+  // A Woning property value -> floors, the same mapping as snippets/zv-woning-floors.liquid.
+  function woningFloors(value) {
+    var v = value == null ? '' : String(value);
+    if (!v) return 0;
+    if (WONING_V2 && v === WONING_V2) return 2;
+    if (WONING_V1 && v === WONING_V1) return 1;
+    return (WONING_LEGACY && v.indexOf(WONING_LEGACY) === 0) ? 1 : 0;
+  }
+  function hasWoningProp(it) {
+    var p = it.properties || {};
+    return Object.prototype.hasOwnProperty.call(p, 'Woning') && p['Woning'] != null && p['Woning'] !== '';
+  }
+
+  function post(url, body) {
+    return window.fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) { if (r.ok) window.location.reload(); });
+  }
+
+  // The rules below, as a pure function of a /cart.js response: returns the ONE fix to
+  // apply as { url, body }, or null when the cart is in shape. Exposed as
+  // window.zvCartGuard.planFix so Overzicht's checkout button can re-check a fresh cart
+  // on click with these same rules instead of a copy of them.
+  function planFix(cart) {
     var items = (cart && cart.items) || [];
-    var hasSub = items.some(function (it) { return it.product_type === SUB_TYPE; });
-    var hasActivation = items.some(function (it) { return String(it.variant_id) === String(ACTIVATION_ID); });
+    var isWoningLine = function (it) { return WONING_ID != null && String(it.variant_id) === String(WONING_ID); };
+    var isPkg = function (it) {
+      return !isWoningLine(it) && it.product_type === SUB_TYPE && (NAMI_PKG_HANDLES.indexOf(it.handle) !== -1 || CLIMAX_PKG_HANDLES.indexOf(it.handle) !== -1);
+    };
+    var isActivation = function (it) { return ACTIVATION_ID != null && String(it.variant_id) === String(ACTIVATION_ID); };
     var namiLines = items.filter(function (it) { return NAMI_IDS.indexOf(String(it.variant_id)) !== -1; });
+    var pkgLines = items.filter(isPkg);
+    var hasClimaxPkg = pkgLines.some(function (it) { return CLIMAX_PKG_HANDLES.indexOf(it.handle) !== -1; });
+    var activationLines = items.filter(isActivation);
 
+    // 1. Duplicate NAMI install lines: keep the most recently added.
     if (namiLines.length > 1) {
       var keepId = String(namiLines[namiLines.length - 1].variant_id);
-      var updates = {};
+      var namiUpdates = {};
       namiLines.forEach(function (it) {
         var vid = String(it.variant_id);
-        if (vid !== keepId) updates[vid] = 0;
+        if (vid !== keepId) namiUpdates[vid] = 0;
       });
-      return window.fetch('/cart/update.js', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updates: updates })
-      }).then(function (r) { if (r.ok) window.location.reload(); });
+      return { url: '/cart/update.js', body: { updates: namiUpdates } };
     }
 
-    if (hasSub && !hasActivation && namiLines.length === 0) {
-      return window.fetch('/cart/add.js', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: [{ id: ACTIVATION_ID, quantity: 1 }] })
-      }).then(function (r) { if (r.ok) window.location.reload(); });
+    // 2. Quantities, keyed by line key so each line is set on its own.
+    var qtyUpdates = {};
+    var seenPkgVariants = {};
+    pkgLines.forEach(function (it) {
+      var vid = String(it.variant_id);
+      if (seenPkgVariants[vid]) { qtyUpdates[it.key] = 0; return; }
+      seenPkgVariants[vid] = true;
+      if (it.quantity !== PKG_QTY) qtyUpdates[it.key] = PKG_QTY;
+    });
+    namiLines.concat(activationLines).forEach(function (it) {
+      if (it.quantity !== 1 && qtyUpdates[it.key] == null) qtyUpdates[it.key] = 1;
+    });
+    if (Object.keys(qtyUpdates).length) return { url: '/cart/update.js', body: { updates: qtyUpdates } };
+
+    // 3. A Climax package needs the one fixed Climax installation line.
+    //    update.js with an absolute quantity of 1 (it adds the variant when it's missing),
+    //    never add.js: add.js increments, so two overlapping guard runs (a fast /cart ->
+    //    Overzicht click, or two tabs) would each add 1 and stack CL003 to quantity 2.
+    if (hasClimaxPkg && ACTIVATION_ID != null && !activationLines.length) {
+      var setActivation = {};
+      setActivation[ACTIVATION_ID] = 1;
+      return { url: '/cart/update.js', body: { updates: setActivation } };
     }
+
+    // 4. The Climax installation line never stays in a cart without a Climax package.
+    if (!hasClimaxPkg && activationLines.length) {
+      var rm = {};
+      activationLines.forEach(function (it) { rm[it.key] = 0; });
+      return { url: '/cart/update.js', body: { updates: rm } };
+    }
+
+    // 5. The Woning line: one line at pkg_qty x the NAMI package lines' floors (NAMI only).
+    if (WONING_ID != null) {
+      var floors = 0;
+      pkgLines.forEach(function (it) {
+        if (WONING_APPLIES.indexOf(it.handle) !== -1) floors += woningFloors((it.properties || {})['Woning']);
+      });
+      var target = PKG_QTY * floors;
+      var woningLines = items.filter(isWoningLine);
+      if (woningLines.length > 1) {
+        var merge = {};
+        woningLines.forEach(function (it, i) { merge[it.key] = i === 0 ? target : 0; });
+        return { url: '/cart/update.js', body: { updates: merge } };
+      }
+      if (woningLines.length === 1 && woningLines[0].quantity !== target) {
+        var setWoning = {};
+        setWoning[woningLines[0].key] = target;   // 0 removes it
+        return { url: '/cart/update.js', body: { updates: setWoning } };
+      }
+      // Missing: update.js with an absolute quantity by variant id adds it, and two overlapping
+      // guard runs can't stack it (same reason as rule 3).
+      if (!woningLines.length && target > 0) {
+        var addWoning = {};
+        addWoning[WONING_ID] = target;
+        return { url: '/cart/update.js', body: { updates: addWoning } };
+      }
+    }
+
+    // 6. A Climax package line never carries Woning: delete the property, keep the quantity.
+    var climaxWoning = pkgLines.filter(function (it) { return CLIMAX_PKG_HANDLES.indexOf(it.handle) !== -1 && hasWoningProp(it); })[0];
+    if (climaxWoning) {
+      var keep = {}, cp = climaxWoning.properties || {};
+      for (var pk in cp) { if (Object.prototype.hasOwnProperty.call(cp, pk) && pk !== 'Woning') keep[pk] = cp[pk]; }
+      return { url: '/cart/change.js', body: { id: climaxWoning.key, quantity: climaxWoning.quantity, properties: keep } };
+    }
+    return null;
+  }
+
+  window.zvCartGuard = { planFix: planFix };
+
+  window.fetch('/cart.js').then(function (r) { return r.json(); }).then(function (cart) {
+    var fix = planFix(cart);
+    if (fix) return post(fix.url, fix.body);
   }).catch(function () { /* fail safe: server-side gate (Overzicht) still blocks checkout */ });
 })();
 </script>

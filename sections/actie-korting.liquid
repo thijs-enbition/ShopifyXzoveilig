@@ -6,26 +6,20 @@
   discount rate itself come from the zv-pricing include, never a literal here (CI
   check #9 in scripts/check_pricing.py enforces that).
 
-  Whether the promo is actually live right now is controlled by the Shopify theme
-  setting `zv_promo_live` (Zo Veilig · Introductiekorting) — a checkbox Thijs can flip
-  from the theme editor, no code change or redeploy needed. `zv_promo_active` (from
-  zv-pricing, i.e. pricing.config.json `promo.enabled`/`ratePercent`) confirms the
-  mechanism itself is valid; both must be true for the discount to show. While either
-  is off, the whole page degrades to a plain package overview: no discount badge, no
-  struck-through "was" price, no disclosure text. It stays live rather than being
-  unpublished so the URL keeps working; turning the setting on brings the discount
-  framing straight back with no further changes here.
+  The only on/off switch for the promo is the Shopify automatic discount "Eerste 3
+  maanden" itself (2026-09-23; the theme setting that used to gate this page is gone).
+  `zv_promo_active` (from zv-pricing, i.e. pricing.config.json `promo.enabled`/
+  `ratePercent`) only confirms the mechanism is part of the pricing model; while it is
+  off, the page degrades to a plain package overview: no discount badge, no
+  struck-through "was" price, no disclosure text. Each card shows the one-time figure
+  for the first 3 months (now/was: promoDiscountTotal struck against promoWas, eenmalig
+  vandaag) and then the plain monthly rate — never a discounted monthly rate.
 
   Cards link out to the existing, tested purchase flow on /pages/oplossingen (deep-linked
   per package via zv-route's "pakket" key) rather than re-implementing add-to-cart, so this
   stays a lightweight top-of-funnel page.
 {%- endcomment -%}
 
-{%- assign zv_promo_mechanism_active = zv_promo_active -%}
-{%- assign zv_promo_active = false -%}
-{%- if zv_promo_mechanism_active and settings.zv_promo_live -%}
-  {%- assign zv_promo_active = true -%}
-{%- endif -%}
 {%- liquid
   assign arrow = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 -%}
@@ -67,12 +61,12 @@
         {%- for id in lt_ids -%}
           {%- assign i = forloop.index0 -%}
           {%- case id -%}
-            {%- when 'inzicht' -%}{%- assign monthly = zv_inzicht_monthly -%}{%- assign promo_monthly = zv_inzicht_promo_monthly -%}
-            {%- when 'zeker' -%}{%- assign monthly = zv_zeker_monthly -%}{%- assign promo_monthly = zv_zeker_promo_monthly -%}
-            {%- when 'beschermd' -%}{%- assign monthly = zv_beschermd_monthly -%}{%- assign promo_monthly = zv_beschermd_promo_monthly -%}
+            {%- when 'inzicht' -%}{%- assign monthly = zv_inzicht_monthly -%}{%- assign promo_now = zv_inzicht_promo_discount -%}{%- assign promo_was = zv_inzicht_promo_was -%}
+            {%- when 'zeker' -%}{%- assign monthly = zv_zeker_monthly -%}{%- assign promo_now = zv_zeker_promo_discount -%}{%- assign promo_was = zv_zeker_promo_was -%}
+            {%- when 'beschermd' -%}{%- assign monthly = zv_beschermd_monthly -%}{%- assign promo_now = zv_beschermd_promo_discount -%}{%- assign promo_was = zv_beschermd_promo_was -%}
           {%- endcase -%}
-          {%- unless zv_promo_active -%}{%- assign promo_monthly = blank -%}{%- endunless -%}
-          {%- render 'zv-actie-card', name: lt_names[i], hook: lt_hooks[i], popular: lt_popular[i], monthly: monthly, promo_monthly: promo_monthly, promo_badge: zv_promo_badge, fk: lt_fks[i] -%}
+          {%- unless zv_promo_active -%}{%- assign promo_now = blank -%}{%- assign promo_was = blank -%}{%- endunless -%}
+          {%- render 'zv-actie-card', name: lt_names[i], hook: lt_hooks[i], popular: lt_popular[i], monthly: monthly, promo_now: promo_now, promo_was: promo_was, promo_badge: zv_promo_badge, fk: lt_fks[i] -%}
         {%- endfor -%}
       </div>
     </div>
@@ -96,12 +90,12 @@
         {%- for id in mt_ids -%}
           {%- assign i = forloop.index0 -%}
           {%- case id -%}
-            {%- when 'alert' -%}{%- assign monthly = zv_alert_monthly -%}{%- assign promo_monthly = zv_alert_promo_monthly -%}
-            {%- when 'protect' -%}{%- assign monthly = zv_protect_monthly -%}{%- assign promo_monthly = zv_protect_promo_monthly -%}
-            {%- when 'vista' -%}{%- assign monthly = zv_vista_monthly -%}{%- assign promo_monthly = blank -%}
+            {%- when 'alert' -%}{%- assign monthly = zv_alert_monthly -%}{%- assign promo_now = zv_alert_promo_discount -%}{%- assign promo_was = zv_alert_promo_was -%}
+            {%- when 'protect' -%}{%- assign monthly = zv_protect_monthly -%}{%- assign promo_now = zv_protect_promo_discount -%}{%- assign promo_was = zv_protect_promo_was -%}
+            {%- when 'vista' -%}{%- assign monthly = zv_vista_monthly -%}{%- assign promo_now = blank -%}{%- assign promo_was = blank -%}
           {%- endcase -%}
-          {%- unless zv_promo_active -%}{%- assign promo_monthly = blank -%}{%- endunless -%}
-          {%- render 'zv-actie-card', name: mt_names[i], hook: mt_hooks[i], popular: mt_popular[i], monthly: monthly, promo_monthly: promo_monthly, promo_badge: zv_promo_badge, fk: mt_fks[i] -%}
+          {%- unless zv_promo_active -%}{%- assign promo_now = blank -%}{%- assign promo_was = blank -%}{%- endunless -%}
+          {%- render 'zv-actie-card', name: mt_names[i], hook: mt_hooks[i], popular: mt_popular[i], monthly: monthly, promo_now: promo_now, promo_was: promo_was, promo_badge: zv_promo_badge, fk: mt_fks[i] -%}
         {%- endfor -%}
       </div>
 
@@ -172,6 +166,10 @@
 .zv-actie .acard__price .now { font-size:27px; font-weight:900; color:var(--ink); letter-spacing:-.01em; }
 .zv-actie .acard__price .per { font-size:13px; font-weight:700; color:var(--muted); }
 .zv-actie .acard__price .was { font-size:14px; font-weight:700; color:var(--muted-2); text-decoration:line-through; }
+.zv-actie .acard__period { flex-basis:100%; font-size:11.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--belt, var(--muted)); }
+.zv-actie .acard__once { font-size:12.5px; font-weight:700; color:var(--muted); }
+.zv-actie .acard__after { margin-top:6px; font-size:14.5px; font-weight:700; color:#5b5374; }
+.zv-actie .acard__after .per { font-size:13px; font-weight:700; color:var(--muted); }
 .zv-actie .acard__badge { display:inline-block; align-self:flex-start; margin-top:8px; font-size:11.5px; font-weight:800; color:#fff; background:var(--danger); border-radius:999px; padding:4px 11px; }
 .zv-actie .acard .btn--ghost { background:transparent; color:var(--indigo); border:1.6px solid var(--line-2); margin-top:20px; }
 .zv-actie .acard .btn--ghost:hover { border-color:var(--indigo); }
