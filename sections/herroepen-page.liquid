@@ -1,0 +1,291 @@
+{%- comment -%}
+  Zo Veilig — Herroepen. Dedicated withdrawal-request page, split off from the
+  Contact page (which is adviesgesprek-only). Same Supabase capture-lead wiring
+  as contact-page.liquid, plus an Odoo dual-write with its own lead_type so
+  withdrawal requests don't land mixed in with general advice leads.
+
+  Linked from snippets/legal-herroepingsrecht.liquid §2 (both buttons).
+{%- endcomment -%}
+
+<div class="zv-herroepen">
+  <section class="page-hero">
+    <div class="wrap">
+      <div class="crumbs"><a href="{% render 'zv-route', key: 'home' %}">Home</a> <span>›</span> <a href="{% render 'zv-route', key: 'herroepingsrecht' %}">Herroepingsrecht</a> <span>›</span> <b>{{ section.settings.crumb | default: 'Herroepen' | escape }}</b></div>
+      <span class="eyebrow">{{ section.settings.eyebrow | default: 'Herroepingsrecht' | escape }}</span>
+      <h1>{{ section.settings.title | default: 'Aankoop binnen 14 dagen herroepen' | escape }}</h1>
+      <p class="lead">{{ section.settings.lead | default: 'U heeft het recht uw aankoop binnen 14 dagen zonder opgave van redenen te herroepen. Vul onderstaand formulier in, dan bevestigen we de ontvangst en nemen we de verdere afhandeling met u op. Liever op papier? Download het modelformulier onderaan deze pagina.' | escape }}</p>
+    </div>
+  </section>
+
+  <section class="hp-wrap">
+    <div class="wrap">
+      <div class="hp-grid">
+        <div class="hp-card">
+          <h2>Meld uw herroeping</h2>
+          <p class="hint">Vul uw gegevens in, dan bevestigen we de ontvangst binnen één werkdag en nemen we contact met u op over de verdere afhandeling (en eventuele retourzending van gehuurde apparatuur).</p>
+
+          <div id="hp-ok" class="hp-ok" hidden>Bedankt, we hebben uw herroeping ontvangen. U krijgt een ontvangstbevestiging en we nemen binnen één werkdag contact met u op.</div>
+          <div id="hp-err" class="hp-err" hidden>Controleer even de gemarkeerde velden en probeer het opnieuw.</div>
+          <div id="hp-err-server" class="hp-err" hidden>Er ging iets mis bij het versturen. Probeer het over een moment opnieuw, of bel ons direct op <a href="tel:0881221111">088 122 11 11</a>.</div>
+
+          <form id="zv-herroepen-form" novalidate data-capture-lead-endpoint="{{ section.settings.capture_lead_endpoint | escape }}" data-capture-lead-key="{{ section.settings.capture_lead_anon_key | escape }}">
+            <div class="fld-row">
+              <div class="fld"><label for="h-naam">Naam</label><input id="h-naam" name="Naam" placeholder="Voor- en achternaam" required></div>
+              <div class="fld"><label for="h-tel">Telefoon</label><input id="h-tel" name="Telefoon" type="tel" placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}" required></div>
+            </div>
+            <div class="fld-row">
+              <div class="fld"><label for="h-mail">E-mailadres</label><input id="h-mail" name="email" type="email" placeholder="uw@email.nl" required></div>
+              <div class="fld"><label for="h-order">Ordernummer <span class="opt">(indien bekend)</span></label><input id="h-order" name="Ordernummer" placeholder="Bijv. #1234"></div>
+            </div>
+            <div class="fld-row">
+              <div class="fld"><label for="h-datum">Besteld op / ontvangen op</label><input id="h-datum" name="Besteldatum" type="date"></div>
+              <div class="fld"><label for="h-product">Wat wilt u herroepen?</label><input id="h-product" name="Product" placeholder="Bijv. Mijn Thuis Alert-abonnement"></div>
+            </div>
+            <div class="fld"><label for="h-msg">Toelichting (optioneel)</label><textarea id="h-msg" name="body" placeholder="Eventuele toelichting of bijzonderheden."></textarea></div>
+            <div class="fld fld-consent">
+              <label class="hp-consent">
+                <input type="checkbox" id="h-consent" required>
+                <span>{% render 'zv-form-copy', key: 'consent' %}</span>
+              </label>
+            </div>
+            <input type="hidden" name="Bron" value="Herroepingspagina">
+            <div class="hp-hp" aria-hidden="true"><label for="h-web">Website</label><input id="h-web" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+            <div class="hp-submit">
+              <button class="btn btn--gold" type="submit">Herroeping versturen <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <span class="hp-priv">Uw gegevens worden alleen gebruikt om uw herroeping te verwerken. Zie de <a href="{% render 'zv-route', key: 'privacyverklaring' %}">privacyverklaring</a>.</span>
+            </div>
+          </form>
+
+          {%- if section.settings.withdrawal_pdf_url != blank -%}
+          <div class="hp-pdf">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 15l2.5 2.5L15 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <div>
+              <h3>Liever op papier?</h3>
+              <p>Download het modelformulier, vul het in en stuur het naar <a href="mailto:klantenservice@zoveilig.nl">klantenservice@zoveilig.nl</a>.</p>
+              <a class="hp-pdf-link" href="{{ section.settings.withdrawal_pdf_url | escape }}" target="_blank" rel="noopener">Download modelformulier (PDF)</a>
+            </div>
+          </div>
+          {%- endif -%}
+        </div>
+
+        <div class="hp-side">
+          <div class="hp-opt"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L14 14l5 2v3a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span><div><h3>Bel ons direct</h3><p>Liever meteen regelen?</p><a class="big" href="tel:0881221111">088 122 11 11</a><div class="sub">ma t/m do 08.30–17.00 uur, vr 08.30–13.00 uur</div></div></div>
+          <div class="hp-opt"><span class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M4 7l8 6 8-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><h3>Stuur een e-mail</h3><p>Voor niet-urgente afhandeling.</p><a class="big" href="mailto:klantenservice@zoveilig.nl" style="font-size:16px">klantenservice@zoveilig.nl</a></div></div>
+          <div class="hp-hours"><h3>Goed om te weten</h3><ul><li><span>Bedenktijd</span><b>14 dagen</b></li><li><span>Terugbetaling</span><b>uiterlijk binnen 14 dagen</b></li></ul></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+{% stylesheet %}
+.zv-herroepen {
+  --ink:#1a1230; --indigo:#322469; --indigo-deep:#281c54; --indigo-soft:#ece8fb;
+  --paper:#fffdf8; --cream:#fdfaf2; --gold:#e4a311; --gold-lt:#f5c84a;
+  --line:#e7e0cf; --line-2:#ddd4c0; --muted:#6f6786; --ok:#2f8f5b;
+  color:var(--ink); line-height:1.5;
+}
+.zv-herroepen .wrap { max-width:1180px; margin:0 auto; padding:0 clamp(20px,3.6vw,52px); }
+.zv-herroepen .page-hero { background:radial-gradient(64% 120% at 92% 0%,rgba(197,46,47,.3) 0%,rgba(197,46,47,0) 55%),linear-gradient(180deg,#2c3076 0%,#241c54 100%); color:#fff; padding:clamp(38px,4.6vw,64px) 0 clamp(30px,3.5vw,46px); }
+.zv-herroepen .page-hero .crumbs { font-size:12.5px; font-weight:700; color:#cdc6e8; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.zv-herroepen .page-hero .crumbs a { color:#cdc6e8; text-decoration:none; }
+.zv-herroepen .page-hero .crumbs a:hover { color:#fff; }
+.zv-herroepen .page-hero .crumbs b { color:#fff; }
+.zv-herroepen .page-hero .eyebrow { display:inline-block; margin-top:14px; font-size:12px; font-weight:800; letter-spacing:.22em; text-transform:uppercase; color:var(--gold-lt); }
+.zv-herroepen .page-hero h1 { font-size:clamp(28px,3.6vw,46px); font-weight:900; letter-spacing:-.02em; line-height:1.05; margin-top:10px; }
+.zv-herroepen .page-hero .lead { font-size:clamp(15px,1.5vw,17.5px); font-weight:500; color:#dcd6f0; margin-top:14px; max-width:62ch; line-height:1.6; }
+.zv-herroepen .hp-wrap { padding:clamp(40px,4.5vw,68px) 0 clamp(56px,6vw,90px); background:var(--cream); }
+.zv-herroepen .hp-grid { display:grid; grid-template-columns:1.15fr .85fr; gap:clamp(26px,3.5vw,44px); align-items:start; }
+@media(max-width:900px){ .zv-herroepen .hp-grid { grid-template-columns:1fr; } }
+.zv-herroepen .hp-card { background:var(--paper); border:1px solid var(--line); border-radius:20px; padding:clamp(24px,3vw,38px); box-shadow:0 24px 54px -44px rgba(26,18,48,.5); }
+.zv-herroepen .hp-card h2 { font-size:24px; font-weight:900; color:var(--indigo); letter-spacing:-.015em; }
+.zv-herroepen .hp-card p.hint { font-size:14.5px; font-weight:500; color:var(--muted); margin-top:8px; line-height:1.5; }
+.zv-herroepen .fld { margin-top:18px; }
+.zv-herroepen .fld label { display:block; font-size:13px; font-weight:800; color:var(--ink); margin-bottom:7px; }
+.zv-herroepen .fld label .opt { font-weight:600; color:var(--muted); text-transform:none; letter-spacing:0; }
+.zv-herroepen .fld input, .zv-herroepen .fld select, .zv-herroepen .fld textarea { width:100%; background:var(--cream); border:1.5px solid var(--line-2); border-radius:12px; padding:13px 15px; font:inherit; font-size:15px; font-weight:600; color:var(--ink); }
+.zv-herroepen .fld textarea { min-height:100px; resize:vertical; }
+.zv-herroepen .fld input:focus, .zv-herroepen .fld select:focus, .zv-herroepen .fld textarea:focus { outline:none; border-color:var(--indigo); background:#fff; }
+.zv-herroepen .fld-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media(max-width:520px){ .zv-herroepen .fld-row { grid-template-columns:1fr; } }
+.zv-herroepen .fld-consent .hp-consent { display:flex; align-items:flex-start; gap:10px; margin-bottom:0; cursor:pointer; }
+.zv-herroepen .fld-consent .hp-consent input { width:19px; height:19px; margin-top:2px; flex:none; accent-color:var(--indigo); }
+.zv-herroepen .fld-consent .hp-consent span { font-size:13.5px; font-weight:600; color:var(--muted); line-height:1.5; }
+.zv-herroepen .fld--invalid.fld-consent .hp-consent span { color:#9a2b2b; }
+.zv-herroepen .fld-consent .hp-consent a { color:var(--indigo); font-weight:800; }
+.zv-herroepen .hp-submit { margin-top:22px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.zv-herroepen .hp-priv { font-size:12.5px; font-weight:600; color:var(--muted); max-width:34ch; line-height:1.45; }
+.zv-herroepen .hp-priv a { color:var(--indigo); font-weight:800; }
+.zv-herroepen .hp-ok { margin-top:0; margin-bottom:18px; background:rgba(47,143,91,.1); border:1px solid rgba(47,143,91,.4); border-radius:12px; padding:16px 18px; color:#256b45; font-size:14.5px; font-weight:700; }
+.zv-herroepen .hp-err { margin-bottom:14px; background:rgba(197,46,47,.08); border:1px solid rgba(197,46,47,.35); border-radius:12px; padding:13px 16px; color:#9a2b2b; font-size:14px; font-weight:700; }
+.zv-herroepen .hp-err a { color:#9a2b2b; text-decoration:underline; }
+.zv-herroepen .fld--invalid input, .zv-herroepen .fld--invalid select, .zv-herroepen .fld--invalid textarea { border-color:#c52e2f; background:rgba(197,46,47,.05); }
+.zv-herroepen .hp-hp { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+.zv-herroepen .btn { display:inline-flex; align-items:center; gap:9px; border:none; cursor:pointer; border-radius:12px; font:inherit; font-weight:800; text-decoration:none; }
+.zv-herroepen .btn svg { width:18px; height:18px; }
+.zv-herroepen .btn--gold { background:linear-gradient(180deg,var(--gold-lt),var(--gold)); color:#3a2a06; padding:14px 24px; box-shadow:0 14px 30px -18px rgba(228,163,17,.9); }
+.zv-herroepen .btn--gold:hover { filter:brightness(1.03); }
+.zv-herroepen .hp-pdf { margin-top:22px; padding-top:22px; border-top:1px solid var(--line); display:flex; gap:14px; align-items:flex-start; }
+.zv-herroepen .hp-pdf .ic { flex:none; width:42px; height:42px; border-radius:12px; background:var(--indigo-soft); color:var(--indigo); display:grid; place-items:center; }
+.zv-herroepen .hp-pdf .ic svg { width:22px; height:22px; }
+.zv-herroepen .hp-pdf h3 { font-size:15px; font-weight:900; color:var(--indigo); }
+.zv-herroepen .hp-pdf p { font-size:13.5px; font-weight:500; color:var(--muted); margin-top:4px; line-height:1.5; }
+.zv-herroepen .hp-pdf-link { display:inline-block; margin-top:8px; font-size:13.5px; font-weight:800; color:var(--indigo); text-decoration:underline; }
+.zv-herroepen .hp-side { display:flex; flex-direction:column; gap:16px; }
+.zv-herroepen .hp-opt { display:flex; gap:15px; align-items:flex-start; background:var(--paper); border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:0 16px 40px -38px rgba(26,18,48,.5); }
+.zv-herroepen .hp-opt .ic { flex:none; width:46px; height:46px; border-radius:13px; background:var(--indigo-soft); color:var(--indigo); display:grid; place-items:center; }
+.zv-herroepen .hp-opt .ic svg { width:24px; height:24px; }
+.zv-herroepen .hp-opt h3 { font-size:16px; font-weight:900; color:var(--indigo); }
+.zv-herroepen .hp-opt p { font-size:14px; font-weight:500; color:#5b5374; margin-top:5px; line-height:1.5; }
+.zv-herroepen .hp-opt a.big { display:inline-block; font-size:18px; font-weight:900; color:var(--ink); margin-top:6px; text-decoration:none; }
+.zv-herroepen .hp-opt .sub { font-size:12.5px; font-weight:700; color:var(--muted); margin-top:4px; }
+.zv-herroepen .hp-hours { background:var(--indigo-deep); color:#fff; border-radius:16px; padding:22px; }
+.zv-herroepen .hp-hours h3 { font-size:15px; font-weight:900; letter-spacing:.01em; }
+.zv-herroepen .hp-hours ul { list-style:none; margin-top:14px; display:flex; flex-direction:column; gap:9px; }
+.zv-herroepen .hp-hours li { display:flex; justify-content:space-between; font-size:14px; font-weight:600; color:#d8d2ef; border-bottom:1px solid rgba(255,255,255,.12); padding-bottom:9px; }
+.zv-herroepen .hp-hours li b { color:#fff; font-weight:800; }
+{% endstylesheet %}
+
+{% javascript %}
+(function () {
+  var form = document.getElementById('zv-herroepen-form');
+  if (!form) return;
+  var okEl = document.getElementById('hp-ok');
+  var errEl = document.getElementById('hp-err');
+  var errServerEl = document.getElementById('hp-err-server');
+  var endpoint = form.getAttribute('data-capture-lead-endpoint');
+  var anonKey = form.getAttribute('data-capture-lead-key');
+  var consentInput = document.getElementById('h-consent');
+  var requiredFields = [
+    document.getElementById('h-naam'),
+    document.getElementById('h-tel'),
+    document.getElementById('h-mail'),
+    consentInput
+  ];
+
+  function clearInvalid() {
+    requiredFields.forEach(function (input) {
+      input.closest('.fld').classList.remove('fld--invalid');
+    });
+  }
+
+  function validate() {
+    clearInvalid();
+    var invalid = requiredFields.filter(function (input) { return !input.checkValidity(); });
+    invalid.forEach(function (input) { input.closest('.fld').classList.add('fld--invalid'); });
+    return invalid.length === 0;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    errEl.hidden = true;
+    errServerEl.hidden = true;
+
+    if (!validate()) {
+      errEl.hidden = false;
+      return;
+    }
+
+    var formData = new FormData(form);
+    var payload = {};
+    formData.forEach(function (value, key) { payload[key] = value; });
+    payload.consent = !!(consentInput && consentInput.checked);
+
+    // Odoo CRM dual-write — same additive pattern as contact-page.liquid, its own
+    // lead_type so withdrawal requests don't land mixed in with advice leads.
+    // NOTE: order_number / order_date / product_or_service are new fields — need
+    // the Odoo Automation Rule's record_getter updated to actually read them,
+    // same caveat as contact_subject/message (docs/contact-odoo-dual-write-2026-09-16.md).
+    try {
+      if (window.ZVMeasurement && window.ZVMeasurement.buildCallbackLead && window.ZVLeadWebhook) {
+        var rec = window.ZVMeasurement.buildCallbackLead({
+          lead_type: 'herroepen',
+          cta_location: 'herroepen_page',
+          name: payload.Naam || '',
+          phone: payload.Telefoon || '',
+          email: payload.email || '',
+          order_number: payload.Ordernummer || '',
+          order_date: payload.Besteldatum || '',
+          product_or_service: payload.Product || '',
+          message: payload.body || '',
+          consent: payload.consent
+        });
+        window.ZVLeadWebhook.send(rec, 'herroepen_page');
+      }
+    } catch (e) { /* never block the Supabase submit below on this */ }
+
+    var submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+
+    fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': anonKey,
+        'Authorization': 'Bearer ' + anonKey
+      },
+      body: JSON.stringify(payload)
+    })
+      .then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (json) {
+          return { httpOk: res.ok, json: json };
+        });
+      })
+      .then(function (result) {
+        if (result.httpOk && result.json && result.json.ok) {
+          form.hidden = true;
+          okEl.hidden = false;
+        } else {
+          errServerEl.hidden = false;
+          if (submitBtn) submitBtn.disabled = false;
+        }
+      })
+      .catch(function () {
+        errServerEl.hidden = false;
+        if (submitBtn) submitBtn.disabled = false;
+      });
+  });
+})();
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "Herroepen",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "crumb", "label": "Broodkruimel", "default": "Herroepen" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Herroepingsrecht" },
+    { "type": "text", "id": "title", "label": "Titel", "default": "Aankoop binnen 14 dagen herroepen" },
+    { "type": "textarea", "id": "lead", "label": "Lead" },
+    {
+      "type": "header",
+      "content": "Modelformulier (PDF)"
+    },
+    {
+      "type": "text",
+      "id": "withdrawal_pdf_url",
+      "label": "Modelformulier PDF-URL",
+      "info": "Upload de PDF naar Shopify Files (Content → Files) en plak de CDN-link hier. Leeg = de downloadsectie wordt niet getoond."
+    },
+    {
+      "type": "header",
+      "content": "Herroepingsformulier (Supabase capture-lead)"
+    },
+    {
+      "type": "text",
+      "id": "capture_lead_endpoint",
+      "label": "capture-lead endpoint URL",
+      "default": "https://lfwkpbooieiesuvblvse.supabase.co/functions/v1/capture-lead",
+      "info": "Bijv. https://<project-ref>.supabase.co/functions/v1/capture-lead. Leeg = formulier toont een foutmelding bij versturen."
+    },
+    {
+      "type": "text",
+      "id": "capture_lead_anon_key",
+      "label": "Supabase anon (public) API key",
+      "default": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxmd2twYm9vaWVpZXN1dmJsdnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0NjI2ODYsImV4cCI6MjEwNTAzODY4Nn0.mwOnoWN2pDZ5J8nj0RfEMbnrH8HUei0C6qCKGt4twaE",
+      "info": "De publieke anon key van het Supabase-project, niet de service role key."
+    }
+  ],
+  "presets": [{ "name": "Herroepen" }]
+}
+{% endschema %}
