@@ -25,6 +25,8 @@
     "amountCents": 9900,
     "display": "€ 99,00",
     "label": "Eenmalige activatie en installatie",
+    "cartName": "Installatie",
+    "cartNameNote": "Optional cartName (here and on installationOptions.nami options; Thijs, 2026-10-14): the product name the cart shows for this installation line (/cart, Overzicht's line rows and breakdown, the cart drawer, GA4 item_name via #zv-item-names). Falls back to the label. CL003 and N0004 (the same EUR 99 installation) read 'Installatie'; N0005 (Telefonische ondersteuning, the phone/remote option) and N0006 (Geen installatie, EUR 0) have none and keep their labels. The label itself stays as the choice text on Overzicht's installation radio group.",
     "billing": "oneoff",
     "collectedBy": "shopify",
     "productHandle": "climax-instalatie",
@@ -53,6 +55,7 @@
         {
           "id": "huis",
           "label": "Installatie aan huis",
+          "cartName": "Installatie",
           "amountCents": 9900,
           "display": "€ 99,00",
           "productHandle": "installatie-nami",

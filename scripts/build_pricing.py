@@ -94,11 +94,13 @@ def build():
         for o in cfg["installationOptions"]["nami"]["options"]
     ]
 
-    # installation product handle -> the label the theme shows for it (NAMI options by their
-    # own labels, the Climax installation by labels.activation), never the Shopify title.
-    install_names = {o["productHandle"]: o["label"] for o in nami_install_options}
+    # installation product handle -> the name the cart shows for it, never the Shopify title:
+    # an option's optional `cartName` (2026-10-14: "Installatie" for CL003 and N0004), else the
+    # NAMI option's own label / labels.activation for the Climax installation.
+    install_names = {o["productHandle"]: o.get("cartName", o["label"])
+                     for o in cfg["installationOptions"]["nami"]["options"]}
     if cfg["activation"].get("productHandle"):
-        install_names[cfg["activation"]["productHandle"]] = cfg["labels"]["activation"]
+        install_names[cfg["activation"]["productHandle"]] = cfg["activation"].get("cartName", cfg["labels"]["activation"])
     # Name-only add-ons (cfg["addonNames"], e.g. Videodeurbel/Afstandsbediening): a real Shopify
     # product's display name, deliberately with no price field — their price is never config data,
     # always read live from the product. Merged into the same handle -> name map installation

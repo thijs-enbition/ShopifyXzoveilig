@@ -88,7 +88,7 @@
 <script src="{{ 'zv-vergelijk-pakketten.js' | asset_url }}" defer="defer"></script>
 
 {%- if sols.size > 0 -%}
-<div class="opl-page" id="oplossingen-page" data-zv-oplossingen data-activation-variant-id="{{ activation_variant_id }}" data-woning-variant-id="{{ woning_variant_id }}" data-cart-url="{{ routes.cart_url }}" data-addon-videodeurbel-variant-id="{{ zv_addon_videodeurbel_variant_id }}" data-addon-afstandsbediening-variant-id="{{ zv_addon_afstandsbediening_variant_id }}" data-addon-ontzorg-inzicht-variant-id="{{ zv_addon_ontzorg_inzicht_variant_id }}">
+<div class="opl-page" id="oplossingen-page" data-zv-oplossingen data-activation-variant-id="{{ activation_variant_id }}" data-install-handles="{{ zv_activation_handle }}|{{ zv_nami_install_geen_handle }}|{{ zv_nami_install_telefonisch_handle }}|{{ zv_nami_install_huis_handle }}" data-woning-variant-id="{{ woning_variant_id }}" data-cart-url="{{ routes.cart_url }}" data-addon-videodeurbel-variant-id="{{ zv_addon_videodeurbel_variant_id }}" data-addon-afstandsbediening-variant-id="{{ zv_addon_afstandsbediening_variant_id }}" data-addon-ontzorg-inzicht-variant-id="{{ zv_addon_ontzorg_inzicht_variant_id }}">
 
   <div class="catnav" role="tablist" aria-label="Onze oplossingen">
     <span class="catnav__lbl">Onze oplossingen</span>
@@ -1478,7 +1478,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
         if (!dot) { dot = document.createElement('span'); dot.className = 'dot'; link.appendChild(dot); }
         dot.textContent = n;
       } else if (dot && dot.parentNode) {
-        dot.parentNode.removeChild(dot);            // empty cart -> no dot (matches the Liquid `if item_count > 0`)
+        dot.parentNode.removeChild(dot);            // empty cart -> no dot (matches zv-header's Liquid `if cart.items.size > 0`)
       }
       link.setAttribute('aria-label', 'Winkelwagen, ' + n + ' artikelen');
     });
@@ -1518,6 +1518,10 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
      only once: addToCart() checks the live cart first so adding a second package or
      add-on later never charges the fee twice. */
   var activationVariantId = page.dataset.activationVariantId || null;
+  // Every installation product (Climax CL003 + the three NAMI options), by handle from
+  // zv-pricing: the drawer shows them as one-off charges, never "/mnd". By handle rather than
+  // variant id so this page needs no extra all_products lookups (20-handle limit).
+  var INSTALL_HANDLES = (page.dataset.installHandles || '').split('|').filter(Boolean);
   /* Every checkout entry point on this page must land on the Overzicht
      read-only review step (same as the main /cart page), never straight on
      Shopify's own /checkout — Overzicht is where av_akkoord consent is
@@ -1835,7 +1839,10 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     var pkgName = (card && card.getAttribute('data-package-name')) || ITEM_NAMES[it.handle] || p['Pakket'] || it.product_title || '';
     var full = (p['Oplossing'] ? esc(p['Oplossing']) + ' · ' : '') + esc(pkgName);
     var pkg = pkgName || 'item';
-    var isActivation = String(it.variant_id) === String(activationVariantId);
+    // Any installation line (CL003 or a NAMI option chosen on Overzicht) is a one-off charge:
+    // its real line price, no "/mnd", no Woning/line options. Before 2026-10-14 only CL003
+    // matched, so a NAMI installation line showed its one-off price with a "/mnd" suffix.
+    var isActivation = String(it.variant_id) === String(activationVariantId) || INSTALL_HANDLES.indexOf(it.handle) !== -1;
     // Woning only on a NAMI package line (WONING.appliesTo) whose card offers it, never on a
     // Climax package (its card has no Woning group since 2026-09-25), an installation line or
     // anything else: no reader counts Woning there. A legacy value reads as 1 floor.
@@ -1923,7 +1930,9 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     // syncAddonLines() call, since the package line's Uitbreidingen property still wants it.
     var items = ((cart && cart.items) || []).filter(function (it) { return !isWoningLine(it) && !isAddonLine(it); });
     var list = items.map(cartRowHtml).join('');
-    var n = items.length;   // number of line items (== cards shown), per spec
+    // Logical count, same as the header badge and /cart: one per cart line, so the Woning and
+    // add-on lines count too even though they show inside the package row, not as rows here.
+    var n = ((cart && cart.items) || []).length;
     var count = n + (n === 1 ? ' item in winkelwagen' : ' items in winkelwagen');
     var body = items.length
       ? '<div class="addcart__count">' + count + '</div>' +

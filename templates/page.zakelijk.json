@@ -1,10 +1,35 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
   "sections": {
-    "main": { "type": "zakelijk", "settings": {} },
+    "main": {
+      "type": "zakelijk",
+      "custom_css": [
+        "h1, h2, h3 {color: #fff;}"
+      ],
+      "settings": {
+        "eyebrow": "Zakelijke beveiliging",
+        "heading": "Bescherm uw bedrijf met de meldkamer die u al kent.",
+        "sub": "",
+        "badge": "Nu in ontwikkeling · op aanvraag beschikbaar"
+      }
+    },
     "trust": {
       "type": "trust-partners",
-      "settings": { "label": "Beveiligd met bewezen partners" }
+      "settings": {
+        "label": "Beveiligd met bewezen partners"
+      }
     }
   },
-  "order": ["main", "trust"]
+  "order": [
+    "main",
+    "trust"
+  ]
 }
