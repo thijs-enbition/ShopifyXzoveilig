@@ -8,10 +8,21 @@
   The design gives each bucket a fixed inline SVG icon beside its number (not an
   uploaded image). We render that icon by metaobject handle, so the tile is never
   empty; an uploaded icon/image on the metaobject overrides it when set.
+
+  Langer Thuis and Mijn Thuis show a "Vanaf" price line plus a promo pill between
+  title and body. The amounts and the promo badge come from zv-pricing (i.e.
+  pricing.config.json: Inzicht N0001 and Alert N0003, the lowest monthly rate per
+  line), never a literal here (CI check_pricing.py). Only the wording around them
+  is set below. The pill reuses the .bk-soon badge with a --promo modifier and is
+  hidden when the promo is off (zv_promo_active). Veilig Onderweg gets neither.
 {%- endcomment -%}
+{%- include 'zv-pricing' -%}
 
 {%- liquid
   assign cards = shop.metaobjects.feature_card.values | where: 'active', true | sort: 'display_order'
+  assign card_price_prefix = 'Vanaf'
+  assign card_price_suffix = '/mnd'
+  assign card_promo_prefix = 'Nu'
 -%}
 
 {%- if cards.size > 0 -%}
@@ -81,6 +92,17 @@
               <span class="bk-no">{{ forloop.index | prepend: '0' | slice: -2, 2 }}</span>
             </div>
             {%- if card.heading != blank -%}<h3>{{ card.heading }}</h3>{%- endif -%}
+            {%- assign card_from = blank -%}
+            {%- case handle -%}
+              {%- when 'langer-thuis' -%}{%- assign card_from = zv_inzicht_monthly -%}
+              {%- when 'mijn-thuis' -%}{%- assign card_from = zv_alert_monthly -%}
+            {%- endcase -%}
+            {%- if card_from != blank -%}
+              <div class="bk-price">
+                <span class="bk-price-amt">{{ card_price_prefix }} <b>{{ card_from }}</b>{{ card_price_suffix }}</span>
+                {%- if zv_promo_active -%}<span class="bk-soon bk-soon--promo">{{ card_promo_prefix }} {{ zv_promo_badge }}</span>{%- endif -%}
+              </div>
+            {%- endif -%}
             {%- comment -%} NB: the metaobject field key is 'descripbtion' (typo in the definition, immutable). {%- endcomment -%}
             {%- if card.descripbtion != blank -%}<p>{{ card.descripbtion }}</p>{%- endif -%}
             {%- if card.eyebrow != blank -%}<div class="bk-meta">{{ card.eyebrow }}</div>{%- endif -%}
@@ -125,6 +147,10 @@
 .bucket--soon .bk-link { color: var(--muted); }
 .bucket--soon .bk-link svg { opacity: 0.6; }
 .bk-soon { position: absolute; top: 16px; right: 16px; background: var(--indigo); color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; padding: 5px 11px; border-radius: 999px; white-space: nowrap; }
+.bk-price { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; }
+.bk-price-amt { font-size: 14px; font-weight: 600; color: var(--indigo); white-space: nowrap; }
+.bk-price-amt b { font-size: 17px; font-weight: 900; letter-spacing: -0.01em; }
+.bk-soon--promo { position: static; background: var(--gold); color: var(--ink); font-size: 12px; padding: 5px 9px; }
 
 /* "Voor wie is dit?" info popover */
 .whoinfo { position: relative; display: inline-block; margin-top: 22px; }
