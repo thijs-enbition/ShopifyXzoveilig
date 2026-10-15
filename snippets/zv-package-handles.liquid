@@ -33,6 +33,14 @@
       else
         echo 'veilig-onderweg-paniek-meldkamer|veilig-onderweg-zorgmeldkamer'
       endif
+    when 'woning'
+      if what == 'skus'
+        echo 'N0008'
+      elsif what == 'name'
+        echo 'Woning'
+      else
+        echo 'extra-etage-of-100m2'
+      endif
     when 'all'
       if what == 'skus'
         echo 'N0001|N0002|LT-BES|N0003|MT-PRO|MT-VIS|VO-SOLO|VO-GUARD'

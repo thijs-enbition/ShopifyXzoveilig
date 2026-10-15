@@ -42,9 +42,9 @@
 {%- endcomment -%}
 
 {%- include 'zv-pricing' -%}
+{%- include 'zv-hidden-cart-lines' -%}
 {%- assign sub_type = section.settings.sub_type | default: 'Beveiligingsabonnement' -%}
 {%- assign sub_tag = section.settings.sub_tag | default: 'abonnement' -%}
-{%- assign activation_variant_id = all_products[zv_activation_handle].selected_or_first_available_variant.id -%}
 {%- assign nami_install_geen_variant_id = all_products[zv_nami_install_geen_handle].selected_or_first_available_variant.id -%}
 {%- assign nami_install_telefonisch_variant_id = all_products[zv_nami_install_telefonisch_handle].selected_or_first_available_variant.id -%}
 {%- assign nami_install_huis_variant_id = all_products[zv_nami_install_huis_handle].selected_or_first_available_variant.id -%}
@@ -56,8 +56,6 @@
   the Woning line above, it keeps its remove link: it's a standalone product a customer might
   simply not want any more, not a per-package attribute.
 {%- endcomment -%}
-{%- assign zv_addon_videodeurbel_variant_id = all_products['koop-video-deurbel-750'].variants.first.id -%}
-{%- assign zv_addon_afstandsbediening_variant_id = all_products['huur-afstandsbediening'].variants.first.id -%}
 {%- comment -%}
   Ontzorgpakket Inzicht (2026-10-13): same treatment as the two add-ons above — resolved by
   handle only, name via zv-install-name/zv_install_names_by_handle. It's a confirmed monthly
@@ -67,7 +65,6 @@
   — unconfirmed, and if so it has the same "Daarna" gap this fix closes for Ontzorgpakket.
   Worth checking with Alex; not addressed here since it predates this change.
 {%- endcomment -%}
-{%- assign zv_addon_ontzorg_inzicht_variant_id = all_products['ontzorgpakket-inzicht'].variants.first.id -%}
 {%- comment -%}
   Woning line (2026-09-25, NAMI packages only): resolved like the packages, by handle and only
   if its first variant's SKU is zv_woning_sku. It renders as one non-editable row, "Woning:
@@ -77,11 +74,6 @@
   the line itself as well. Woning on a Climax line is ignored (zv-cart-guard removes it).
 {%- endcomment -%}
 {%- liquid
-  assign woning_variant_id = nil
-  assign woning_product = all_products[zv_woning_handle]
-  if zv_woning_handle != blank and woning_product != blank and woning_product.id != blank and woning_product.variants.first.sku == zv_woning_sku
-    assign woning_variant_id = woning_product.variants.first.id
-  endif
   assign woning_applies_list = zv_woning_applies_handles | split: '|'
   assign woning_label = ''
   for item in cart.items
@@ -106,11 +98,19 @@
   endfor
 -%}
 {%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_id: woning_variant_id, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles -%}
+{%- liquid
+  assign zv_visible_item_count = 0
+  for item in cart.items
+    unless item.variant_id == woning_variant_id or item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_addon_ontzorg_inzicht_variant_id
+      assign zv_visible_item_count = zv_visible_item_count | plus: 1
+    endunless
+  endfor
+-%}
 <div class="zv-cart">
   <section class="cartbar">
     <div class="wrap">
       <h1>Winkelwagen</h1>
-      <span class="cnt">{{ cart.item_count }} {% if cart.item_count == 1 %}artikel{% else %}artikelen{% endif %}</span>
+      <span class="cnt">{{ zv_visible_item_count }} {% if zv_visible_item_count == 1 %}artikel{% else %}artikelen{% endif %}</span>
       <a class="cont" href="{% render 'zv-route', key: 'oplossingen' %}"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Verder winkelen</a>
     </div>
   </section>

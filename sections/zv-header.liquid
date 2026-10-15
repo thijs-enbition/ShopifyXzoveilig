@@ -5,8 +5,21 @@
   Navigation is a Shopify primitive (Online Store > Navigation), NOT a metaobject, so the
   nav links and the utility links come from link list menus chosen in the Theme Editor.
   Logo, phone number and the utility message are theme/section settings.
-  Cart count is live from the cart object.
+  Cart count is live from the cart object — but counts distinct visible lines, not
+  cart.item_count's total quantity: a package line sits at quantity 3 (prepaid months)
+  so item_count would overcount by design. Woning/add-on lines (see
+  snippets/zv-hidden-cart-lines.liquid) are excluded from the count, same as the
+  add-to-cart drawer on Oplossingen; the activation line is not excluded.
 {%- endcomment -%}
+{%- include 'zv-hidden-cart-lines' -%}
+{%- liquid
+  assign zv_visible_item_count = 0
+  for item in cart.items
+    unless item.variant_id == woning_variant_id or item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_addon_ontzorg_inzicht_variant_id
+      assign zv_visible_item_count = zv_visible_item_count | plus: 1
+    endunless
+  endfor
+-%}
 {%- capture zv_header_cta_fallback -%}{% render 'zv-route', key: 'contact' %}{%- endcapture -%}
 
 <div class="util">
@@ -63,9 +76,9 @@
         </a>
       {%- endif -%}
 
-      <a class="cart" href="{{ routes.cart_url }}" aria-label="Winkelwagen, {{ cart.item_count }} artikelen">
+      <a class="cart" href="{{ routes.cart_url }}" aria-label="Winkelwagen, {{ zv_visible_item_count }} artikelen" data-woning-variant-id="{{ woning_variant_id }}" data-addon-videodeurbel-variant-id="{{ zv_addon_videodeurbel_variant_id }}" data-addon-afstandsbediening-variant-id="{{ zv_addon_afstandsbediening_variant_id }}" data-addon-ontzorg-inzicht-variant-id="{{ zv_addon_ontzorg_inzicht_variant_id }}">
         <svg class="sf-icn" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12L4 3H2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="20" r="1.6" fill="currentColor"/><circle cx="18" cy="20" r="1.6" fill="currentColor"/></svg>
-        {%- if cart.item_count > 0 -%}<span class="dot">{{ cart.item_count }}</span>{%- endif -%}
+        {%- if zv_visible_item_count > 0 -%}<span class="dot">{{ zv_visible_item_count }}</span>{%- endif -%}
       </a>
 
       {%- if section.settings.cta_text != blank -%}
@@ -167,9 +180,25 @@
 
 {% javascript %}
 (function () {
-  // The .dot badge is server-rendered from cart.item_count, correct at page load but
-  // otherwise static. Reconcile it with the authoritative Shopify cart on load (so a
-  // stale count can never show while /cart is empty) and on the drawer's cart:refresh.
+  // The .dot badge is server-rendered from a distinct-visible-line count (NOT
+  // cart.item_count — a package line sits at quantity 3 for the prepaid months, so
+  // item_count would overcount), correct at page load but otherwise static. Reconcile
+  // it with the authoritative Shopify cart on load (so a stale count can never show
+  // while /cart is empty) and on the drawer's cart:refresh. Woning/add-on ids are read
+  // off this link's own data attributes (server-rendered by
+  // snippets/zv-hidden-cart-lines.liquid) since the header renders on every page, not
+  // just Oplossingen — it can't rely on that page's #oplossingen-page data attributes.
+  var zvCartLink = document.querySelector('a.cart');
+  var ZV_HIDDEN_VARIANT_IDS = zvCartLink ? [
+    zvCartLink.dataset.woningVariantId,
+    zvCartLink.dataset.addonVideodeurbelVariantId,
+    zvCartLink.dataset.addonAfstandsbedieningVariantId,
+    zvCartLink.dataset.addonOntzorgInzichtVariantId
+  ].filter(Boolean) : [];
+  function zvVisibleCount(cart) {
+    var items = (cart && cart.items) || [];
+    return items.filter(function (it) { return ZV_HIDDEN_VARIANT_IDS.indexOf(String(it.variant_id)) === -1; }).length;
+  }
   function syncCartDot(n) {
     document.querySelectorAll('a.cart').forEach(function (link) {
       var dot = link.querySelector('.dot');
@@ -184,11 +213,11 @@
   }
   window.fetch('/cart.js', { headers: { 'Accept': 'application/json' } })
     .then(function (r) { return r.json(); })
-    .then(function (cart) { syncCartDot(cart && cart.item_count ? cart.item_count : 0); })
+    .then(function (cart) { syncCartDot(zvVisibleCount(cart)); })
     .catch(function () {});
   document.addEventListener('cart:refresh', function (e) {
     var c = e && e.detail && e.detail.cart;
-    syncCartDot(c && c.item_count ? c.item_count : 0);
+    syncCartDot(zvVisibleCount(c));
   });
 
   // Closing via the explicit close button re-clicks the <summary> (rather than
