@@ -539,6 +539,7 @@ def build():
     for ln in line_packages:
         ph += _ph_branch(ln["lineId"], "|".join(p["handle"] for p in ln["packages"]),
                          "|".join(p["sku"] for p in ln["packages"]), ln["name"])
+    ph += _ph_branch("woning", woning["shopify"].get("handle") or "", woning["shopify"].get("sku") or "", "Woning")
     ph += _ph_branch("all", "|".join(p["handle"] for ln in line_packages for p in ln["packages"]),
                      "|".join(p["sku"] for ln in line_packages for p in ln["packages"]), "")
     ph += ["  endcase", "-%}"]

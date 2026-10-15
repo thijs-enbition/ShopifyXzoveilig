@@ -1,0 +1,39 @@
+{%- comment -%}
+  Zo Veilig — variant ids for cart lines that are not a product the customer chose from
+  a product page: the Woning surcharge line and the three add-on lines (Videodeurbel,
+  Afstandsbediening, Ontzorgpakket Inzicht). Shared by zv-header.liquid, zv-cart.liquid
+  and the add-to-cart drawer in oplossingen.liquid, so every "N artikelen"/cart-count
+  display agrees on what counts as a visible line.
+
+  Deliberately self-contained (does NOT include zv-pricing): zv-pricing.liquid also
+  prints a <script id="zv-pricing-config"> JSON blob, and zv-header.liquid renders on
+  every page, including ones whose own section already includes zv-pricing (Oplossingen,
+  the cart page) — including it here too would duplicate that script tag/id on those
+  pages. The Woning handle/SKU come from the generated zv-package-handles.liquid
+  (line: 'woning'; render, not include — it only echoes text, no script tag, so it's
+  safe sitewide), so pricing.config.json stays their only source and check_pricing.py's
+  "no theme file names the Woning product" guard holds. The three add-on handles stay
+  hardcoded literals, mirroring zv-cart.liquid and oplossingen.liquid (not covered by
+  that guard); if they ever change, update this file too.
+
+  activation_variant_id is resolved here too for convenience (both existing callers
+  already need it for their own row display) but it is NOT excluded from any count —
+  the Climax activation line is counted everywhere, matching the add-to-cart drawer's
+  existing behaviour (cartRowHtml in oplossingen.liquid always renders it as its own
+  row; only Woning/add-on lines are merged into their package line there).
+
+  Include this (not render — callers need these as their own variables).
+{%- endcomment -%}
+{%- assign activation_variant_id = all_products['climax-instalatie'].selected_or_first_available_variant.id -%}
+{%- capture zv_hidden_woning_handle -%}{% render 'zv-package-handles', line: 'woning', what: 'handles' %}{%- endcapture -%}
+{%- assign zv_hidden_woning_handle = zv_hidden_woning_handle | strip -%}
+{%- capture zv_hidden_woning_sku -%}{% render 'zv-package-handles', line: 'woning', what: 'skus' %}{%- endcapture -%}
+{%- assign zv_hidden_woning_sku = zv_hidden_woning_sku | strip -%}
+{%- assign woning_variant_id = nil -%}
+{%- assign woning_product = all_products[zv_hidden_woning_handle] -%}
+{%- if zv_hidden_woning_handle != blank and woning_product != blank and woning_product.id != blank and woning_product.variants.first.sku == zv_hidden_woning_sku -%}
+  {%- assign woning_variant_id = woning_product.variants.first.id -%}
+{%- endif -%}
+{%- assign zv_addon_videodeurbel_variant_id = all_products['koop-video-deurbel-750'].variants.first.id -%}
+{%- assign zv_addon_afstandsbediening_variant_id = all_products['huur-afstandsbediening'].variants.first.id -%}
+{%- assign zv_addon_ontzorg_inzicht_variant_id = all_products['ontzorgpakket-inzicht'].variants.first.id -%}

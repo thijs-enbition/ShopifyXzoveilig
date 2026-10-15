@@ -1461,13 +1461,15 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
 
   /* Keep the header cart badge in lock-step with the real Shopify cart.
      The active header is the custom zv-header (<a class="cart"><span class="dot">N</span>),
-     which only server-renders the dot when the cart has a line — so add/remove must
-     create it, update it, and remove it at zero. A Dawn .cart-count-bubble is handled too
-     as a fallback. The badge can never show a stale non-zero count while /cart is empty. */
+     which only server-renders the dot when the distinct-visible-line count is > 0 — so
+     add/remove must create it, update it, and remove it at zero. Counts the same lines
+     renderCart() below shows as cards (isWoningLine/isAddonLine excluded, same as the
+     drawer and zv-header's own badge — see snippets/zv-hidden-cart-lines.liquid), not
+     cart.item_count: a package line sits at quantity 3 for the prepaid months, so
+     item_count would overcount. A Dawn .cart-count-bubble is handled too as a fallback.
+     The badge can never show a stale non-zero count while /cart is empty. */
   function updateCartCount(cart) {
-    // Logical count: one per cart line (package, installation, Woning, each add-on), never
-    // cart.item_count, which sums quantities (a package line alone is 3). Same as zv-header.
-    var n = (cart && cart.items) ? cart.items.length : 0;
+    var n = ((cart && cart.items) || []).filter(function (it) { return !isWoningLine(it) && !isAddonLine(it); }).length;
 
     // Custom Zo Veilig header: <a class="cart"> ... <span class="dot">N</span>
     document.querySelectorAll('a.cart').forEach(function (link) {
