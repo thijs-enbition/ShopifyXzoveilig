@@ -77,6 +77,7 @@ body:has(.sf-drawer details[open]) .zv-fab { display: none; }
   line-height: 1.2;
   text-decoration: none;
 }
+.zv-fab__link { width: 100%; box-sizing: border-box; font-family: inherit; text-align: left; cursor: pointer; }
 .zv-fab__link:hover { background: var(--cream, #fdfaf2); border-color: var(--indigo, #322469); }
 .zv-fab__link svg { width: 18px; height: 18px; flex: 0 0 auto; }
 /* The adviesgesprek link is the primary action: gold, like .btn--gold. */
@@ -86,6 +87,10 @@ body:has(.sf-drawer details[open]) .zv-fab { display: none; }
   color: var(--ink, #1a1230);
 }
 .zv-fab__list li:last-child .zv-fab__link:hover { background: var(--gold-lt, #f5c84a); }
+
+/* Odoo's own floating livechat bubble is hidden: visitors reach the chat through the
+   "Chat met ons" option above, which clicks this button programmatically. */
+.o-livechat-LivechatButton { display: none !important; }
 
 /* Visible focus: gold ring framed in indigo (white gap inside), so it reads on white,
    cream and gold surfaces alike. */
