@@ -8,6 +8,15 @@
 (function (document) {
   'use strict';
 
+  // Odoo's injected stylesheet beats the CSS rule on specificity/order, so also hide the
+  // bubble inline (inline !important wins) and again whenever Odoo redraws it.
+  function hideOdooBubble() {
+    var btn = document.querySelector('.o-livechat-LivechatButton');
+    if (btn) btn.style.setProperty('display', 'none', 'important');
+  }
+  hideOdooBubble();
+  new MutationObserver(hideOdooBubble).observe(document.documentElement, { childList: true, subtree: true });
+
   function ready() {
     var root = document.querySelector('[data-zv-fab]');
     if (!root) return;
