@@ -1211,7 +1211,6 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
 .pbd-plus-t { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .pbd-plus-t span:first-child { font-size: 13px; font-weight: 700; color: #4a4458; }
 .pbd-plus-pr { font-size: 13px; font-weight: 900; color: var(--belt); white-space: nowrap; }
-.pbd-plus-items { font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 10px; line-height: 1.4; }
 /* Climax packages (2026-09-25): the modal shows the card's "Uitbreiding hardware" link and hint
    instead of a Woning box, in the same sand block. */
 .pbd-hw { margin-top: 12px; padding: 13px 14px; border-radius: 12px; background: var(--sand); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
@@ -2236,7 +2235,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
           return '<label class="pbd-plus-row"><input type="checkbox" data-pb-woning="' + esc(o.floors) + '">' +
             '<span class="pbd-plus-t"><span>' + esc(o.value) + '</span><span class="pbd-plus-pr">' + esc(woningPrice(o)) + '</span></span></label>';
         }).join('') +
-        '<div class="pbd-plus-items">Per extra verdieping: ' + esc((pk.plus.items || []).join(' + ')) + '</div></div>';
+        '</div>';
     }
     var buyHtml = buyable
       ? '<button class="pb-buy" data-pb-add data-variant="' + esc(d.variantId) + '" data-cta-position="' + esc(d.solutionType) + '_modal">' + ICON.cart + 'In winkelwagen</button>' +
