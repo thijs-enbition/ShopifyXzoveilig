@@ -2,6 +2,8 @@
   zv-contact-fab.js — floating contact button (S-02). Markup: snippets/zv-contact-fab.liquid.
   Toggles the panel, keeps aria-expanded in sync, closes on Escape (focus back on the
   button), on a click outside, and after one of the options is chosen.
+  "Chat met ons" forwards to Odoo's livechat button (.o-livechat-LivechatButton), which is
+  hidden in CSS and mounts late (deferred scripts), so the click is retried for ~5s.
 */
 (function (document) {
   'use strict';
@@ -22,8 +24,27 @@
 
     toggle.addEventListener('click', function () { setOpen(!isOpen()); });
 
+    function openChat(fallbackHref) {
+      var tries = 0;
+      (function attempt() {
+        var btn = document.querySelector('.o-livechat-LivechatButton');
+        if (btn) { btn.click(); return; }
+        if (++tries >= 25) {
+          if (fallbackHref) window.location.href = fallbackHref;
+          return;
+        }
+        setTimeout(attempt, 200);
+      })();
+    }
+
     panel.addEventListener('click', function (e) {
-      if (e.target.closest && e.target.closest('a')) setOpen(false);
+      var chat = e.target.closest && e.target.closest('[data-zv-fab-chat]');
+      if (chat) {
+        setOpen(false);
+        openChat(chat.getAttribute('data-fallback-href'));
+      } else if (e.target.closest && e.target.closest('a')) {
+        setOpen(false);
+      }
     });
 
     document.addEventListener('keydown', function (e) {

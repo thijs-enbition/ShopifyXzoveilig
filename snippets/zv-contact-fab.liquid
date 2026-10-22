@@ -1,7 +1,7 @@
 {%- comment -%}
   Floating contact button (ticket S-02). Rendered once, from layout/theme.liquid only
   (never layout/password.liquid). Styles: assets/zv-contact-fab.css. Behaviour:
-  assets/zv-contact-fab.js (toggle, Escape, outside click).
+  assets/zv-contact-fab.js (toggle, Escape, outside click, chat -> Odoo livechat button).
 
   Placement: bottom-LEFT, so it never collides with Lio (snippets/zv-lio.liquid), which
   pops up bottom-right. z-index 40 keeps it below the sticky header group (z-index 50),
@@ -35,6 +35,12 @@
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M4 7l8 6 8-6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
           <span>Mail ons</span>
         </a>
+      </li>
+      <li>
+        <button type="button" class="zv-fab__link" data-zv-fab-chat data-fallback-href="{% render 'zv-route', key: 'contact' %}">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          <span>Chat met ons</span>
+        </button>
       </li>
       <li>
         <a class="zv-fab__link" href="{% render 'zv-route', key: 'contact' %}">
