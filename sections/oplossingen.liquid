@@ -1686,9 +1686,15 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     return names.reduce(function (prev, name) {
       return prev.then(function (cart) {
         var variantId = ADDON_VARIANT_IDS[name];
-        if (!variantId || !PKG_QTY) return cart;
+        if (!variantId) return cart;
         var items = (cart && cart.items) || [];
-        var target = addonsWanted(items)[name] ? PKG_QTY : 0;
+        // 2026-10-22 fix: add-ons are never a multiple (see comment above) — they must
+        // sync to quantity 1, not PKG_QTY. PKG_QTY is the package's own "prepay 3 months"
+        // promo quantity (3) and only belongs on the package/Woning lines; reusing it here
+        // made a flat €299 one-time Videodeurbel charge ring up as €897 (3×) whenever it
+        // was checked. Ontzorgpakket is explicitly excluded from the ×3 promo mechanic in
+        // pricing.config.json for the same reason.
+        var target = addonsWanted(items)[name] ? 1 : 0;
         var lines = items.filter(function (it) { return String(it.variant_id) === String(variantId); });
         var plan = null;
         if (lines.length > 1) {
