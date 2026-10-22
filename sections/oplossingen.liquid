@@ -1444,19 +1444,20 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
   function money(cents) { return '€' + (cents / 100).toFixed(2).replace('.', ','); }
   function euroToCents(s) { var m = /(\d+)(?:[.,](\d{1,2}))?/.exec(s || ''); if (!m) return 0; return parseInt(m[1], 10) * 100 + (m[2] ? parseInt((m[2] + '0').slice(0, 2), 10) : 0); }
 
-  /* live-update a card's shown price from its checked options (woning / abonnementen) */
+  /* The /mnd banner must always show only the package's own recurring price.
+     2026-10-22 fix (confirmed with Thijs): any checked Uitbreiding — Videodeurbel
+     (one-time), Ontzorgpakket, the Woning-grootte surcharge, etc. — must total only
+     in the cart ("In winkelwagen"), never roll into this banner. Previously this
+     summed every checked .pcard__plus-opt price into the banner regardless of
+     whether it was a one-time or recurring charge (e.g. a €299 one-time Videodeurbel
+     fee displayed as if it were €299/mnd) — see spellcheck/pricing report 2026-10-21.
+     Kept as a no-op reset (rather than deleting the call site) so a card's banner is
+     always restored to its base price even if it was previously showing a stale
+     computed total. */
   function recomputeCardPrice(card) {
     var amtEl = card.querySelector('.pcard__price .amt'); if (!amtEl) return;
     var base = parseInt(card.dataset.priceCents, 10); if (isNaN(base) || base <= 0) return;
-    var extra = 0;
-    card.querySelectorAll('.pcard__plus-opt input:checked').forEach(function (inp) {
-      var pr = inp.closest('.pcard__plus-opt').querySelector('.pcard__plus-pr');
-      if (pr && /\+/.test(pr.textContent)) extra += euroToCents(pr.textContent);
-    });
-    amtEl.textContent = money(base + extra);
-    amtEl.classList.add('is-updated');
-    if (card._priceT) clearTimeout(card._priceT);
-    card._priceT = setTimeout(function () { amtEl.classList.remove('is-updated'); }, 600);
+    amtEl.textContent = money(base);
   }
 
   /* Keep the header cart badge in lock-step with the real Shopify cart.
