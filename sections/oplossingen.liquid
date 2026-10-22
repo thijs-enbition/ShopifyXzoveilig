@@ -1177,7 +1177,6 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
 .pbd-it-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .pbd-it-name { font-size: 16px; font-weight: 800; color: var(--indigo); line-height: 1.2; }
 .pbd-qty { color: var(--belt); font-weight: 900; margin-right: 5px; }
-.pbd-kind { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-2); background: none; border-radius: 0; padding: 0; }
 .pbd-it-tag { font-size: 13.5px; font-weight: 500; color: #5b5374; margin-top: 5px; line-height: 1.45; }
 .pbd-specs { display: grid; grid-template-columns: auto 1fr; gap: 9px 24px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .pbd-spx { margin-top: 12px; }
@@ -2175,12 +2174,11 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
       specs = '<details class="pbd-spx"><summary>Specificaties' + ICON.chev + '</summary><div class="pbd-specs">' + rows + '</div></details>';
     }
     var qty = (entry.qty && entry.qty > 1) ? '<b class="pbd-qty">' + entry.qty + '×</b>' : '';
-    var kind = esc(hw.kind) + (hw.sku ? ' · ' + esc(hw.sku) : '');
     // entry.name: optional per-package display name (the card's "Wat zit erin?" wording); entry.id stays the DATA.hw lookup key.
     // entry.tagline: optional per-package tagline, for a shared hw entry whose own tagline doesn't hold for this package
     // (Beschermd's locatiesensor: no routine claim; its rookmelder: no familie-app, 2026-10-14).
     return '<li class="pbd-item"><span class="pbd-ic">' + ICON.check + '</span><div class="pbd-it-body">' +
-      '<div class="pbd-it-top"><span class="pbd-it-name">' + qty + esc(entry.name || hw.name) + '</span><span class="pbd-kind">' + kind + '</span></div>' +
+      '<div class="pbd-it-top"><span class="pbd-it-name">' + qty + esc(entry.name || hw.name) + '</span></div>' +
       '<p class="pbd-it-tag">' + esc(entry.tagline || hw.tagline) + '</p>' + specs + '</div></li>';
   }
 
