@@ -326,6 +326,17 @@ match the Shopify variant price: both confirmed equal on 2026-09-23 (Alert €24
 €37,95). What Odoo bills monthly is a separate, manually-verified sync point; nothing here can
 check it.
 
+**Huren/Kopen (draft, 2026-10-23, `docs/huren-kopen-toggle-2026-10-23.md`).** The five fixed
+packages and the Videodeurbel/Afstandsbediening add-on rows on Oplossingen get a Huren/Kopen
+choice. Koop prices are config inputs (`koopEenmalig`/`koopMaandelijks` per package,
+`addonNames[].koopEenmalig`), emitted as `zv_<pakket>_koop_*_cents` and
+`zv_koop_addon_cents_by_handle`; `check_pricing.py` section 15 pins them. **The intro promo is
+Huren only**: `koop.promoApplies` must stay false (`build_pricing.py` refuses otherwise), and a
+Koop variant is added by `addKoopToCart()` at quantity 1, never through `addToCart()`/`PKG_QTY`.
+Koop variant ids come only from the theme settings "Zo Veilig · Huren/Kopen" (empty = a disabled
+"binnenkort" state). **Don't fill those settings on the live theme yet**: `/cart`, Overzicht,
+the cart guard and Odoo don't handle a koop line (see the doc for the list). Vista stays as-is.
+
 ## Shopify store
 
 The test store is **`zoveiligdev.myshopify.com`** (admin: `admin.shopify.com/store/zoveiligdev`).

@@ -18,6 +18,8 @@ Covers:
  12 package display order
  13 Woning surcharge: unit, property values, monthly amounts, contract value (NAMI only),
     the N0008 product it is collected by, and no theme file naming that product itself
+ 14 packages by handle
+ 15 Huren/Kopen: koop figures per package and hardware add-on, never a promo figure
 
 Run:  python3 scripts/check_pricing.py
 """
@@ -495,6 +497,34 @@ for line in cfg["lines"]:
     blk = ph_text.split(f"when '{line['id']}'", 1)[1].split("when '", 1)[0] if f"when '{line['id']}'" in ph_text else ""
     check(f"echo '{hs}'" in blk and f"echo '{ss}'" in blk, f"zv-package-handles.liquid has {line['id']} handles and skus from the config")
 check(f"echo '{'|'.join(handles)}'" in ph_text and f"echo '{'|'.join(skus)}'" in ph_text, "zv-package-handles.liquid 'all' lists every package in config order")
+
+print("\n15. Huren/Kopen (koop figures, display only; intro promo is Huren only)")
+# Confirmed by Thijs 2026-10-23: one-time hardware price + reduced monthly service fee. Huur
+# (section 1) is unchanged by this; Vista and Veilig Onderweg never get a koop option.
+EXPECTED_KOOP_CENTS = {"inzicht": (29900, 995), "zeker": (34900, 995), "beschermd": (84900, 1995),
+                       "alert": (34900, 995), "protect": (79900, 1995)}
+check(cfg.get("koop", {}).get("promoApplies") is False and gen.get("koop", {}).get("promoApplies") is False,
+      "koop.promoApplies is false in config and generated output")
+for p in gen["packages"]:
+    exp = EXPECTED_KOOP_CENTS.get(p["id"])
+    k = p.get("koop")
+    if exp is None:
+        check(k is None, f"{p['name']} has no koop option", f"got {k}")
+        continue
+    got = (k or {}).get("eenmaligCents"), (k or {}).get("maandelijksCents")
+    check(got == exp, f"{p['name']} koop = {exp[0]} eenmalig + {exp[1]}/mnd", f"got {got}")
+    check(not any("promo" in key.lower() for key in (k or {})), f"{p['name']} koop carries no promo figure",
+          f"keys {sorted(k or {})}")
+    check(exp[1] < p["monthlyRecurringPriceCents"], f"{p['name']} koop monthly is below the huur monthly")
+    pid = p["id"].replace("-", "_")
+    check((snippet_int(f"zv_{pid}_koop_eenmalig_cents"), snippet_int(f"zv_{pid}_koop_maandelijks_cents")) == exp,
+          f"zv_{pid}_koop_* assigns match the config")
+EXPECTED_KOOP_ADDON_CENTS = {"koop-video-deurbel-750": 29900, "huur-afstandsbediening": 4000}
+got_addons = {a["productHandle"]: a["eenmaligCents"] for a in gen.get("koop", {}).get("addons", [])}
+check(got_addons == EXPECTED_KOOP_ADDON_CENTS, "koop add-ons are Videodeurbel 29900 and Afstandsbediening 4000",
+      f"got {got_addons}")
+check(snippet_str("zv_koop_addon_cents_by_handle") == "|".join(f"{h}:{c}" for h, c in got_addons.items()),
+      "zv_koop_addon_cents_by_handle matches the generated add-ons")
 
 print("\n" + "=" * 60)
 if failures:

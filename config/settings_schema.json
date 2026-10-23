@@ -1463,5 +1463,21 @@
       { "type": "url", "id": "webhook_failure_log_endpoint", "label": "Foutlog-endpoint URL", "info": "Bijv. https://<project-ref>.supabase.co/functions/v1/log-webhook-failure (Supabase Edge Function, zie supabase/functions/log-webhook-failure)." },
       { "type": "text", "id": "webhook_failure_log_key", "label": "Foutlog anon key", "info": "Supabase anon/public key van hetzelfde project als de foutlog-functie." }
     ]
+  },
+  {
+    "name": "Zo Veilig · Huren/Kopen",
+    "settings": [
+      { "type": "paragraph", "content": "Variant-ID van het Koop-product per pakket en per uitbreiding (alleen het getal, bijv. 58446173143421). Leeg = de Kopen-knop of het Kopen-vinkje toont 'binnenkort' en voegt niets toe. Prijzen komen uit pricing.config.json, niet uit deze instellingen." },
+      { "type": "paragraph", "content": "Let op: winkelwagen, Overzicht, cart guard en Odoo kennen een Koop-regel nog niet (geen installatieregel, geen contractregels, geen SEPA-servicebedrag). Vul deze velden niet in op het live thema voordat dat is gebouwd; zie docs/huren-kopen-toggle-2026-10-23.md." },
+      { "type": "header", "content": "Pakketten" },
+      { "type": "text", "id": "zv_koop_variant_inzicht", "label": "Inzicht · Koop variant-ID" },
+      { "type": "text", "id": "zv_koop_variant_zeker", "label": "Zeker · Koop variant-ID" },
+      { "type": "text", "id": "zv_koop_variant_beschermd", "label": "Beschermd · Koop variant-ID" },
+      { "type": "text", "id": "zv_koop_variant_alert", "label": "Alert · Koop variant-ID" },
+      { "type": "text", "id": "zv_koop_variant_protect", "label": "Protect · Koop variant-ID" },
+      { "type": "header", "content": "Uitbreidingen" },
+      { "type": "text", "id": "zv_koop_variant_videodeurbel", "label": "Videodeurbel · Koop variant-ID" },
+      { "type": "text", "id": "zv_koop_variant_afstandsbediening", "label": "Afstandsbediening · Koop variant-ID" }
+    ]
   }
 ]

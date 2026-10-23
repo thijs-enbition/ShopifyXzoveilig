@@ -63,6 +63,24 @@
       36
     ]
   },
+  "koop": {
+    "status": "DISPLAY_ONLY",
+    "promoApplies": false,
+    "addons": [
+      {
+        "productHandle": "koop-video-deurbel-750",
+        "name": "Videodeurbel",
+        "eenmaligCents": 29900,
+        "eenmaligDisplay": "€ 299,00"
+      },
+      {
+        "productHandle": "huur-afstandsbediening",
+        "name": "Afstandsbediening",
+        "eenmaligCents": 4000,
+        "eenmaligDisplay": "€ 40,00"
+      }
+    ]
+  },
   "labels": {
     "activation": "Eenmalige activatie en installatie",
     "commitment": "eerste 3 maanden (50% korting)",
@@ -218,7 +236,13 @@
           "cents": 8400,
           "display": "€ 84,00"
         }
-      ]
+      ],
+      "koop": {
+        "eenmaligCents": 29900,
+        "eenmaligDisplay": "€ 299,00",
+        "maandelijksCents": 995,
+        "maandelijksDisplay": "€ 9,95"
+      }
     },
     {
       "id": "zeker",
@@ -281,7 +305,13 @@
           "cents": 8400,
           "display": "€ 84,00"
         }
-      ]
+      ],
+      "koop": {
+        "eenmaligCents": 34900,
+        "eenmaligDisplay": "€ 349,00",
+        "maandelijksCents": 995,
+        "maandelijksDisplay": "€ 9,95"
+      }
     },
     {
       "id": "beschermd",
@@ -325,7 +355,13 @@
         "label": "Indicatieve totale contractwaarde, inclusief eenmalige kosten"
       },
       "woningApplies": false,
-      "woningContractValue": []
+      "woningContractValue": [],
+      "koop": {
+        "eenmaligCents": 84900,
+        "eenmaligDisplay": "€ 849,00",
+        "maandelijksCents": 1995,
+        "maandelijksDisplay": "€ 19,95"
+      }
     },
     {
       "id": "alert",
@@ -388,7 +424,13 @@
           "cents": 8400,
           "display": "€ 84,00"
         }
-      ]
+      ],
+      "koop": {
+        "eenmaligCents": 34900,
+        "eenmaligDisplay": "€ 349,00",
+        "maandelijksCents": 995,
+        "maandelijksDisplay": "€ 9,95"
+      }
     },
     {
       "id": "protect",
@@ -432,7 +474,13 @@
         "label": "Indicatieve totale contractwaarde, inclusief eenmalige kosten"
       },
       "woningApplies": false,
-      "woningContractValue": []
+      "woningContractValue": [],
+      "koop": {
+        "eenmaligCents": 79900,
+        "eenmaligDisplay": "€ 799,00",
+        "maandelijksCents": 1995,
+        "maandelijksDisplay": "€ 19,95"
+      }
     },
     {
       "id": "vista",
