@@ -116,7 +116,15 @@
     "timelineLabel": "Eerste 3 maanden",
     "disclosure": "De eerste 3 maanden betaalt u vooruit met 50% korting, eenmalig bij uw bestelling. Daarna betaalt u het vaste maandbedrag via SEPA-incasso. Alle bedragen zijn inclusief btw (21%).",
     "note": "MODEL (2026-09-23, Thijs): a package purchase is the chosen installation product (qty 1, never discounted) plus the real package product at quantity `months` (3). Shopify's automatic discount 'Eerste 3 maanden' (amount off products, 50%, no end date, does not combine, scope exactly N0001/N0002/N0003/LT-BES/MT-PRO/MT-VIS — nothing to build, never modified from this repo) takes `ratePercent` off that line by itself. The Overzicht breakdown reads that line's real final_line_price. promoDiscountTotalCents is what those 3 prepaid months cost, rounded PER UNIT like Shopify: months x half_up(monthly x rate), e.g. 3 x 1248 = 3744 for Zeker, not half_up(3 x 2495 x 50%) = 3743 (decided by Thijs 2026-09-23 after measuring real carts; see docs/prepay-qty3-2026-09-23.md). indicativeContractValue uses the same figure: activation + promoDiscountTotal + monthly x (term - months). The monthly recurring price is never modified anywhere in this flow. SUPERSEDES the 2026-09-22 prepaid PROMO product model (separate per-package promo products), abandoned 2026-09-23: those products were deleted from Shopify because every new Shopify product becomes a stub product in Odoo. 'disclosure' above is the approved customer-facing wording (Thijs, 2026-09-23).",
+    "discountScopeNote": "2026-10-23 (Thijs): Inzicht, Zeker and Alert now sell as A0071/A0072/A0073 (handles nami-langer-thuis-inzicht, nami-langer-thuis-zeker, nami-mijn-thuis-alert); the old N0001/N0002/N0003 products were archived and are internal-only. The 'Eerste 3 maanden' automatic discount is scoped to specific products in Shopify Admin, and its scope still names the archived products, so the intro discount does NOT apply to A0071-A0073 until Thijs re-points it at the new products in Admin (Discounts). Admin-side only: this repo never modifies the discount. The scope list in `note` above describes the pre-2026-10-23 state.",
     "labelCommitmentNote": "labels.commitment is the breakdown-row suffix for the package line on Overzicht, rendered as '<pakket> × <months> — <labels.commitment>', e.g. 'Zeker × 3 — eerste 3 maanden (50% korting)'. Originally the retired v2 'Eerste vooruitbetaling' label."
+  },
+  "koop": {
+    "status": "DISPLAY_ONLY",
+    "promoApplies": false,
+    "decidedOn": "2026-10-23",
+    "decidedBy": "Thijs",
+    "note": "Huren/Kopen toggle (feature/huren-kopen-toggle-2026-10-23, draft). Kopen = buy the hardware: koopEenmalig once, then koopMaandelijks per month for the service only (no hardware cost in it), instead of the full monthlyRecurringPrice. Only the 5 fixed packages have it (never Vista, never Veilig Onderweg); among the add-ons only the hardware ones in addonNames carry koopEenmalig (Videodeurbel, Afstandsbediening), never a service such as Ontzorgpakket. promoApplies false: the intro promo (promo above, 50% off the first 3 months) is Huren only. build_pricing.py never runs a koop figure through the promo maths and check_pricing.py fails if a koop row carries a promo field; the theme never adds a koop variant at promo.packageCartQuantity. DISPLAY_ONLY: there are no Koop products in Shopify yet (Thijs and Alex create them; never from this repo). Each package and add-on gets its Koop variant id from a theme setting (Zo Veilig - Huren/Kopen); empty = the Kopen button / checkbox shows 'binnenkort' and adds nothing. Odoo (SEPA amount, contract template for a koop service fee) is out of scope and not done. See docs/huren-kopen-toggle-2026-10-23.md for what still has to happen before a Koop variant id may be filled in on the live theme."
   },
   "contract": {
     "defaultTermMonths": 36,
@@ -151,7 +159,7 @@
       "packages": [
         {
           "id": "inzicht",
-          "sku": "N0001",
+          "sku": "A0071",
           "name": "Inzicht",
           "finderKey": "aware",
           "platform": "NAMI aiAware",
@@ -162,13 +170,22 @@
             "display": "€19,95",
             "per": "/mnd"
           },
+          "koopEenmalig": {
+            "amountCents": 29900,
+            "display": "€299"
+          },
+          "koopMaandelijks": {
+            "amountCents": 995,
+            "display": "€9,95",
+            "per": "/mnd"
+          },
           "termMonths": 12,
           "installGroup": "nami",
-          "productHandle": "langer-thuis-inzicht"
+          "productHandle": "nami-langer-thuis-inzicht"
         },
         {
           "id": "zeker",
-          "sku": "N0002",
+          "sku": "A0072",
           "name": "Zeker",
           "finderKey": "aware_plus",
           "platform": "NAMI aiCare",
@@ -180,9 +197,18 @@
             "display": "€24,95",
             "per": "/mnd"
           },
+          "koopEenmalig": {
+            "amountCents": 34900,
+            "display": "€349"
+          },
+          "koopMaandelijks": {
+            "amountCents": 995,
+            "display": "€9,95",
+            "per": "/mnd"
+          },
           "termMonths": 12,
           "installGroup": "nami",
-          "productHandle": "langer-thuis-zeker"
+          "productHandle": "nami-langer-thuis-zeker"
         },
         {
           "id": "beschermd",
@@ -195,6 +221,15 @@
           "monthlyRecurringPrice": {
             "amountCents": 3995,
             "display": "€39,95",
+            "per": "/mnd"
+          },
+          "koopEenmalig": {
+            "amountCents": 84900,
+            "display": "€849"
+          },
+          "koopMaandelijks": {
+            "amountCents": 1995,
+            "display": "€19,95",
             "per": "/mnd"
           },
           "termMonths": 36,
@@ -212,7 +247,7 @@
       "packages": [
         {
           "id": "alert",
-          "sku": "N0003",
+          "sku": "A0073",
           "name": "Alert",
           "finderKey": "secure",
           "platform": "NAMI Alarm15",
@@ -224,9 +259,18 @@
             "display": "€24,95",
             "per": "/mnd"
           },
+          "koopEenmalig": {
+            "amountCents": 34900,
+            "display": "€349"
+          },
+          "koopMaandelijks": {
+            "amountCents": 995,
+            "display": "€9,95",
+            "per": "/mnd"
+          },
           "termMonths": 12,
           "installGroup": "nami",
-          "productHandle": "mijn-thuis-alert"
+          "productHandle": "nami-mijn-thuis-alert"
         },
         {
           "id": "protect",
@@ -241,6 +285,15 @@
           "monthlyRecurringPrice": {
             "amountCents": 3795,
             "display": "€37,95",
+            "per": "/mnd"
+          },
+          "koopEenmalig": {
+            "amountCents": 79900,
+            "display": "€799"
+          },
+          "koopMaandelijks": {
+            "amountCents": 1995,
+            "display": "€19,95",
             "per": "/mnd"
           },
           "termMonths": 36,
@@ -323,9 +376,9 @@
         "sku": "N0008"
       },
       "appliesTo": [
-        "langer-thuis-inzicht",
-        "langer-thuis-zeker",
-        "mijn-thuis-alert"
+        "nami-langer-thuis-inzicht",
+        "nami-langer-thuis-zeker",
+        "nami-mijn-thuis-alert"
       ],
       "collectedVia": "NAMI packages only (appliesTo: Inzicht, Zeker, Alert; Thijs, 2026-09-25). Two records per choice. (1) The `Woning` line-item property on the NAMI package line, unchanged from 2026-09-24 (same values, same legacy prefix, same writers): the per-package record for Odoo. (2) ONE priced cart line for the Shopify product shopify.handle / shopify.sku (N0008, 'Extra etage of >100m2'), at quantity promo.months x the sum of floors over the NAMI package lines (1 floor = 3, 2 floors = 6, no Woning = no line). N0008 is in the 'Eerste 3 maanden' automatic discount (set in Shopify Admin, never from this repo), so each floor costs promo.months x half_up(price.amountCents x promo.ratePercent) today (600 cents at 400 / 50%); Odoo bills price.amountCents per floor per month from month 4. Climax packages (Beschermd, Protect) never get a Woning choice, a Woning property or an N0008 line: a larger Climax home is extended with extra sensors via the hardware page (/pages/camera-hardware#grotere-woning). Supersedes 'property only, never a priced line' (2026-09-24).",
       "woning": {
@@ -447,12 +500,22 @@
       "productHandle": "koop-video-deurbel-750",
       "sku": "ADC-750",
       "name": "Videodeurbel",
+      "koopEenmalig": {
+        "amountCents": 29900,
+        "display": "€299"
+      },
+      "koopSource": "koop-video-deurbel-750 / ADC-750, EUR 299,00 (the same product the Huren row resolves live today: it is a one-time product, so both rows show EUR 299 until Alex's rental conversion lands)",
       "note": "Real Shopify product (2026-09-26), rendered as a checkbox in the Uitbreidingen accordion on every Langer Thuis/Mijn Thuis package card except Vista. Name-only entry, deliberately separate from `addons` above: that array's price is a static config literal (amountCents/display), which is exactly what this add-on must NOT use — it's currently a one-time purchase and Alex is converting it to a rental shortly, so its price and purchase type are read live from all_products['koop-video-deurbel-750'] in the theme, never duplicated here. This entry exists only so /cart, Overzicht and the cart drawer can show the clean name instead of the raw Shopify admin title (which currently still carries a '***' placeholder) — see sections/oplossingen.liquid, zv-cart.liquid, zv-checkout-overview.liquid."
     },
     {
       "productHandle": "huur-afstandsbediening",
       "sku": "H0010",
       "name": "Afstandsbediening",
+      "koopEenmalig": {
+        "amountCents": 4000,
+        "display": "€40"
+      },
+      "koopSource": "koop-afstandsbediening / CL004, EUR 40,00 (also the koop price on /pages/camera-hardware)",
       "note": "Real Shopify product (2026-09-26), same treatment as Videodeurbel above: name-only, no price here — live price and the qty-3/discount cart mechanic read straight from all_products['huur-afstandsbediening']."
     },
     {
@@ -605,7 +668,7 @@
     {
       "id": "ODOO_PROMO_DISCOUNT",
       "severity": "high",
-      "summary": "DOCUMENTATION ONLY (Thijs, 2026-09-23: Odoo is out of scope for this repo and this blocks nothing here; Thijs handles it with Alex). A package is sold as ONE Shopify order line: the package product at quantity 3 (e.g. N0002 x 3), 50% off, which prepays months 1-3. Odoo must turn that line into (1) exactly ONE contract at the plain monthly rate (e.g. €24,95/mnd) — not a contract at quantity 3 (€74,85/mnd) and not three contracts — and (2) start SEPA collection at month 4, not month 1, so months 1-3 are not charged twice. Neither is confirmed yet.",
+      "summary": "DOCUMENTATION ONLY (Thijs, 2026-09-23: Odoo is out of scope for this repo and this blocks nothing here; Thijs handles it with Alex). A package is sold as ONE Shopify order line: the package product at quantity 3 (e.g. A0072 x 3), 50% off, which prepays months 1-3. Odoo must turn that line into (1) exactly ONE contract at the plain monthly rate (e.g. €24,95/mnd) — not a contract at quantity 3 (€74,85/mnd) and not three contracts — and (2) start SEPA collection at month 4, not month 1, so months 1-3 are not charged twice. Neither is confirmed yet.",
       "blocks": [
         "Moment B offline conversion value",
         "Shopify to Odoo billing reconciliation"

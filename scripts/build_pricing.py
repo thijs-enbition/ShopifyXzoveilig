@@ -63,6 +63,25 @@ def is_priced(price: dict) -> bool:
     return isinstance(price, dict) and "amountCents" in price
 
 
+def koop_row(pkg: dict):
+    """Huren/Kopen (2026-10-23): a package's koop figures, copied as-is, or None without them.
+
+    Never derived from monthlyRecurringPrice and never run through the promo maths: the
+    intro promo is Huren only (cfg["koop"]["promoApplies"] is false, enforced in build()).
+    """
+    once, monthly = pkg.get("koopEenmalig"), pkg.get("koopMaandelijks")
+    if once is None and monthly is None:
+        return None
+    if not (is_priced(once) and is_priced(monthly)):
+        raise SystemExit(f"{pkg['id']}: koopEenmalig and koopMaandelijks must both be priced, or both absent")
+    return {
+        "eenmaligCents": once["amountCents"],
+        "eenmaligDisplay": eur(once["amountCents"]),
+        "maandelijksCents": monthly["amountCents"],
+        "maandelijksDisplay": eur(monthly["amountCents"]),
+    }
+
+
 def build():
     cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
 
@@ -78,6 +97,18 @@ def build():
     # `enabled: false` or `ratePercent: 0` fully hides every promo-specific display
     # (badge, disclosure, discount rows) via zv_promo_active, without a second flag to keep in sync.
     promo_active = promo_enabled and promo_rate > 0
+
+    # Huren/Kopen (2026-10-23, Thijs): the intro promo is Huren only. Refuse a config that says
+    # otherwise rather than emit a discounted koop figure anywhere.
+    koop_cfg = cfg.get("koop") or {}
+    if koop_cfg.get("promoApplies", False):
+        raise SystemExit("koop.promoApplies must be false: the intro promo applies to Huren only")
+    # Hardware add-ons that can be bought (addonNames[].koopEenmalig): handle -> one-time price.
+    koop_addons = [
+        {"productHandle": a["productHandle"], "name": a["name"],
+         "eenmaligCents": a["koopEenmalig"]["amountCents"], "eenmaligDisplay": eur(a["koopEenmalig"]["amountCents"])}
+        for a in cfg.get("addonNames", []) if is_priced(a.get("koopEenmalig"))
+    ]
 
     # NAMI installation choice (Inzicht/Zeker/Alert only; Climax keeps the fixed `activation`
     # fee above, untouched). display is recomputed via eur(), same as activation's, rather
@@ -218,6 +249,8 @@ def build():
             "packageCartQuantity": promo_months,
         },
         "contract": {"defaultTermMonths": default_term, "enabledTerms": enabled_terms},
+        # Huren/Kopen: the per-package figures sit on each package row ("koop"); never promo.
+        "koop": {"status": koop_cfg.get("status"), "promoApplies": False, "addons": koop_addons},
         "labels": cfg["labels"],
         # Display order for package cards (see package_order_fks above): the finder_key
         # values in pricing.config.json order. Theme surfaces must render in this order,
@@ -347,6 +380,9 @@ def build():
                 "woningApplies": woning_applies_pkg,
                 "woningContractValue": woning_contract_value,
             })
+            koop = koop_row(pkg)
+            if koop:
+                row["koop"] = koop
             out["packages"].append(row)
 
     for a in cfg["addons"] + cfg["surcharges"]:
@@ -489,6 +525,15 @@ def build():
                 f"{{%- assign zv_{pid}_due_today_{oid} = '{opt['display']}' -%}}",
                 f"{{%- assign zv_{pid}_due_today_{oid}_cents = {opt['amountCents']} -%}}",
             ]
+        # Huren/Kopen: the Oplossingen card's Kopen price. No promo figure exists for koop.
+        if p.get("koop"):
+            lines += [
+                f"{{%- assign zv_{pid}_koop_eenmalig_cents = {p['koop']['eenmaligCents']} -%}}",
+                f"{{%- assign zv_{pid}_koop_maandelijks_cents = {p['koop']['maandelijksCents']} -%}}",
+            ]
+    # Huren/Kopen add-ons: product handle -> one-time koop price in cents, for the Uitbreidingen rows.
+    lines.append("{%- assign zv_koop_addon_cents_by_handle = '" + "|".join(
+        f"{a['productHandle']}:{a['eenmaligCents']}" for a in koop_addons) + "' -%}")
     SNIPPET.parent.mkdir(parents=True, exist_ok=True)
     SNIPPET.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -561,6 +606,9 @@ def build():
               f" | package x{out['promo']['packageCartQuantity']} today {p['promoDiscountTotalDisplay']} (was {p['promoWasDisplay']})"
               f" | due today [{due_today_breakdown}]"
               f" | {p['termMonths']}m | ICV {p['indicativeContractValue']['display']} | woning ICV [{woning_icv}]")
+        if p.get("koop"):
+            print(f"      koop: {p['koop']['eenmaligDisplay']} eenmalig + {p['koop']['maandelijksDisplay']}/mnd (no promo)")
+    print("  koop add-ons: " + (", ".join(f"{a['name']} {a['eenmaligDisplay']}" for a in koop_addons) or "none"))
 
 
 if __name__ == "__main__":

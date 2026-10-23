@@ -11,19 +11,19 @@
   case line
     when 'langer-thuis'
       if what == 'skus'
-        echo 'N0001|N0002|LT-BES'
+        echo 'A0071|A0072|LT-BES'
       elsif what == 'name'
         echo 'Langer Thuis'
       else
-        echo 'langer-thuis-inzicht|langer-thuis-zeker|langer-thuis-beschermd'
+        echo 'nami-langer-thuis-inzicht|nami-langer-thuis-zeker|langer-thuis-beschermd'
       endif
     when 'mijn-thuis'
       if what == 'skus'
-        echo 'N0003|MT-PRO|MT-VIS'
+        echo 'A0073|MT-PRO|MT-VIS'
       elsif what == 'name'
         echo 'Mijn Thuis'
       else
-        echo 'mijn-thuis-alert|mijn-thuis-protect|mijn-thuis-vista'
+        echo 'nami-mijn-thuis-alert|mijn-thuis-protect|mijn-thuis-vista'
       endif
     when 'veilig-onderweg'
       if what == 'skus'
@@ -43,11 +43,11 @@
       endif
     when 'all'
       if what == 'skus'
-        echo 'N0001|N0002|LT-BES|N0003|MT-PRO|MT-VIS|VO-SOLO|VO-GUARD'
+        echo 'A0071|A0072|LT-BES|A0073|MT-PRO|MT-VIS|VO-SOLO|VO-GUARD'
       elsif what == 'name'
         echo ''
       else
-        echo 'langer-thuis-inzicht|langer-thuis-zeker|langer-thuis-beschermd|mijn-thuis-alert|mijn-thuis-protect|mijn-thuis-vista|veilig-onderweg-paniek-meldkamer|veilig-onderweg-zorgmeldkamer'
+        echo 'nami-langer-thuis-inzicht|nami-langer-thuis-zeker|langer-thuis-beschermd|nami-mijn-thuis-alert|mijn-thuis-protect|mijn-thuis-vista|veilig-onderweg-paniek-meldkamer|veilig-onderweg-zorgmeldkamer'
       endif
   endcase
 -%}
