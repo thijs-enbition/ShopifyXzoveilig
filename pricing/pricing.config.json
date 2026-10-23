@@ -492,7 +492,7 @@
         "status": "PRICE_PENDING",
         "display": "Prijs volgt"
       },
-      "note": "Price not confirmed. Must NOT enter the cart with any amount. The EUR 4,95 on the confirmation mockup is not authorised. Superseded for Inzicht (fk 'aware') by the real, confirmed addonNames entry 'ontzorgpakket-inzicht' below (EUR 5,95/mnd, 2026-10-13) — this placeholder still applies to Zeker/Beschermd."
+      "note": "Price not confirmed. Must NOT enter the cart with any amount. The EUR 4,95 on the confirmation mockup is not authorised. Superseded for Inzicht (fk 'aware') by the real, confirmed addonNames entry 'maandelijks-ontzorg-inzicht-oh' below (EUR 4,95/mnd since 2026-10-23) — this placeholder still applies to Zeker/Beschermd."
     }
   ],
   "addonNames": [
@@ -519,10 +519,10 @@
       "note": "Real Shopify product (2026-09-26), same treatment as Videodeurbel above: name-only, no price here — live price and the qty-3/discount cart mechanic read straight from all_products['huur-afstandsbediening']."
     },
     {
-      "productHandle": "ontzorgpakket-inzicht",
+      "productHandle": "maandelijks-ontzorg-inzicht-oh",
       "sku": "MOIOH",
       "name": "Ontzorgpakket",
-      "note": "Real Shopify product (2026-10-13), confirmed price EUR 5,95/mnd (Thijs), published to Online Store. Inzicht (fk 'aware') only for now — Zeker/Beschermd keep the 'Prijs volgt' placeholder in sections/oplossingen.liquid until their own Ontzorgpakket variants are live. SHIPPED DELIBERATELY WITHOUT THE PROMO DISCOUNT (Thijs, 2026-10-13): this product is not in the 'Eerste 3 maanden' automatic discount's product list, so syncAddonLines() adds its line at quantity 3 at full price (EUR 17,85 today, not the ~EUR 8,94 a discounted line would be) — a known, accepted gap, not a bug. Add it to that automatic discount in Shopify Admin whenever the full 50%-off treatment is wanted; nothing in this repo needs to change for that. Same treatment as Videodeurbel/Afstandsbediening otherwise: name-only, no price here — live price and the qty-3 cart mechanic read straight from all_products['ontzorgpakket-inzicht']. Supersedes the generic 'ontzorgpakket' entry in `addons` above for Inzicht specifically; that entry still stands for Zeker/Beschermd. Reported on Inzicht's package line via the Uitbreidingen property (not Abonnement, where the Zeker/Beschermd placeholder still reports it) — flag to whoever owns the Odoo mapping if anything there reads Abonnement for services."
+      "note": "Real Shopify product (2026-10-13; handle maandelijks-ontzorg-inzicht-oh since the 2026-10-23 catalog reimport, was ontzorgpakket-inzicht, same SKU), price EUR 4,95/mnd (Thijs, 2026-10-23; was EUR 5,95), published to Online Store. Inzicht (fk 'aware') only for now — Zeker/Beschermd keep the 'Prijs volgt' placeholder in sections/oplossingen.liquid until their own Ontzorgpakket variants are live. SHIPPED DELIBERATELY WITHOUT THE PROMO DISCOUNT (Thijs, 2026-10-13): this product is not in the 'Eerste 3 maanden' automatic discount's product list, so syncAddonLines() adds its line at full price (quantity 1 since 2026-10-22, i.e. EUR 4,95 today) — a known, accepted gap, not a bug. Add it to that automatic discount in Shopify Admin whenever the full 50%-off treatment is wanted; nothing in this repo needs to change for that. Same treatment as Videodeurbel/Afstandsbediening otherwise: name-only, no price here — live price and the cart line read straight from all_products['maandelijks-ontzorg-inzicht-oh']. Supersedes the generic 'ontzorgpakket' entry in `addons` above for Inzicht specifically; that entry still stands for Zeker/Beschermd. Reported on Inzicht's package line via the Uitbreidingen property (not Abonnement, where the Zeker/Beschermd placeholder still reports it) — flag to whoever owns the Odoo mapping if anything there reads Abonnement for services."
     }
   ],
   "bundles": [

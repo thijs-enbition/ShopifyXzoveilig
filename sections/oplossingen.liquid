@@ -61,7 +61,7 @@
 {%- assign zv_addon_videodeurbel_variant_id = all_products[zv_addon_videodeurbel_handle].variants.first.id -%}
 {%- assign zv_addon_afstandsbediening_variant_id = all_products[zv_addon_afstandsbediening_handle].variants.first.id -%}
 {%- comment -%}
-  Ontzorgpakket Inzicht (2026-10-13): real Shopify product, confirmed EUR 5,95/mnd, Inzicht
+  Ontzorgpakket Inzicht (2026-10-13; handle maandelijks-ontzorg-inzicht-oh and EUR 4,95/mnd since 2026-10-23): real Shopify product, Inzicht
   (fk 'aware') only for now — see pricing.config.json addonNames note: shipped deliberately
   without the "Eerste 3 maanden" promo discount, full price today (Thijs, 2026-10-13). IF that
   changes (product added to the discount later), this note and the config note both need
@@ -70,7 +70,7 @@
   amount. Zeker/Beschermd keep the static 'Prijs volgt' placeholder until their own Ontzorgpakket
   variants go live.
 {%- endcomment -%}
-{%- assign zv_addon_ontzorg_inzicht_handle = 'ontzorgpakket-inzicht' -%}
+{%- assign zv_addon_ontzorg_inzicht_handle = 'maandelijks-ontzorg-inzicht-oh' -%}
 {%- assign zv_addon_ontzorg_inzicht_variant_id = all_products[zv_addon_ontzorg_inzicht_handle].variants.first.id -%}
 {%- comment -%}
   Huren/Kopen (2026-10-23, draft, docs/huren-kopen-toggle-2026-10-23.md): the five package cards
