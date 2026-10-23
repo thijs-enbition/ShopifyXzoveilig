@@ -182,8 +182,10 @@ for pkg_id, expected_options in EXPECTED_DUE_TODAY_CENTS.items():
 # The only products sold on this site (verified live via Admin API, 2026-09-23). The
 # theme resolves them by handle; SKUs are what Odoo and GA4 see. Never create products.
 EXPECTED_PACKAGE_PRODUCTS = {
-    "inzicht": ("langer-thuis-inzicht", "N0001"), "zeker": ("langer-thuis-zeker", "N0002"),
-    "alert": ("mijn-thuis-alert", "N0003"), "beschermd": ("langer-thuis-beschermd", "LT-BES"),
+    # Inzicht/Zeker/Alert sell as A0071/A0072/A0073 since 2026-10-23 (Thijs); N0001-N0003 are
+    # archived and internal-only.
+    "inzicht": ("nami-langer-thuis-inzicht", "A0071"), "zeker": ("nami-langer-thuis-zeker", "A0072"),
+    "alert": ("nami-mijn-thuis-alert", "A0073"), "beschermd": ("langer-thuis-beschermd", "LT-BES"),
     "protect": ("mijn-thuis-protect", "MT-PRO"),  # sku added to the config 2026-09-24 (packages by handle)
 }
 for pkg_id, (handle, sku) in EXPECTED_PACKAGE_PRODUCTS.items():
@@ -385,7 +387,7 @@ check(woning.get("shopify") == {"handle": woning_shopify.get("handle"), "sku": w
 # NAMI only (Thijs, 2026-09-25): appliesTo lists package handles, and none may be Climax.
 pkg_by_handle = {pkg.get("productHandle"): pkg for line in cfg["lines"] for pkg in line["packages"]}
 applies = list((etage or {}).get("appliesTo") or [])
-EXPECTED_WONING_APPLIES = ["langer-thuis-inzicht", "langer-thuis-zeker", "mijn-thuis-alert"]
+EXPECTED_WONING_APPLIES = ["nami-langer-thuis-inzicht", "nami-langer-thuis-zeker", "nami-mijn-thuis-alert"]
 check(applies == EXPECTED_WONING_APPLIES, "Woning applies to Inzicht, Zeker and Alert only",
       f"got {applies}")
 climax_in_applies = [h for h in applies if (pkg_by_handle.get(h) or {}).get("installGroup") != "nami"]

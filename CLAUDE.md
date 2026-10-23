@@ -78,9 +78,9 @@ after the fact or a package reaching the cart through an unexpected route:
 **Known limitation: both checks run in the theme, so any route to Shopify checkout that skips
 Overzicht bypasses them.** A cart permalink (`/cart/<variant>:<qty>`) and typing or bookmarking
 `/checkout` directly go straight to Shopify's checkout: no guard, no gate, no `av_akkoord`. The
-other sales channels where N0001 (Inzicht), N0003 (Alert) and the installation products (CL003,
-N0004/N0005/N0006) are published (Shop, Point of Sale, Google & YouTube, Inbox; Admin API,
-2026-09-23) don't run this theme either. A real server-side block needs a Shopify checkout
+other sales channels where A0071/A0072/A0073 (Inzicht/Zeker/Alert; Admin API, 2026-10-23) and the
+installation products (CL003, N0004/N0005/N0006) are published (Shop, Point of Sale, Google &
+YouTube, Inbox; Admin API, 2026-09-23) don't run this theme either. A real server-side block needs a Shopify checkout
 (cart/checkout validation) function, which is a separate decision; the theme can't close this.
 
 The standalone product page doesn't render a buy form for a package (`sections/main-product.liquid`).
@@ -100,15 +100,27 @@ none of them carry `abonnement`:
 
 | Product (title) | handle | type | tags | `custom.finder_key` | SKU |
 |---|---|---|---|---|---|
-| Nami Langer Thuis Inzicht | `langer-thuis-inzicht` | Beveiligingsabonnement | keuzehulp, Langer Thuis | `aware` | N0001 |
-| Nami Langer Thuis Zeker | `langer-thuis-zeker` | Beveiligingsabonnement | keuzehulp, Langer Thuis | `aware_plus` | N0002 |
+| Nami Langer Thuis Inzicht | `nami-langer-thuis-inzicht` | Beveiligingsabonnement | keuzehulp, Langer Thuis | `aware` | A0071 |
+| Nami Langer Thuis Zeker | `nami-langer-thuis-zeker` | Beveiligingsabonnement | keuzehulp, Langer Thuis | `aware_plus` | A0072 |
 | Langer Thuis Beschermd | `langer-thuis-beschermd` | Beveiligingsabonnement | keuzehulp, Langer Thuis | `care` | LT-BES |
-| Nami Mijn Thuis Alert | `mijn-thuis-alert` | Beveiligingsabonnement | keuzehulp, Mijn Thuis | `secure` | N0003 |
+| Nami Mijn Thuis Alert | `nami-mijn-thuis-alert` | Beveiligingsabonnement | keuzehulp, Mijn Thuis | `secure` | A0073 |
 | Mijn Thuis Protect | `mijn-thuis-protect` | Beveiligingsabonnement | keuzehulp, Mijn Thuis | `guard` | MT-PRO |
 | Mijn Thuis Vista | `mijn-thuis-vista` | Beveiligingsabonnement | keuzehulp, Mijn Thuis | `secure_plus` | MT-VIS |
 | Veilig Onderweg Paniek Meldkamer | `veilig-onderweg-paniek-meldkamer` | Beveiligingsabonnement | keuzehulp, prijs-volgt, Veilig Onderweg | `liogo_solo` | — |
 | Veilig Onderweg Zorgmeldkamer | `veilig-onderweg-zorgmeldkamer` | Beveiligingsabonnement | keuzehulp, prijs-volgt, Veilig Onderweg | `liogo_guard` | — |
 | Extra etage of >100m2 (the Woning line, not a package) | `extra-etage-of-100m2` | NAMI_abonnementen | — | — | N0008 |
+
+**SKU switch (Thijs, 2026-10-23): Inzicht/Zeker/Alert sell as A0071/A0072/A0073**, handles
+`nami-langer-thuis-inzicht`, `nami-langer-thuis-zeker`, `nami-mijn-thuis-alert`. N0001/N0002/N0003
+(`langer-thuis-inzicht`, `langer-thuis-zeker`, `mijn-thuis-alert`) were archived the same day and are
+internal-only ("Voor zv niet voor website"). Same prices, term and installGroup. The table shows
+what the theme needs; **as recreated (Admin API, 2026-10-23 20:12 UTC) the three new products have
+type `NAMI_abonnementen` and no `custom.finder_key`**, and inventory tracking on (CONTINUE, 0
+stock). Until type and finder_key are set in Admin, the cards lose their copy and name, and /cart,
+Overzicht and the cart guard don't see them as packages (no installation gate, no qty-3 reset, no
+contract rows; same type as the N0008 Woning line). The "Eerste 3 maanden" discount scope also
+still names the archived products (`promo.discountScopeNote` in pricing.config.json). All three are
+Admin fixes for Thijs, never made from here.
 
 N0008 (created in Shopify Admin on 2026-09-25, not from this repo): one variant, inventory
 **untracked**, published to the Online Store. It is the priced Woning line for the NAMI packages
