@@ -41,6 +41,14 @@
     line's quantity isn't zv_promo_package_qty x the NAMI floors (or it's split over several
     lines), it carries no discount, or its unit price isn't zv_woning_unit_cents. Same
     contact message: never overcharge for Woning.
+  - cart_koop_bad (Huren/Kopen, 2026-10-24): a malformed Koop line (Afname: Kopen on a product
+    that isn't a Koop product, or a Koop product without it; see snippets/zv-koop-fk.liquid) or a
+    Koop line that carries a discount. The intro promo is Huren only; same contact message.
+  KOOP LINES (docs/koop-checkout-2026-10-24.md): a bought package is a one-time line at
+  quantity 1 (cart_needs_fix otherwise, zv-cart-guard resets it). It takes the installation step
+  of its installGroup like a rented package (has_nami_pkg / has_climax_pkg), but it is never a
+  package line for the promo, "Daarna", the contract term or the ICV. Woning on a bought NAMI
+  package is its property only: shown on the line, never counted towards the Woning line.
   The gate reflects the cart at render time, so on click the button also re-reads /cart.js
   and reloads this page instead of navigating to /checkout when the cart no longer matches
   data-cart-sig or zv-cart-guard's rules (window.zvCartGuard.planFix) find a fix.
@@ -75,6 +83,14 @@
   assign zv_addon_ontzorg_inzicht_variant_id = all_products['maandelijks-ontzorg-inzicht-oh'].variants.first.id
 
   comment
+    Koop add-on lines (Huren/Kopen): the Koop variants from the theme settings, synced at
+    quantity 1 by syncAddonLines() on Oplossingen. Labelled "<naam> (kopen)" below; one-off,
+    never in "Daarna". 0 when the setting is empty, so it never matches a line.
+  endcomment
+  assign zv_koop_addon_videodeurbel_variant_id = settings.zv_koop_variant_videodeurbel | strip | plus: 0
+  assign zv_koop_addon_afstandsbediening_variant_id = settings.zv_koop_variant_afstandsbediening | strip | plus: 0
+
+  comment
     Woning line (2026-09-25, NAMI packages only): resolved by handle, only if its first
     variant's SKU is zv_woning_sku. Unresolved, woning_variant_id stays nil and the page keeps
     the property-only behaviour: no Woning row, no Woning gate.
@@ -107,6 +123,8 @@
   assign pkg_woning_floors = 0
   assign cart_needs_fix = false
   assign cart_pkg_undiscounted = false
+  assign cart_koop_bad = false
+  assign distinct_koop_fks = ''
   for item in cart.items
     if activation_variant_id != blank and item.variant_id == activation_variant_id
       assign has_activation_line = true
@@ -174,7 +192,42 @@
     endif
 
     comment
-      A package line: product type sub_type plus one of the 5 purchasable finder_keys.
+      A Koop package line (Huren/Kopen): quantity 1, no discount, one line per package. It needs
+      its installGroup's installation like a rented package; a Climax one never carries Woning
+      (zv-cart-guard deletes it), a NAMI one keeps Woning as its property only.
+    endcomment
+    capture item_koop_fk
+      render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle
+    endcapture
+    assign item_koop_fk = item_koop_fk | strip
+    if item_koop_fk == 'invalid'
+      assign cart_koop_bad = true
+    elsif item_koop_fk != blank
+      if item_koop_fk == 'aware' or item_koop_fk == 'aware_plus' or item_koop_fk == 'secure'
+        assign has_nami_pkg = true
+      else
+        assign has_climax_pkg = true
+        if item.properties['Woning'] != blank
+          assign cart_needs_fix = true
+        endif
+      endif
+      if item.quantity != 1
+        assign cart_needs_fix = true
+      endif
+      if item.final_line_price < item.original_line_price
+        assign cart_koop_bad = true
+      endif
+      assign koop_fk_token = item_koop_fk | append: '|'
+      if distinct_koop_fks contains koop_fk_token
+        assign cart_needs_fix = true
+      else
+        assign distinct_koop_fks = distinct_koop_fks | append: koop_fk_token
+      endif
+    endif
+
+    comment
+      A package line: product type sub_type plus one of the 5 purchasable finder_keys. Never a
+      Koop line, whatever its product type.
     endcomment
     assign item_pkg_fk = blank
     if item.product.type == sub_type or item.product.tags contains sub_tag
@@ -182,6 +235,9 @@
       if item_fk == 'aware' or item_fk == 'aware_plus' or item_fk == 'secure' or item_fk == 'care' or item_fk == 'guard'
         assign item_pkg_fk = item_fk
       endif
+    endif
+    if item_koop_fk != blank
+      assign item_pkg_fk = blank
     endif
 
     if item_pkg_fk != blank
@@ -283,11 +339,11 @@
     endif
   endif
   assign cart_checkout_blocked = false
-  if cart_needs_activation or cart_needs_fix or cart_pkg_undiscounted or cart_woning_bad
+  if cart_needs_activation or cart_needs_fix or cart_pkg_undiscounted or cart_woning_bad or cart_koop_bad
     assign cart_checkout_blocked = true
   endif
 -%}
-{%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_id: woning_variant_id, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles -%}
+{%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_id: woning_variant_id, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles, koop_map: zv_koop_fk_by_handle -%}
 {%- liquid
 
   comment
@@ -390,6 +446,24 @@
     assign pkg_icv_cents_final = pkg_icv_cents_final | plus: pkg_woning_icv_cents
     assign pkg_icv = pkg_icv_cents_final | money
   endif
+
+  comment
+    The NAMI installation choice (radio group, "Installatie" row, delivery text) shows whenever
+    the cart holds a NAMI package, rented or bought (has_nami_pkg, the same flag the
+    cart_needs_activation gate uses), not only when exactly one rented package is recognized:
+    a cart with only a Koop NAMI line must be able to choose, or the gate would block it for
+    good (Huren/Kopen, 2026-10-24).
+  endcomment
+  assign show_nami_install = has_nami_pkg
+
+  comment
+    A cart that buys a package and rents none has no contract term: no "Opzeggen ... na afloop
+    van de contractduur" row (the Koop service fee's own terms are Odoo's, not shown here).
+  endcomment
+  assign koop_only = false
+  if distinct_koop_fks != '' and pkg_line_item == nil
+    assign koop_only = true
+  endif
 -%}
 {%- capture av_url -%}{% render 'zv-route', key: 'algemene-voorwaarden' %}{%- endcapture -%}
 {%- capture privacy_url -%}{% render 'zv-route', key: 'privacyverklaring' %}{%- endcapture -%}
@@ -451,12 +525,23 @@
                     </div>
                     {%- continue -%}
                   {%- endif -%}
+                  {%- capture ovi_koop_fk -%}{%- render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle -%}{%- endcapture -%}
+                  {%- assign ovi_koop_fk = ovi_koop_fk | strip -%}
+                  {%- assign ovi_is_koop = false -%}
+                  {%- if ovi_koop_fk != blank and ovi_koop_fk != 'invalid' -%}{%- assign ovi_is_koop = true -%}{%- endif -%}
                   {%- assign is_sub = false -%}
                   {%- if item.product.type == sub_type or item.product.tags contains sub_tag -%}{%- assign is_sub = true -%}{%- endif -%}
-                  {%- comment -%} Package and installation lines show their pricing.config.json name (package via finder_key, installation via handle), never the Shopify product title. {%- endcomment -%}
+                  {%- if ovi_is_koop -%}{%- assign is_sub = false -%}{%- endif -%}
+                  {%- comment -%} Package and installation lines show their pricing.config.json name (package via finder_key, installation via handle), never the Shopify product title. A Koop line shows its package's name. {%- endcomment -%}
                   {%- assign item_name = item.product.title -%}
                   {%- if is_sub -%}
                     {%- capture cfg_name -%}{%- render 'zv-package-name', finder_key: item.product.metafields.custom.finder_key.value, names: zv_package_names_by_fk -%}{%- endcapture -%}
+                  {%- elsif ovi_is_koop -%}
+                    {%- capture cfg_name -%}{%- render 'zv-package-name', finder_key: ovi_koop_fk, names: zv_package_names_by_fk -%}{%- endcapture -%}
+                  {%- elsif item.variant_id == zv_koop_addon_videodeurbel_variant_id -%}
+                    {%- assign cfg_name = 'Videodeurbel (kopen)' -%}
+                  {%- elsif item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}
+                    {%- assign cfg_name = 'Afstandsbediening (kopen)' -%}
                   {%- else -%}
                     {%- capture cfg_name -%}{%- render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle -%}{%- endcapture -%}
                   {%- endif -%}
@@ -475,8 +560,8 @@
                       {%- assign ovi_is_install = false -%}
                       {%- if item.variant_id == activation_variant_id or item.variant_id == nami_install_geen_variant_id or item.variant_id == nami_install_telefonisch_variant_id or item.variant_id == nami_install_huis_variant_id -%}{%- assign ovi_is_install = true -%}{%- endif -%}
                       {%- assign ovi_is_addon = false -%}
-                      {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_addon_ontzorg_inzicht_variant_id -%}{%- assign ovi_is_addon = true -%}{%- endif -%}
-                      {%- if ovi_is_install -%}<span class="ovi-line">Installatie</span>{%- elsif ovi_is_addon -%}<span class="ovi-line">Uitbreiding</span>{%- elsif item.product.type != blank -%}<span class="ovi-line">{{ item.product.type | escape }}</span>{%- endif -%}
+                      {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_addon_ontzorg_inzicht_variant_id or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}{%- assign ovi_is_addon = true -%}{%- endif -%}
+                      {%- if ovi_is_install -%}<span class="ovi-line">Installatie</span>{%- elsif ovi_is_koop -%}<span class="ovi-line">Kopen</span>{%- elsif ovi_is_addon -%}<span class="ovi-line">Uitbreiding</span>{%- elsif item.product.type != blank -%}<span class="ovi-line">{{ item.product.type | escape }}</span>{%- endif -%}
                       <div class="ovi-name">{{ item_name | escape }}</div>
                       {%- unless item.variant.title contains 'Default' -%}<div class="ovi-meta">{{ item.variant.title | escape }}</div>{%- endunless -%}
                       {%- if is_sub -%}
@@ -484,6 +569,19 @@
                         {%- comment -%} Woning meta on NAMI package lines only; a Climax line's Woning is ignored. {%- endcomment -%}
                         {%- assign ovi_wf = 0 -%}
                         {%- if woning_applies_list contains item.product.handle -%}
+                          {%- capture ovi_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
+                        {%- endif -%}
+                        {%- assign ovi_wf = ovi_wf | strip | plus: 0 -%}
+                        {%- if ovi_wf > 0 -%}
+                          {%- if ovi_wf == 2 -%}{%- assign ovi_wl = zv_woning_2_value -%}{%- else -%}{%- assign ovi_wl = zv_woning_1_value -%}{%- endif -%}
+                          {%- assign ovi_wc = zv_woning_unit_cents | times: ovi_wf -%}
+                          <div class="ovi-meta">Woning: {{ ovi_wl | escape }} (+{{ ovi_wc | money_without_trailing_zeros }}/mnd)</div>
+                        {%- endif -%}
+                      {%- elsif ovi_is_koop -%}
+                        {%- comment -%} A bought package: the apparatuur once, no looptijd. Woning on a bought NAMI package is its property only, billed by Odoo with the service fee, never a line here. {%- endcomment -%}
+                        <div class="ovi-meta">Apparatuur, eenmalig</div>
+                        {%- assign ovi_wf = 0 -%}
+                        {%- if ovi_koop_fk == 'aware' or ovi_koop_fk == 'aware_plus' or ovi_koop_fk == 'secure' -%}
                           {%- capture ovi_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
                         {%- endif -%}
                         {%- assign ovi_wf = ovi_wf | strip | plus: 0 -%}
@@ -507,7 +605,7 @@
                   </div>
                 {%- endfor -%}
               </div>
-              {%- if pkg_install_group == 'nami' -%}
+              {%- if show_nami_install -%}
                 <div class="ovinstall-section">
                   <span class="ovi-line">Installatie</span>
                   <div class="ovinstall-options" data-ov-install-options role="radiogroup" aria-label="Installatie">
@@ -590,6 +688,22 @@
                           assign row_pkg_name = row_pkg_name | strip
                         endif
                       endif
+                      comment
+                        A bought package: "<pakket> — kopen, eenmalig", its real final_line_price (quantity 1,
+                        never discounted). Never the "× 3 — eerste 3 maanden (50% korting)" label.
+                      endcomment
+                      assign row_koop_name = blank
+                      capture row_koop_fk
+                        render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle
+                      endcapture
+                      assign row_koop_fk = row_koop_fk | strip
+                      if row_koop_fk != blank and row_koop_fk != 'invalid'
+                        assign row_pkg_name = blank
+                        capture row_koop_name
+                          render 'zv-package-name', finder_key: row_koop_fk, names: zv_package_names_by_fk
+                        endcapture
+                        assign row_koop_name = row_koop_name | strip
+                      endif
                       if woning_variant_id != blank and item.variant_id == woning_variant_id
                         assign row_label = 'Woning'
                         if woning_label != ''
@@ -606,6 +720,12 @@
                           render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle
                         endcapture
                         assign row_label = row_label | strip
+                      elsif row_koop_name != blank
+                        assign row_label = row_koop_name | append: ' — kopen, eenmalig' | escape
+                      elsif item.variant_id == zv_koop_addon_videodeurbel_variant_id
+                        assign row_label = 'Videodeurbel (kopen)'
+                      elsif item.variant_id == zv_koop_addon_afstandsbediening_variant_id
+                        assign row_label = 'Afstandsbediening (kopen)'
                       elsif zv_addon_videodeurbel_variant_id != blank and item.variant_id == zv_addon_videodeurbel_variant_id
                         assign row_label = 'Videodeurbel'
                       elsif zv_addon_afstandsbediening_variant_id != blank and item.variant_id == zv_addon_afstandsbediening_variant_id
@@ -642,9 +762,9 @@
 
               <dl class="ovdl">
                 <div><dt>Maandelijkse betaling</dt><dd>SEPA-incasso</dd></div>
-                <div><dt>Opzeggen</dt><dd>Maandelijks, na afloop van de contractduur</dd></div>
+                {%- unless koop_only -%}<div><dt>Opzeggen</dt><dd>Maandelijks, na afloop van de contractduur</dd></div>{%- endunless -%}
                 <div><dt>Bedenktijd</dt><dd>14 dagen (<a href="{{ herroeping_url }}" target="_blank" rel="noopener">Herroepen</a>)</dd></div>
-                {%- if pkg_install_group == 'nami' -%}
+                {%- if show_nami_install -%}
                   <div>
                     <dt>Installatie</dt>
                     <dd>
@@ -666,9 +786,9 @@
 
               <div class="ovdelivery">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7h11v9H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 10h4l3 3v3h-7z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="7" cy="18" r="1.8" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="18" r="1.8" stroke="currentColor" stroke-width="2"/></svg>
-                {%- if pkg_install_group == 'nami' and selected_nami_install_id == 'geen' -%}
+                {%- if show_nami_install and selected_nami_install_id == 'geen' -%}
                   <p>Uw pakket wordt na uw bestelling bij u thuisbezorgd.</p>
-                {%- elsif pkg_install_group == 'nami' and selected_nami_install_id == 'telefonisch' -%}
+                {%- elsif show_nami_install and selected_nami_install_id == 'telefonisch' -%}
                   <p>Uw pakket wordt bezorgd. Onze klantenservice belt u om de installatie telefonisch te begeleiden.</p>
                 {%- else -%}
                   <p>Onze monteur neemt na uw bestelling contact op om de installatie in te plannen.</p>
@@ -686,7 +806,7 @@
             </div>
 
             <div class="ovcard ovconsent">
-              {%- if cart_pkg_undiscounted or cart_woning_bad -%}
+              {%- if cart_pkg_undiscounted or cart_woning_bad or cart_koop_bad -%}
                 <div class="ovconsent-err" data-ov-needs-activation role="alert">Er ging iets mis met uw bestelling. Neem contact op via 088 122 11 11.</div>
               {%- elsif cart_needs_activation -%}
                 <div class="ovconsent-err" data-ov-needs-activation role="alert">Er ontbreekt een onderdeel van uw bestelling (activatie en installatie). We herstellen dit automatisch — ververs de pagina als dit blijft staan.</div>

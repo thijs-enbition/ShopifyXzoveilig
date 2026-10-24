@@ -39,6 +39,12 @@
   line to a Climax package that lacks it, and removes it from a cart without one; keeps the
   Woning line at 3 x the NAMI floors and strips Woning from a Climax line. See
   snippets/zv-cart-guard.liquid.
+
+  Koop lines (Huren/Kopen, 2026-10-24, docs/koop-checkout-2026-10-24.md): a bought package
+  (Afname: Kopen on a Koop product, snippets/zv-koop-fk.liquid) shows its package name, "Kopen",
+  its one-time final_line_price and no +/- (the guard keeps it at 1). It is never counted as a
+  package for "p/m", the promo note or "Daarna". Woning on a bought NAMI package shows as its
+  property only; there is no Woning line for it.
 {%- endcomment -%}
 
 {%- include 'zv-pricing' -%}
@@ -97,11 +103,11 @@
     endif
   endfor
 -%}
-{%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_id: woning_variant_id, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles -%}
+{%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_id: woning_variant_id, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles, koop_map: zv_koop_fk_by_handle -%}
 {%- liquid
   assign zv_visible_item_count = 0
   for item in cart.items
-    unless item.variant_id == woning_variant_id or item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_addon_ontzorg_inzicht_variant_id
+    unless item.variant_id == woning_variant_id or item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_addon_ontzorg_inzicht_variant_id or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id
       assign zv_visible_item_count = zv_visible_item_count | plus: 1
     endunless
   endfor
@@ -138,12 +144,23 @@
                 </div>
                 {%- continue -%}
               {%- endif -%}
+              {%- capture ci_koop_fk -%}{%- render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle -%}{%- endcapture -%}
+              {%- assign ci_koop_fk = ci_koop_fk | strip -%}
+              {%- assign is_koop = false -%}
+              {%- if ci_koop_fk != blank and ci_koop_fk != 'invalid' -%}{%- assign is_koop = true -%}{%- endif -%}
               {%- assign is_sub = false -%}
               {%- if item.product.type == sub_type or item.product.tags contains sub_tag -%}{%- assign is_sub = true -%}{%- endif -%}
-              {%- comment -%} Package and installation lines show their pricing.config.json name (package via finder_key, installation via handle), never the Shopify product title. {%- endcomment -%}
+              {%- if is_koop -%}{%- assign is_sub = false -%}{%- endif -%}
+              {%- comment -%} Package and installation lines show their pricing.config.json name (package via finder_key, installation via handle), never the Shopify product title. A Koop line shows its package's name. {%- endcomment -%}
               {%- assign item_name = item.product.title -%}
               {%- if is_sub -%}
                 {%- capture cfg_name -%}{%- render 'zv-package-name', finder_key: item.product.metafields.custom.finder_key.value, names: zv_package_names_by_fk -%}{%- endcapture -%}
+              {%- elsif is_koop -%}
+                {%- capture cfg_name -%}{%- render 'zv-package-name', finder_key: ci_koop_fk, names: zv_package_names_by_fk -%}{%- endcapture -%}
+              {%- elsif item.variant_id == zv_koop_addon_videodeurbel_variant_id -%}
+                {%- assign cfg_name = 'Videodeurbel (kopen)' -%}
+              {%- elsif item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}
+                {%- assign cfg_name = 'Afstandsbediening (kopen)' -%}
               {%- else -%}
                 {%- capture cfg_name -%}{%- render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle -%}{%- endcapture -%}
               {%- endif -%}
@@ -152,7 +169,7 @@
               {%- assign is_install = false -%}
               {%- if item.variant_id == activation_variant_id or item.variant_id == nami_install_geen_variant_id or item.variant_id == nami_install_telefonisch_variant_id or item.variant_id == nami_install_huis_variant_id -%}{%- assign is_install = true -%}{%- endif -%}
               {%- assign is_addon = false -%}
-              {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_addon_ontzorg_inzicht_variant_id -%}{%- assign is_addon = true -%}{%- endif -%}
+              {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_addon_ontzorg_inzicht_variant_id or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}{%- assign is_addon = true -%}{%- endif -%}
               <div class="citem">
                 <div class="ci-thumb">
                   {%- if item.image -%}
@@ -163,11 +180,16 @@
                 </div>
                 <div>
                   {%- comment -%} Installation lines (CL003 and the 3 NAMI options) always read "Installatie", as on Overzicht: Odoo sets their product type (e.g. "All"), which isn't customer copy. {%- endcomment -%}
-                  {%- if is_install -%}<span class="ci-line">Installatie</span>{%- elsif is_addon -%}<span class="ci-line">Uitbreiding</span>{%- elsif item.product.type != blank -%}<span class="ci-line">{{ item.product.type | escape }}</span>{%- endif -%}
+                  {%- if is_install -%}<span class="ci-line">Installatie</span>{%- elsif is_koop -%}<span class="ci-line">Kopen</span>{%- elsif is_addon -%}<span class="ci-line">Uitbreiding</span>{%- elsif item.product.type != blank -%}<span class="ci-line">{{ item.product.type | escape }}</span>{%- endif -%}
                   <div class="ci-name"><a href="{{ item.url }}">{{ item_name | escape }}</a></div>
                   {%- unless item.variant.title contains 'Default' -%}<div class="ci-meta">{{ item.variant.title | escape }}</div>{%- endunless -%}
                   {%- if item.selling_plan_allocation -%}<div class="ci-meta">{{ item.selling_plan_allocation.selling_plan.name | escape }}</div>{%- endif -%}
-                  {%- if is_sub and woning_applies_list contains item.product.handle -%}
+                  {%- assign ci_woning_line = false -%}
+                  {%- if is_sub and woning_applies_list contains item.product.handle -%}{%- assign ci_woning_line = true -%}{%- endif -%}
+                  {%- if is_koop -%}
+                    {%- if ci_koop_fk == 'aware' or ci_koop_fk == 'aware_plus' or ci_koop_fk == 'secure' -%}{%- assign ci_woning_line = true -%}{%- endif -%}
+                  {%- endif -%}
+                  {%- if ci_woning_line -%}
                     {%- comment -%} Woning (spec §7): its own line, not a generic property tag, on NAMI package lines only (a Climax line's Woning is ignored). The generic tags below never render (item.properties has no .size), and enabling them would also show internal keys like SKU and Bron. A legacy "Groter dan 100 m²…" value reads as option 1. {%- endcomment -%}
                     {%- capture ci_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
                     {%- assign ci_wf = ci_wf | strip | plus: 0 -%}
@@ -183,7 +205,7 @@
                     </div>
                   {%- endif -%}
                   <div class="ci-actions">
-                    {%- unless is_sub or is_install or is_addon -%}
+                    {%- unless is_sub or is_install or is_addon or is_koop -%}
                     <div class="qty">
                       <a href="{{ routes.cart_change_url }}?id={{ item.key }}&quantity={{ item.quantity | minus: 1 }}" aria-label="Aantal verlagen" class="qbtn">−</a>
                       <span>{{ item.quantity }}</span>
@@ -200,6 +222,7 @@
                     <span class="ci-note">Eerste {{ item.quantity }} maanden vandaag: {{ item.final_line_price | money }} ({{ zv_promo_badge }}).<br>Loopt daarna door via SEPA-incasso.</span>
                   {%- else -%}
                     <div class="ci-price">{{ item.final_line_price | money }}</div>
+                    {%- if is_koop -%}<span class="ci-note">Apparatuur, eenmalig</span>{%- endif -%}
                     {%- if item.original_line_price > item.final_line_price -%}<span class="ci-note">Korting toegepast</span>{%- endif -%}
                   {%- endif -%}
                 </div>
@@ -212,8 +235,11 @@
             {%- assign today_cents = 0 -%}
             {%- assign true_month_cents = 0 -%}
             {%- for item in cart.items -%}
+              {%- capture li_koop_fk -%}{%- render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle -%}{%- endcapture -%}
+              {%- assign li_koop_fk = li_koop_fk | strip -%}
               {%- assign li_sub = false -%}
               {%- if item.product.type == sub_type or item.product.tags contains sub_tag -%}{%- assign li_sub = true -%}{%- endif -%}
+              {%- if li_koop_fk != blank and li_koop_fk != 'invalid' -%}{%- assign li_sub = false -%}{%- endif -%}
               {%- assign today_cents = today_cents | plus: item.final_line_price -%}
               {%- comment -%}
                 Ontzorgpakket Inzicht (2026-10-13): a confirmed recurring monthly service
@@ -250,6 +276,12 @@
                 {%- endif -%}
                 {%- assign true_month_cents = true_month_cents | plus: item.original_price | plus: li_wc -%}
                 <div class="srow"><span>{{ row_pkg_name }} × {{ item.quantity }} — {{ zv_label_commitment }}</span><b>{{ item.final_line_price | money }}</b></div>
+              {%- elsif li_koop_fk != blank and li_koop_fk != 'invalid' -%}
+                {%- comment -%} A bought package: one-time, never "× 3 — eerste 3 maanden (50% korting)", never in "Daarna". {%- endcomment -%}
+                {%- capture li_koop_name -%}{%- render 'zv-package-name', finder_key: li_koop_fk, names: zv_package_names_by_fk -%}{%- endcapture -%}
+                <div class="srow"><span>{{ li_koop_name | strip | escape }} — kopen, eenmalig</span><b>{{ item.final_line_price | money }}</b></div>
+              {%- elsif item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}
+                <div class="srow"><span>{% if item.variant_id == zv_koop_addon_videodeurbel_variant_id %}Videodeurbel{% else %}Afstandsbediening{% endif %} (kopen)</span><b>{{ item.final_line_price | money }}</b></div>
               {%- elsif zv_addon_ontzorg_inzicht_variant_id != blank and item.variant_id == zv_addon_ontzorg_inzicht_variant_id -%}
                 {%- comment -%}
                   Ontzorgpakket Inzicht (2026-10-13): same "× 3 — eerste 3 maanden" shape as a

@@ -2265,29 +2265,37 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     addToCart(d.variantId, props, 'drawer', btn, d.finderKey);
   });
 
-  /* Kopen "In winkelwagen" (Huren/Kopen, 2026-10-23, draft). Only rendered once the package's
-     Koop variant setting is filled in. Never through addToCart(): that adds at PKG_QTY for the
-     intro promo, which is Huren only. The Koop variant goes in once (quantity 1) with the same
-     properties as a huur add plus Afname: Kopen, and without Woning (a Woning surcharge for a
-     bought package isn't decided). No installation line is added: cart, Overzicht, the cart guard
-     and Odoo don't know a Koop line yet (docs/huren-kopen-toggle-2026-10-23.md). Checked add-ons
-     get their lines through syncAddonLines(), as for a huur add. */
-  function addKoopToCart(variantId, properties, btn, onceCents) {
+  /* Kopen "In winkelwagen" (Huren/Kopen; cart side 2026-10-24, docs/koop-checkout-2026-10-24.md).
+     Only rendered once the package's Koop variant setting is filled in. Never through addToCart():
+     that adds at PKG_QTY for the intro promo, which is Huren only. The Koop variant goes in once
+     (quantity 1) with the same properties as a huur add plus Afname: Kopen, which is how /cart,
+     Overzicht and zv-cart-guard recognise it. A bought NAMI package keeps its Woning choice as the
+     property only: no Woning line, nothing charged for it today (Thijs, 2026-10-24; Odoo bills it
+     with the service fee), so syncWoningLine() is not called. Installation is the same as for a
+     huur add: a Climax package brings the Climax installation line (once), a NAMI package's
+     installation is chosen on Overzicht. Checked add-ons get their lines through
+     syncAddonLines(), as for a huur add. */
+  function addKoopToCart(variantId, properties, btn, onceCents, finderKey) {
     if (!/^\d+$/.test(variantId || '') || (btn && btn.dataset.busy === '1')) return;
     if (btn) { btn.dataset.busy = '1'; btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }
     var errEl = btn && btn.parentNode && btn.parentNode.querySelector('.pcard__err'); if (errEl) errEl.remove();
     var release = function () { if (btn) { btn.dataset.busy = ''; btn.disabled = false; btn.removeAttribute('aria-busy'); } };
     window.fetch('/cart.js').then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (cart) {
-      if ((cart.items || []).some(function (it) { return String(it.variant_id) === String(variantId); })) return cart;
+      var inCart = function (id) { return (cart.items || []).some(function (it) { return String(it.variant_id) === String(id); }); };
+      var items = [];
+      if (!inCart(variantId)) items.push({ id: variantId, quantity: 1, properties: properties });
+      if ((PKG_BY_FK[finderKey] || {}).installGroup === 'climax' && activationVariantId && !inCart(activationVariantId)) items.push({ id: activationVariantId, quantity: 1 });
+      if (!items.length) return cart;
       return window.fetch('/cart/add.js', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: [{ id: variantId, quantity: 1, properties: properties }] })
+        body: JSON.stringify({ items: items })
       })
         .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(function (res) {
+          // The Koop line is the first item only when it was added now (else only CL003 was).
           var line = res && res.items && res.items[0];
           var ZV = window.ZVMeasurement;
-          if (ZV && ZV.addToCart) ZV.addToCart({ item_id: (line && line.sku) || properties['SKU'], item_name: properties['Pakket'], item_brand: 'Zo Veilig', price: onceCents ? onceCents / 100 : undefined, quantity: 1 }, { cta_location: (btn && btn.getAttribute('data-cta-position')) || 'oplossingen' });
+          if (String((line || {}).variant_id) === String(variantId) && ZV && ZV.addToCart) ZV.addToCart({ item_id: (line && line.sku) || properties['SKU'], item_name: properties['Pakket'], item_brand: 'Zo Veilig', price: onceCents ? onceCents / 100 : undefined, quantity: 1 }, { cta_location: (btn && btn.getAttribute('data-cta-position')) || 'oplossingen' });
           return window.fetch('/cart.js').then(function (r) { return r.json(); });
         });
     })
@@ -2314,9 +2322,10 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
       'Oplossing': (panel && panel.getAttribute('aria-label')) || d.solutionType || '',
       'Bron': 'Oplossingen'
     };
+    if (o.woning && woningAppliesFk(d.finderKey)) props['Woning'] = o.woning;
     if (o.terms.length) props['Abonnement'] = o.terms.join(', ');
     if (o.addons.length) props['Uitbreidingen'] = o.addons.join(', ');
-    addKoopToCart(btn.getAttribute('data-variant'), props, btn, parseInt(btn.getAttribute('data-koop-once-cents'), 10));
+    addKoopToCart(btn.getAttribute('data-variant'), props, btn, parseInt(btn.getAttribute('data-koop-once-cents'), 10), d.finderKey);
   });
 
   /* ============================================================

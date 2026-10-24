@@ -1,0 +1,36 @@
+{%- comment -%}
+  zv-koop-fk: prints the finder_key of the package a cart line BUYS (Huren/Kopen, 2026-10-24,
+  docs/koop-checkout-2026-10-24.md), 'invalid' for a malformed Koop line, or nothing.
+
+  A Koop package line carries the line-item property Afname: Kopen (written by
+  addKoopToCart() in sections/oplossingen.liquid) AND is one of the Koop products in
+  pricing.config.json (packages[].koopProduct.handle, emitted by zv-pricing as
+  zv_koop_fk_by_handle, 'handle:finder_key|...'). The property is the signal; the handle says
+  which package, and so which installGroup. Only one of the two (the property on another
+  product, or a Koop product without the property) prints 'invalid': the caller blocks checkout.
+
+  Params (render scope can't see the section's zv_* variables, so pass them in):
+    handle - item.product.handle
+    afname - item.properties['Afname']
+    map    - zv_koop_fk_by_handle
+  Usage: capture it, then `| strip`.
+{%- endcomment -%}
+{%- liquid
+  assign kf = ''
+  assign kf_pairs = map | split: '|'
+  for kf_pair in kf_pairs
+    assign kf_kv = kf_pair | split: ':'
+    if kf_kv[0] == handle
+      assign kf = kf_kv[1]
+    endif
+  endfor
+  if afname == 'Kopen'
+    if kf == ''
+      echo 'invalid'
+    else
+      echo kf
+    endif
+  elsif kf != ''
+    echo 'invalid'
+  endif
+-%}
