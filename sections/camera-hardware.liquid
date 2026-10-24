@@ -167,7 +167,7 @@
     ]},
     {n:'(Koop) Magneetcontact (DC-23)', type:'Sensor', koop:60.00, huur:null, huurSku:null, k:'magneetcontact_dc23', sku:'CL001'},
     {n:'(Koop) 729 WiFi Camera Floodlight (Mickey)', type:'Camera', koop:475.00, huur:null, huurSku:null, k:'cam_adc_mm', sku:'ADC-MM'},
-    {n:'(Koop) Binnencamera 516 ***', type:'Binnen', koop:175.00, huur:null, huurSku:null, k:'cam_516', sku:'ADC-516'},
+    {n:'(Koop) Binnencamera 516', type:'Binnen', koop:175.00, huur:null, huurSku:null, k:'cam_516', sku:'ADC-516'},
     {n:'(Koop) 730 Buitencamera met spotlight', type:'Buiten', koop:325.00, huur:null, huurSku:null, k:'cam_730_adc', sku:'ADC-730'},
     {n:'(Koop) Video Deurbel 750', type:'Deurbel', koop:299.00, huur:null, huurSku:null, k:'vdb_750_adc', sku:'ADC-750'},
     {n:'(Koop) Video Deurbel 780', type:'Deurbel', koop:425.00, huur:null, huurSku:null, k:'vdb_780_adc', sku:'ADC-780'},
@@ -208,38 +208,48 @@
   captureSource();
 
   function modeChip(h,mode){
-    if(mode==='huur' && h.huur==null){
-      return '<button type="button" class="modechip huur soon" disabled><span class="ml">Huren</span><span class="mp">Binnenkort</span><span class="mu">beschikbaar</span></button>';
-    }
     var l=state.lines[h.k], on=l&&l.mode===mode;
     var price=euro(mode==='koop'?h.koop:h.huur);
     var lab=mode==='koop'?'Kopen':'Huren', unit=mode==='koop'?'eenmalig':'per maand';
     return '<button type="button" class="modechip '+mode+(on?' on':'')+'" data-mode="'+mode+'"><span class="ml">'+lab+'</span><span class="mp">'+price+'</span><span class="mu">'+unit+'</span></button>';
   }
   function specHtml(h){
-    if(!h.specs){
-      return '<p class="hw-spec-soon">Specificaties volgen.</p>';
-    }
     var model=h.model?'<div class="hw-spec-model">'+h.model+'</div>':'';
     var rows=h.specs.map(function(s){
       return '<div class="hw-spec-row"><span class="hw-spec-l">'+s[0]+'</span><span class="hw-spec-v">'+s[1]+'</span></div>';
     }).join('');
     return model+'<div class="hw-spec-list">'+rows+'</div>';
   }
+  /* Two groups, split on h.huur: rows with a huur price offer Kopen and Huren, the rest are
+     koop-only (one chip, no "binnenkort" Huren). Array order is kept within each group. Only
+     rows with h.specs get the Specificaties toggle and panel. */
+  var GROUPS=[
+    {title:"Camera's, videodeurbellen & recorder — kopen of huren", huur:true},
+    {title:'Extra sensoren & accessoires — eenmalig te koop', huur:false}
+  ];
+  function rowEl(h){
+    var l=state.lines[h.k], q=l?l.qty:0, hasMode=!!(l&&l.mode);
+    var chosenSku=hasMode&&l.mode==='huur'&&h.huurSku?h.huurSku:h.sku;
+    var chosen=hasMode?'<span class="hw-chosen">Gekozen: '+(l.mode==='koop'?'Kopen · eenmalig':'Huren · maandelijks')+' &middot; '+chosenSku+'</span>':'';
+    var specsId='specs-'+h.k;
+    var specBtn=h.specs?'<button type="button" class="hw-spec-btn" aria-expanded="false" aria-controls="'+specsId+'">Specificaties<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>':'';
+    var specPanel=h.specs?'<div class="hw-specs" id="'+specsId+'" role="region"><div class="hw-specs-in">'+specHtml(h)+'</div></div>':'';
+    var el=document.createElement('div'); el.className='hw'+(q>0?' has':''); el.setAttribute('data-k',h.k);
+    el.innerHTML=
+      '<div class="hw-main"><div class="hw-name">'+h.n+specBtn+'</div>'+chosen+'</div>'+
+      '<div class="hw-modes">'+modeChip(h,'koop')+(h.huur!=null?modeChip(h,'huur'):'')+'</div>'+
+      '<div class="stepper"><button type="button" data-d="-1"'+(q===0?' disabled':'')+'>−</button><span class="q">'+q+'</span><button type="button" data-d="1"'+(hasMode?'':' disabled')+'>+</button></div>'+
+      specPanel;
+    return el;
+  }
   function renderRows(){
     var rows=document.getElementById('rows'); rows.innerHTML='';
-    HW.forEach(function(h){
-      var l=state.lines[h.k], q=l?l.qty:0, hasMode=!!(l&&l.mode);
-      var chosenSku=hasMode&&l.mode==='huur'&&h.huurSku?h.huurSku:h.sku;
-      var chosen=hasMode?'<span class="hw-chosen">Gekozen: '+(l.mode==='koop'?'Kopen · eenmalig':'Huren · maandelijks')+' &middot; '+chosenSku+'</span>':'';
-      var specsId='specs-'+h.k;
-      var el=document.createElement('div'); el.className='hw'+(q>0?' has':''); el.setAttribute('data-k',h.k);
-      el.innerHTML=
-        '<div class="hw-main"><div class="hw-name">'+h.n+'<button type="button" class="hw-spec-btn" aria-expanded="false" aria-controls="'+specsId+'">Specificaties<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>'+chosen+'</div>'+
-        '<div class="hw-modes">'+modeChip(h,'koop')+modeChip(h,'huur')+'</div>'+
-        '<div class="stepper"><button type="button" data-d="-1"'+(q===0?' disabled':'')+'>−</button><span class="q">'+q+'</span><button type="button" data-d="1"'+(hasMode?'':' disabled')+'>+</button></div>'+
-        '<div class="hw-specs" id="'+specsId+'" role="region"><div class="hw-specs-in">'+specHtml(h)+'</div></div>';
-      rows.appendChild(el);
+    GROUPS.forEach(function(g){
+      var list=HW.filter(function(h){ return (h.huur!=null)===g.huur; });
+      if(!list.length) return;
+      var head=document.createElement('h3'); head.className='hw-group-h'; head.textContent=g.title;
+      rows.appendChild(head);
+      list.forEach(function(h){ rows.appendChild(rowEl(h)); });
     });
   }
   document.getElementById('rows').addEventListener('click',function(e){
@@ -411,10 +421,9 @@
 .zv-camera .modechip.on .mp { color:var(--indigo); }
 .zv-camera .modechip.koop.on { border-color:var(--belt); background:#fbf1e0; }
 .zv-camera .modechip.koop.on .ml, .zv-camera .modechip.koop.on .mp { color:var(--belt); }
-.zv-camera .modechip.soon { cursor:default; opacity:.55; border-style:dashed; }
-.zv-camera .modechip.soon:hover { border-color:var(--line-2); }
-.zv-camera .modechip.soon .mp { font-size:12.5px; }
 .zv-camera .rows { display:flex; flex-direction:column; gap:10px; }
+.zv-camera .hw-group-h { font-size:16px; font-weight:900; color:var(--indigo); letter-spacing:-.01em; line-height:1.2; margin:0 0 2px; }
+.zv-camera .hw + .hw-group-h { margin-top:18px; }
 .zv-camera .hw { display:grid; grid-template-columns:1fr auto auto; gap:16px; align-items:center; background:var(--paper); border:1.5px solid var(--line); border-radius:14px; padding:14px 16px; transition:border-color .14s,box-shadow .14s; }
 .zv-camera .hw.has { border-color:var(--indigo); box-shadow:0 10px 26px -18px rgba(50,36,105,.6); }
 .zv-camera .hw .hw-main { min-width:0; }
@@ -430,7 +439,6 @@
 .zv-camera .hw-spec-row { display:flex; justify-content:space-between; gap:14px; font-size:12.5px; font-weight:600; color:#3a3550; }
 .zv-camera .hw-spec-l { color:var(--muted); font-weight:700; flex:none; }
 .zv-camera .hw-spec-v { text-align:right; }
-.zv-camera .hw-spec-soon { font-size:12.5px; font-weight:600; color:var(--muted-2); margin:0; }
 @media(max-width:680px){ .zv-camera .hw-spec-row { flex-direction:column; gap:1px; } .zv-camera .hw-spec-v { text-align:left; } }
 .zv-camera .stepper { display:inline-flex; align-items:center; border:1.5px solid var(--line-2); border-radius:11px; overflow:hidden; background:#fff; }
 .zv-camera .stepper button { width:38px; height:40px; border:none; background:#fff; color:var(--indigo); font-size:20px; font-weight:800; line-height:1; display:grid; place-items:center; }
