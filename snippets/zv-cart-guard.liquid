@@ -39,6 +39,15 @@
   is not sub_type and its variant is none of the installation ids). Without woning_variant_id
   rule 5 is skipped: the property-only fallback.
 
+  Koop package lines (Huren/Kopen, 2026-10-24, docs/koop-checkout-2026-10-24.md): a line with
+  the property Afname: Kopen whose handle is one of koop_map's Koop products. It is a one-time
+  purchase, never a package line above: rule 2 keeps it at quantity 1 (never pkg_qty) and
+  removes a second line for the same Koop product; a bought Climax package counts for rules 3,
+  4 and 6 exactly like a rented one (CL003 added, kept, Woning stripped). A bought NAMI package
+  keeps its Woning property but never counts towards the Woning line (rule 5): Woning on Koop
+  is the property only (Thijs, 2026-10-24). A line with Afname: Kopen on any other product
+  is left alone here; Overzicht blocks checkout for it.
+
   The same rules are exposed as window.zvCartGuard.planFix(cart), which returns the one fix
   or null. Overzicht's checkout button runs it on a fresh /cart.js before it navigates.
 
@@ -63,7 +72,8 @@
   woning_variant_id (nil when unresolved), woning_v1, woning_v2 (zv_woning_1_value /
   _2_value), woning_legacy (zv_woning_legacy_prefix) and woning_applies
   (zv_woning_applies_handles, pipe-separated) — passed explicitly because `render` doesn't
-  inherit the caller's scope.
+  inherit the caller's scope. koop_map (zv_koop_fk_by_handle, 'handle:finder_key|...') names
+  the Koop products.
 {%- endcomment -%}
 {%- if pkg_qty > 0 -%}
 <script>
@@ -82,6 +92,16 @@
   if (WONING_ID === '') WONING_ID = null;
   var WONING_V1 = {{ woning_v1 | json }}, WONING_V2 = {{ woning_v2 | json }}, WONING_LEGACY = {{ woning_legacy | json }};
   var WONING_APPLIES = String({{ woning_applies | json }} || '').split('|').filter(Boolean);
+  // Koop product handle -> finder_key; a Koop package line also carries Afname: Kopen.
+  var KOOP_FK = {};
+  String({{ koop_map | json }} || '').split('|').forEach(function (pair) {
+    var kv = pair.split(':');
+    if (kv[0] && kv[1]) KOOP_FK[kv[0]] = kv[1];
+  });
+  var NAMI_FKS = ['aware', 'aware_plus', 'secure'];
+  function isKoopProp(it) { return (it.properties || {})['Afname'] === 'Kopen'; }
+  function isKoop(it) { return isKoopProp(it) && Object.prototype.hasOwnProperty.call(KOOP_FK, it.handle); }
+  function isKoopClimax(it) { return isKoop(it) && NAMI_FKS.indexOf(KOOP_FK[it.handle]) === -1; }
 
   // A Woning property value -> floors, the same mapping as snippets/zv-woning-floors.liquid.
   function woningFloors(value) {
@@ -111,12 +131,13 @@
     var items = (cart && cart.items) || [];
     var isWoningLine = function (it) { return WONING_ID != null && String(it.variant_id) === String(WONING_ID); };
     var isPkg = function (it) {
-      return !isWoningLine(it) && it.product_type === SUB_TYPE && (NAMI_PKG_HANDLES.indexOf(it.handle) !== -1 || CLIMAX_PKG_HANDLES.indexOf(it.handle) !== -1);
+      return !isWoningLine(it) && !isKoopProp(it) && it.product_type === SUB_TYPE && (NAMI_PKG_HANDLES.indexOf(it.handle) !== -1 || CLIMAX_PKG_HANDLES.indexOf(it.handle) !== -1);
     };
     var isActivation = function (it) { return ACTIVATION_ID != null && String(it.variant_id) === String(ACTIVATION_ID); };
     var namiLines = items.filter(function (it) { return NAMI_IDS.indexOf(String(it.variant_id)) !== -1; });
     var pkgLines = items.filter(isPkg);
-    var hasClimaxPkg = pkgLines.some(function (it) { return CLIMAX_PKG_HANDLES.indexOf(it.handle) !== -1; });
+    var koopLines = items.filter(isKoop);
+    var hasClimaxPkg = pkgLines.some(function (it) { return CLIMAX_PKG_HANDLES.indexOf(it.handle) !== -1; }) || koopLines.some(isKoopClimax);
     var activationLines = items.filter(isActivation);
 
     // 1. Duplicate NAMI install lines: keep the most recently added.
@@ -138,6 +159,14 @@
       if (seenPkgVariants[vid]) { qtyUpdates[it.key] = 0; return; }
       seenPkgVariants[vid] = true;
       if (it.quantity !== PKG_QTY) qtyUpdates[it.key] = PKG_QTY;
+    });
+    // A Koop line is a one-time purchase: quantity 1, one line per Koop product.
+    var seenKoopVariants = {};
+    koopLines.forEach(function (it) {
+      var vid = String(it.variant_id);
+      if (seenKoopVariants[vid]) { qtyUpdates[it.key] = 0; return; }
+      seenKoopVariants[vid] = true;
+      if (it.quantity !== 1) qtyUpdates[it.key] = 1;
     });
     namiLines.concat(activationLines).forEach(function (it) {
       if (it.quantity !== 1 && qtyUpdates[it.key] == null) qtyUpdates[it.key] = 1;
@@ -189,7 +218,8 @@
     }
 
     // 6. A Climax package line never carries Woning: delete the property, keep the quantity.
-    var climaxWoning = pkgLines.filter(function (it) { return CLIMAX_PKG_HANDLES.indexOf(it.handle) !== -1 && hasWoningProp(it); })[0];
+    var climaxWoning = pkgLines.filter(function (it) { return CLIMAX_PKG_HANDLES.indexOf(it.handle) !== -1 && hasWoningProp(it); })
+      .concat(koopLines.filter(function (it) { return isKoopClimax(it) && hasWoningProp(it); }))[0];
     if (climaxWoning) {
       var keep = {}, cp = climaxWoning.properties || {};
       for (var pk in cp) { if (Object.prototype.hasOwnProperty.call(cp, pk) && pk !== 'Woning') keep[pk] = cp[pk]; }

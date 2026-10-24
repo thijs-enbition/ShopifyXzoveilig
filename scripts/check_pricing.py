@@ -521,6 +521,24 @@ for p in gen["packages"]:
     pid = p["id"].replace("-", "_")
     check((snippet_int(f"zv_{pid}_koop_eenmalig_cents"), snippet_int(f"zv_{pid}_koop_maandelijks_cents")) == exp,
           f"zv_{pid}_koop_* assigns match the config")
+# The Shopify Koop products (Admin API, 2026-10-24): a cart line with Afname: Kopen maps back to
+# its package only through these handles. They are never a huur package handle and never carry
+# Woning as a priced N0008 line (property only, Thijs 2026-10-24).
+EXPECTED_KOOP_PRODUCTS = {"inzicht": ("koop-inzicht", "K001"), "zeker": ("koop-zeker", "K002"),
+                          "beschermd": ("koop-beschermd", "K003"), "alert": ("koop-alert", "K004"),
+                          "protect": ("koop-protect", "K005")}
+for pkg_id, (handle, sku) in EXPECTED_KOOP_PRODUCTS.items():
+    k = next((p.get("koop") or {} for p in gen["packages"] if p["id"] == pkg_id), {})
+    check((k.get("productHandle"), k.get("sku")) == (handle, sku), f"{pkg_id} Koop product is {handle} / {sku}",
+          f"got {(k.get('productHandle'), k.get('sku'))}")
+koop_handles = [h for h, _ in EXPECTED_KOOP_PRODUCTS.values()]
+check(not set(koop_handles) & set(p.get("productHandle") for p in gen["packages"]),
+      "no Koop product handle is a huur package handle")
+check(not set(koop_handles) & set(gen["woning"]["appliesTo"]),
+      "no Koop product handle is in the Woning appliesTo list (Woning on Koop is property only)")
+exp_map = "|".join(f"{EXPECTED_KOOP_PRODUCTS[p['id']][0]}:{p['finderKey']}" for p in gen["packages"] if p["id"] in EXPECTED_KOOP_PRODUCTS)
+check(snippet_str("zv_koop_fk_by_handle") == exp_map, "zv_koop_fk_by_handle maps each Koop product to its package",
+      f"got {snippet_str('zv_koop_fk_by_handle')!r}")
 EXPECTED_KOOP_ADDON_CENTS = {"koop-video-deurbel-750": 29900, "huur-afstandsbediening": 4000}
 got_addons = {a["productHandle"]: a["eenmaligCents"] for a in gen.get("koop", {}).get("addons", [])}
 check(got_addons == EXPECTED_KOOP_ADDON_CENTS, "koop add-ons are Videodeurbel 29900 and Afstandsbediening 4000",

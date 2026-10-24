@@ -64,7 +64,7 @@
     ]
   },
   "koop": {
-    "status": "DISPLAY_ONLY",
+    "status": "PURCHASABLE_WHEN_SETTING_FILLED",
     "promoApplies": false,
     "addons": [
       {
@@ -241,7 +241,9 @@
         "eenmaligCents": 29900,
         "eenmaligDisplay": "€ 299,00",
         "maandelijksCents": 995,
-        "maandelijksDisplay": "€ 9,95"
+        "maandelijksDisplay": "€ 9,95",
+        "productHandle": "koop-inzicht",
+        "sku": "K001"
       }
     },
     {
@@ -310,7 +312,9 @@
         "eenmaligCents": 34900,
         "eenmaligDisplay": "€ 349,00",
         "maandelijksCents": 995,
-        "maandelijksDisplay": "€ 9,95"
+        "maandelijksDisplay": "€ 9,95",
+        "productHandle": "koop-zeker",
+        "sku": "K002"
       }
     },
     {
@@ -360,7 +364,9 @@
         "eenmaligCents": 84900,
         "eenmaligDisplay": "€ 849,00",
         "maandelijksCents": 1995,
-        "maandelijksDisplay": "€ 19,95"
+        "maandelijksDisplay": "€ 19,95",
+        "productHandle": "koop-beschermd",
+        "sku": "K003"
       }
     },
     {
@@ -429,7 +435,9 @@
         "eenmaligCents": 34900,
         "eenmaligDisplay": "€ 349,00",
         "maandelijksCents": 995,
-        "maandelijksDisplay": "€ 9,95"
+        "maandelijksDisplay": "€ 9,95",
+        "productHandle": "koop-alert",
+        "sku": "K004"
       }
     },
     {
@@ -479,7 +487,9 @@
         "eenmaligCents": 79900,
         "eenmaligDisplay": "€ 799,00",
         "maandelijksCents": 1995,
-        "maandelijksDisplay": "€ 19,95"
+        "maandelijksDisplay": "€ 19,95",
+        "productHandle": "koop-protect",
+        "sku": "K005"
       }
     },
     {

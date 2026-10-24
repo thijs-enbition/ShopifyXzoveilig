@@ -119,8 +119,8 @@ type `NAMI_abonnementen` and no `custom.finder_key`**, and inventory tracking on
 stock). Until type and finder_key are set in Admin, the cards lose their copy and name, and /cart,
 Overzicht and the cart guard don't see them as packages (no installation gate, no qty-3 reset, no
 contract rows; same type as the N0008 Woning line). The "Eerste 3 maanden" discount scope also
-still names the archived products (`promo.discountScopeNote` in pricing.config.json). All three are
-Admin fixes for Thijs, never made from here.
+still named the archived products (`promo.discountScopeNote` in pricing.config.json). All three were
+fixed in Admin by Thijs (type and finder_key on 2026-10-23, the discount scope by 2026-10-24).
 
 N0008 (created in Shopify Admin on 2026-09-25, not from this repo): one variant, inventory
 **untracked**, published to the Online Store. It is the priced Woning line for the NAMI packages
@@ -346,8 +346,17 @@ choice. Koop prices are config inputs (`koopEenmalig`/`koopMaandelijks` per pack
 Huren only**: `koop.promoApplies` must stay false (`build_pricing.py` refuses otherwise), and a
 Koop variant is added by `addKoopToCart()` at quantity 1, never through `addToCart()`/`PKG_QTY`.
 Koop variant ids come only from the theme settings "Zo Veilig · Huren/Kopen" (empty = a disabled
-"binnenkort" state). **Don't fill those settings on the live theme yet**: `/cart`, Overzicht,
-the cart guard and Odoo don't handle a koop line (see the doc for the list). Vista stays as-is.
+"binnenkort" state). Vista stays as-is.
+
+**Koop lines in the cart (2026-10-24, `docs/koop-checkout-2026-10-24.md`).** A Koop package line
+= the property `Afname: Kopen` on one of the config's `koopProduct` handles (K001-K005);
+`snippets/zv-koop-fk.liquid` maps it to its package (`zv_koop_fk_by_handle`), and only one of the
+two blocks checkout (`cart_koop_bad`). It is quantity 1 (the guard resets it, never `pkg_qty`),
+full price with no discount (`cart_koop_bad` if one reaches it), never a huur package for the
+promo, "Daarna", looptijd or ICV, and takes the same installation as huur by installGroup
+(`has_nami_pkg` → the radio group, now shown via `show_nami_install`; `has_climax_pkg` → CL003,
+added by `addKoopToCart()` and the guard). **Woning on a bought NAMI package is the property only:
+no N0008 line** (Thijs, 2026-10-24); Odoo bills it. No monthly service-fee line ever.
 
 ## Shopify store
 

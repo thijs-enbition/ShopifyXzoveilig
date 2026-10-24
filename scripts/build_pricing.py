@@ -74,11 +74,16 @@ def koop_row(pkg: dict):
         return None
     if not (is_priced(once) and is_priced(monthly)):
         raise SystemExit(f"{pkg['id']}: koopEenmalig and koopMaandelijks must both be priced, or both absent")
+    product = pkg.get("koopProduct") or {}
     return {
         "eenmaligCents": once["amountCents"],
         "eenmaligDisplay": eur(once["amountCents"]),
         "maandelijksCents": monthly["amountCents"],
         "maandelijksDisplay": eur(monthly["amountCents"]),
+        # The Shopify Koop product (2026-10-24): how /cart, Overzicht and the cart guard map a
+        # line with Afname: Kopen back to this package (and so to its installGroup).
+        "productHandle": product.get("handle"),
+        "sku": product.get("sku"),
     }
 
 
@@ -532,6 +537,12 @@ def build():
                 f"{{%- assign zv_{pid}_koop_maandelijks_cents = {p['koop']['maandelijksCents']} -%}}",
             ]
     # Huren/Kopen add-ons: product handle -> one-time koop price in cents, for the Uitbreidingen rows.
+    # Huren/Kopen cart (2026-10-24): Koop product handle -> the package's finder_key, for
+    # snippets/zv-koop-fk.liquid and zv-cart-guard (a line is a Koop package line only with
+    # Afname: Kopen AND one of these handles).
+    lines.append("{%- assign zv_koop_fk_by_handle = '" + "|".join(
+        f"{p['koop']['productHandle']}:{p['finderKey']}" for p in out["packages"]
+        if p.get("koop") and p["koop"].get("productHandle")) + "' -%}")
     lines.append("{%- assign zv_koop_addon_cents_by_handle = '" + "|".join(
         f"{a['productHandle']}:{a['eenmaligCents']}" for a in koop_addons) + "' -%}")
     SNIPPET.parent.mkdir(parents=True, exist_ok=True)
@@ -542,6 +553,9 @@ def build():
     # config pairs with the finderKey; installation products by their configured handle.
     item_names = {p["productHandle"]: p["name"] for p in out["packages"] if p.get("productHandle")}
     item_names.update(install_names)
+    # Koop products show their package's name too (the drawer, GA4 item_name).
+    item_names.update({p["koop"]["productHandle"]: p["name"] for p in out["packages"]
+                       if p.get("koop") and p["koop"].get("productHandle")})
     ITEM_NAMES.write_text("\n".join([
         "{%- comment -%}",
         "  GENERATED FILE. Do not edit by hand.",
