@@ -1,1 +1,16 @@
-{ "sections": { "main": { "type": "camera-hardware", "settings": {} } }, "order": ["main"] }
+{
+  "sections": {
+    "main": {
+      "type": "camera-hardware",
+      "blocks": {
+        "trust-borg": { "type": "trust", "settings": { "label": "BORG-gecertificeerd", "route": "borg" } },
+        "trust-bedenktijd": { "type": "trust", "settings": { "label": "14 dagen bedenktijd", "route": "herroepingsrecht" } },
+        "trust-advies": { "type": "trust", "settings": { "label": "Gratis installatieadvies", "route": "contact" } },
+        "trust-meldkamer": { "type": "trust", "settings": { "label": "Gekoppeld aan de meldkamer", "route": "kc/hoe-werkt-een-meldkamer" } }
+      },
+      "block_order": ["trust-borg", "trust-bedenktijd", "trust-advies", "trust-meldkamer"],
+      "settings": {}
+    }
+  },
+  "order": ["main"]
+}

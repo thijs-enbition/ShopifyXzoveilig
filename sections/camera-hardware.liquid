@@ -1,13 +1,27 @@
 {%- comment -%}
-  Zo Veilig — Camerahardware (camera page). 1:1 port of "Zo Veilig Camera Hardware.html".
-  Conversion is by phone/callback only, never self-checkout: the visitor composes a
-  camera set (per line: kopen/huren), then "Bel om te bestellen" (tel:) or leaves a
-  callback. The callback POSTs a lead to window.ZV_LEAD_ENDPOINT (Odoo CRM). Header/
-  footer come from the theme layout; the design's own nav is dropped.
+  Zo Veilig — Camerahardware (camera page). Winkelgrid layout (2026-10-24, Thijs): hero, trust
+  strip, category filter chips, a 3-column product grid, the visitor's camera-setup, a
+  "Niet gevonden wat u zocht?" band and an FAQ. Conversion is by phone/callback only, never
+  self-checkout: the visitor composes a camera set (per card: kopen/huren), then "Bel om te
+  bestellen" (tel:) or leaves a callback. The callback POSTs a lead to window.ZV_LEAD_ENDPOINT
+  (Odoo CRM). Header/footer come from the theme layout; the design's own nav is dropped.
+
+  Product data is the HW array below, not Shopify products: the hardware products have no
+  images or tags and most aren't published to the Online Store (Admin API, 2026-10-24), so a
+  card shows a category icon instead of a photo. The filter chips (data-filter) match a row's
+  `type` split on "+" (so "Binnen+Buiten" counts for both), plus "meldkamer" for rows with
+  `meldkamer:true`. A chip that matches no row is hidden; no row has `meldkamer` yet, so that
+  chip stays hidden until the data says which hardware it applies to.
+
+  Kopen/Huren stays per card (the mode chips); the Oplossingen Huren/Kopen toggle (PR #141)
+  covers the package cards only and isn't used here.
+
+  Trust strip: one `trust` block per item (template JSON), a label plus an optional zv-route
+  key for the page that backs it.
 
   Grotere woning (2026-09-25, Thijs): Beschermd and Protect (Climax) have no Woning surcharge;
   a larger home or more floors is covered with extra sensors, bought here. The #grotere-woning
-  block above the product rows shows one set per package per extra verdieping, each item mapped
+  block below the product grid shows one set per package per extra verdieping, each item mapped
   to an existing HW row by its `k` (decisions by Thijs, 2026-09-25):
     Beschermd: 1 rookmelder (rookmelder), 2 magneetcontacten (magneetcontact_dc23 x 2),
                1 locatiesensor (no row on this page: "Op aanvraag", no price or SKU invented);
@@ -29,86 +43,136 @@
     </div>
   </div>
 
-  <div class="wrap">
-    <div class="lede">
-      <div class="eyebrow">{{ section.settings.eyebrow | default: 'Mijn Thuis · camerahardware' | escape }}</div>
+  <section class="ch-hero">
+    <div class="wrap">
+      <span class="eyebrow">{{ section.settings.eyebrow | default: 'Mijn Thuis · camerahardware' | escape }}</span>
       <h1>{{ section.settings.title | default: "Voeg camera's toe aan uw huis" | escape }}</h1>
       <p>{{ section.settings.lead | default: "Bekijk de mogelijkheden en voeg precies de camera's of videodeurbel toe die u nog mist." | escape }}</p>
+      <div class="ch-ctas">
+        <a class="btn btn--gold" href="#winkel">{{ section.settings.cta_shop | default: "Bekijk alle camera's" | escape }}<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <a class="btn btn--ghost" href="{% render 'zv-route', key: 'contact' %}">{{ section.settings.cta_advice | default: 'Vraag advies aan' | escape }}</a>
+      </div>
     </div>
+  </section>
 
-    <section class="shop">
-      <div>
-        <div class="gw" id="grotere-woning" aria-labelledby="gw-h">
-          <h2 id="gw-h">Grotere woning? Extra sensoren voor Beschermd en Protect</h2>
-          <p class="gw-lead">Heeft u Beschermd (Langer Thuis) of Protect (Mijn Thuis) en is uw woning groter dan 100 m² of heeft u meer verdiepingen? Dan breidt u uit met extra sensoren. Er komt geen toeslag per maand bij. Per extra verdieping raden wij deze set aan.</p>
-          <div class="gw-sets">
-            <div class="gw-set" data-gw-set="beschermd">
-              <div class="gw-set-h"><b>Beschermd</b><span>Per extra verdieping</span></div>
-              <ul class="gw-items">
-                <li data-gw-k="rookmelder" data-gw-qty="1"><span class="gw-q">1×</span><span class="gw-n">Rookmelder</span><span class="gw-v" data-gw-price></span></li>
-                <li data-gw-k="magneetcontact_dc23" data-gw-qty="2"><span class="gw-q">2×</span><span class="gw-n">Magneetcontact</span><span class="gw-v" data-gw-price></span></li>
-                <li class="gw-onreq"><span class="gw-q">1×</span><span class="gw-n">Locatiesensor</span><span class="gw-v">Op aanvraag, uw adviseur neemt dit mee</span></li>
-              </ul>
-              <button type="button" class="gw-add" data-gw-add="beschermd" data-zv-event="grotere_woning_set" data-cta-name="voeg_set_toe" data-solution-type="beschermd">Voeg set toe</button>
-              <span class="gw-done" data-gw-done hidden>Toegevoegd aan uw setup</span>
-            </div>
-            <div class="gw-set" data-gw-set="protect">
-              <div class="gw-set-h"><b>Protect</b><span>Per extra verdieping</span></div>
-              <ul class="gw-items">
-                <li data-gw-k="foto_bewegingsdetector_868" data-gw-qty="1"><span class="gw-q">1×</span><span class="gw-n">Fotobewegingsmelder</span><span class="gw-v" data-gw-price></span></li>
-                <li data-gw-k="magneetcontact_dc23" data-gw-qty="1"><span class="gw-q">1×</span><span class="gw-n">Deurcontact</span><span class="gw-v" data-gw-price></span></li>
-              </ul>
-              <button type="button" class="gw-add" data-gw-add="protect" data-zv-event="grotere_woning_set" data-cta-name="voeg_set_toe" data-solution-type="protect">Voeg set toe</button>
-              <span class="gw-done" data-gw-done hidden>Toegevoegd aan uw setup</span>
-            </div>
-          </div>
-          <p class="gw-note">Prijzen zijn eenmalig (kopen). Bestellen gaat via een kort telefoongesprek of een terugbelverzoek, zoals alles op deze pagina.</p>
+  {%- if section.blocks.size > 0 -%}
+    <div class="ch-trust">
+      <ul class="wrap">
+        {%- for block in section.blocks -%}
+          <li {{ block.shopify_attributes }}>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            {%- if block.settings.route != blank -%}
+              <a href="{% render 'zv-route', key: block.settings.route %}">{{ block.settings.label | escape }}</a>
+            {%- else -%}
+              <span>{{ block.settings.label | escape }}</span>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+      </ul>
+    </div>
+  {%- endif -%}
+
+  <section class="wrap ch-shop" id="winkel" aria-labelledby="ch-shop-h">
+    <div class="cat-head">
+      <h2 id="ch-shop-h">Kies uw camerahardware</h2>
+      <span class="cat-hint"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Kies per product kopen of huren</span>
+    </div>
+    <div class="ch-filters" role="group" aria-label="Filter op categorie">
+      <button type="button" class="ch-chip on" data-filter="" aria-pressed="true">Alle <span class="n"></span></button>
+      <button type="button" class="ch-chip" data-filter="binnen" aria-pressed="false">Binnen <span class="n"></span></button>
+      <button type="button" class="ch-chip" data-filter="buiten" aria-pressed="false">Buiten <span class="n"></span></button>
+      <button type="button" class="ch-chip" data-filter="deurbel" aria-pressed="false">Deurbel <span class="n"></span></button>
+      <button type="button" class="ch-chip" data-filter="meldkamer" aria-pressed="false">Met meldkamer-koppeling <span class="n"></span></button>
+    </div>
+    <div class="rows" id="rows"></div>
+  </section>
+
+  <div class="wrap">
+    <div class="gw" id="grotere-woning" aria-labelledby="gw-h">
+      <h2 id="gw-h">Grotere woning? Extra sensoren voor Beschermd en Protect</h2>
+      <p class="gw-lead">Heeft u Beschermd (Langer Thuis) of Protect (Mijn Thuis) en is uw woning groter dan 100 m² of heeft u meer verdiepingen? Dan breidt u uit met extra sensoren. Er komt geen toeslag per maand bij. Per extra verdieping raden wij deze set aan.</p>
+      <div class="gw-sets">
+        <div class="gw-set" data-gw-set="beschermd">
+          <div class="gw-set-h"><b>Beschermd</b><span>Per extra verdieping</span></div>
+          <ul class="gw-items">
+            <li data-gw-k="rookmelder" data-gw-qty="1"><span class="gw-q">1×</span><span class="gw-n">Rookmelder</span><span class="gw-v" data-gw-price></span></li>
+            <li data-gw-k="magneetcontact_dc23" data-gw-qty="2"><span class="gw-q">2×</span><span class="gw-n">Magneetcontact</span><span class="gw-v" data-gw-price></span></li>
+            <li class="gw-onreq"><span class="gw-q">1×</span><span class="gw-n">Locatiesensor</span><span class="gw-v">Op aanvraag, uw adviseur neemt dit mee</span></li>
+          </ul>
+          <button type="button" class="gw-add" data-gw-add="beschermd" data-zv-event="grotere_woning_set" data-cta-name="voeg_set_toe" data-solution-type="beschermd">Voeg set toe</button>
+          <span class="gw-done" data-gw-done hidden>Toegevoegd aan uw setup</span>
         </div>
-        <div class="cat-head">
-          <span class="step-n">2</span>
-          <h2>Kies uw camerahardware</h2>
-          <span class="cat-hint"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Kies per product kopen of huren</span>
-        </div>
-        <div class="rows" id="rows"></div>
-        <div class="adv-note">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 8h.01M11 12h1v4h1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <div>
-            <p>Niet zeker welke camera's bij uw woning passen? Onze adviseurs kijken vrijblijvend met u mee en stellen samen met u de juiste set samen.</p>
-            <div class="adv-actions">
-              <a href="tel:0881221111">Bel 088 122 11 11</a>
-              <a href="{% render 'zv-route', key: 'contact' %}">Plan een adviesgesprek</a>
-            </div>
-          </div>
+        <div class="gw-set" data-gw-set="protect">
+          <div class="gw-set-h"><b>Protect</b><span>Per extra verdieping</span></div>
+          <ul class="gw-items">
+            <li data-gw-k="foto_bewegingsdetector_868" data-gw-qty="1"><span class="gw-q">1×</span><span class="gw-n">Fotobewegingsmelder</span><span class="gw-v" data-gw-price></span></li>
+            <li data-gw-k="magneetcontact_dc23" data-gw-qty="1"><span class="gw-q">1×</span><span class="gw-n">Deurcontact</span><span class="gw-v" data-gw-price></span></li>
+          </ul>
+          <button type="button" class="gw-add" data-gw-add="protect" data-zv-event="grotere_woning_set" data-cta-name="voeg_set_toe" data-solution-type="protect">Voeg set toe</button>
+          <span class="gw-done" data-gw-done hidden>Toegevoegd aan uw setup</span>
         </div>
       </div>
-
-      <aside class="summary">
-        <h3>Uw camera-setup</h3>
-        <div class="sum-cams">
-          <span class="ci"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8.5h4l1.5-2.5h7L17 8.5h4v11H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="14" r="3.4" stroke="currentColor" stroke-width="2"/></svg></span>
-          <div><b id="camCount">0</b><span>camera's en deurbellen</span></div>
-        </div>
-        <div class="sum-list" id="sumList"></div>
-        <div class="sum-empty" id="sumEmpty">Nog niets toegevoegd. Kies per product kopen of huren.</div>
-        <div class="sum-tot" id="sumTot"></div>
-        <button class="sumbtn" id="sumBtn" disabled>Bel om te bestellen<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <div class="sum-note"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Bestellen gaat altijd via een kort telefoongesprek, 088 122 11 11</div>
-        <form class="cam-contact" id="camContact" data-consent-error="{% render 'zv-form-copy', key: 'consent_error' %}">
-          <div class="cam-contact-h">Of laat ons u terugbellen</div>
-          <input type="text" id="ccName" placeholder="Naam" required>
-          <input type="tel" id="ccPhone" placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}" aria-label="Telefoonnummer" required>
-          <input type="email" id="ccEmail" placeholder="E-mailadres (optioneel)">
-          <label class="cam-contact-consent">
-            <input type="checkbox" id="ccConsent" required>
-            <span>{% render 'zv-form-copy', key: 'consent' %}</span>
-          </label>
-          <div class="cam-contact-err" id="ccErr"></div>
-          <button type="submit">Verstuur terugbelverzoek</button>
-          <div class="cam-contact-done" id="ccDone"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Bedankt, wij bellen u terug.</div>
-        </form>
-      </aside>
-    </section>
+      <p class="gw-note">Prijzen zijn eenmalig (kopen). Bestellen gaat via een kort telefoongesprek of een terugbelverzoek, zoals alles op deze pagina.</p>
+    </div>
   </div>
+
+  <div class="ch-bar" id="chBar" hidden>
+    <div class="ch-bar-in">
+      <span class="ch-bar-t" id="chBarT"></span>
+      <a href="#uw-setup">Bekijk uw setup</a>
+    </div>
+  </div>
+
+  <section class="wrap ch-setup" id="uw-setup" aria-labelledby="ch-setup-h">
+    <div class="summary">
+      <h2 id="ch-setup-h">Uw camera-setup</h2>
+      <div class="sum-cams">
+        <span class="ci"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8.5h4l1.5-2.5h7L17 8.5h4v11H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="14" r="3.4" stroke="currentColor" stroke-width="2"/></svg></span>
+        <div><b id="camCount">0</b><span>camera's en deurbellen</span></div>
+      </div>
+      <div class="sum-list" id="sumList"></div>
+      <div class="sum-empty" id="sumEmpty">Nog niets toegevoegd. Kies per product kopen of huren.</div>
+      <div class="sum-tot" id="sumTot"></div>
+      <button class="sumbtn" id="sumBtn" disabled>Bel om te bestellen<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="sum-note"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Bestellen gaat altijd via een kort telefoongesprek, 088 122 11 11</div>
+    </div>
+    <form class="cam-contact" id="camContact" data-consent-error="{% render 'zv-form-copy', key: 'consent_error' %}">
+      <div class="cam-contact-h">Of laat ons u terugbellen</div>
+      <input type="text" id="ccName" placeholder="Naam" required>
+      <input type="tel" id="ccPhone" placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}" aria-label="Telefoonnummer" required>
+      <input type="email" id="ccEmail" placeholder="E-mailadres (optioneel)">
+      <label class="cam-contact-consent">
+        <input type="checkbox" id="ccConsent" required>
+        <span>{% render 'zv-form-copy', key: 'consent' %}</span>
+      </label>
+      <div class="cam-contact-err" id="ccErr"></div>
+      <button type="submit">Verstuur terugbelverzoek</button>
+      <div class="cam-contact-done" id="ccDone"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Bedankt, wij bellen u terug.</div>
+    </form>
+  </section>
+
+  <section class="ch-cta" aria-labelledby="ch-cta-h">
+    <div class="wrap">
+      <div class="ch-cta-in">
+        <div>
+          <h2 id="ch-cta-h">Niet gevonden wat u zocht?</h2>
+          <p>Staat het product dat u zoekt er niet bij, of weet u niet zeker welke camera's bij uw woning passen? Onze adviseurs kijken vrijblijvend met u mee en stellen samen met u de juiste set samen.</p>
+        </div>
+        <div class="ch-cta-actions">
+          <a class="btn btn--gold" href="{% render 'zv-route', key: 'contact' %}">Plan een adviesgesprek</a>
+          <a class="btn btn--ghost-light" href="tel:0881221111">Bel 088 122 11 11</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap ch-faq" aria-labelledby="ch-faq-h">
+    <h2 id="ch-faq-h">Veelgestelde vragen over camerahardware</h2>
+    <div class="fq-item"><button class="fq-q" type="button" aria-expanded="false" aria-controls="ch-fqa-1">Wat is het verschil tussen kopen en huren?<span class="pm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></span></button><div class="fq-a" id="ch-fqa-1" role="region"><div class="fq-a-in">Kiest u kopen, dan betaalt u één keer. Kiest u huren, dan betaalt u een vast bedrag per maand via SEPA-incasso. Huren kan bij de camera's, videodeurbellen en de recorder; de extra sensoren en accessoires zijn alleen te koop. U kiest het per product.</div></div></div>
+    <div class="fq-item"><button class="fq-q" type="button" aria-expanded="false" aria-controls="ch-fqa-2">Hoe bestel ik camerahardware?<span class="pm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></span></button><div class="fq-a" id="ch-fqa-2" role="region"><div class="fq-a-in">Bestellen gaat altijd via een kort telefoongesprek. Stel op deze pagina uw set samen en bel <a href="tel:0881221111">088 122 11 11</a>, of laat uw naam en telefoonnummer achter, dan bellen wij u terug.</div></div></div>
+    <div class="fq-item"><button class="fq-q" type="button" aria-expanded="false" aria-controls="ch-fqa-3">Wat heb ik nodig om een camera te gebruiken?<span class="pm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></span></button><div class="fq-a" id="ch-fqa-3" role="region"><div class="fq-a-in">Voor onze camera's is een cloudopslag-abonnement vereist. Daarnaast heeft u een stabiele internetverbinding nodig met een uploadsnelheid van minimaal 2,0 Mbps per camera, en voldoende wifi-signaal op de plek waar de camera komt.</div></div></div>
+    <p class="ch-faq-more">Meer vragen? <a href="{% render 'zv-route', key: 'faq' %}">Bekijk alle veelgestelde vragen</a></p>
+  </section>
 </div>
 
 <script>
@@ -241,8 +305,8 @@
     {n:'(Koop) Rook- en koolmonoxidemelder', type:'Sensor', koop:150.00, huur:null, huurSku:null, k:'rook_en_koolmonoxidemelder', sku:'CL102'},
     {n:'(Koop) SA-220 Roldeur behuizing', type:'Accessoire', koop:129.00, huur:null, huurSku:null, k:'roldeur_behuizing', sku:'ROL'}
   ];
-  var state={ lines:{} };
-  function euro(n){ return '€ '+Number(n).toFixed(2).replace('.',','); }
+  var state={ lines:{}, filter:'', open:{} };
+  function euro(n){ return '€ '+Number(n).toFixed(2).replace('.',','); }
 
   var SRC=['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid'];
   function captureSource(){
@@ -258,11 +322,29 @@
   }
   captureSource();
 
+  /* Filter categories: the row's type split on "+" ("Binnen+Buiten" is both), plus meldkamer
+     for rows flagged meldkamer:true. Only what the HW data says; nothing is inferred. */
+  function catsOf(h){ var c=h.type.toLowerCase().split('+'); if(h.meldkamer) c.push('meldkamer'); return c; }
+  var ICON={
+    cam:'<svg viewBox="0 0 24 24" fill="none"><path d="M3 8.5h4l1.5-2.5h7L17 8.5h4v11H3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="14" r="3.4" stroke="currentColor" stroke-width="1.6"/></svg>',
+    bel:'<svg viewBox="0 0 24 24" fill="none"><rect x="7" y="2.5" width="10" height="19" rx="3" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="8" r="2.2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="15.5" r="1.8" stroke="currentColor" stroke-width="1.6"/></svg>',
+    rec:'<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M7 12h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="17" cy="12" r="1.2" fill="currentColor"/></svg>',
+    sensor:'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="2.4" stroke="currentColor" stroke-width="1.6"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    acc:'<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M9 8h6M9 12h6M9 16h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
+  };
+  function iconFor(h){
+    if(h.type==='Deurbel') return ICON.bel;
+    if(h.type==='Recorder') return ICON.rec;
+    if(h.type==='Sensor') return ICON.sensor;
+    if(h.type==='Accessoire') return ICON.acc;
+    return ICON.cam;
+  }
+
   function modeChip(h,mode){
     var l=state.lines[h.k], on=l&&l.mode===mode;
     var price=euro(mode==='koop'?h.koop:h.huur);
     var lab=mode==='koop'?'Kopen':'Huren', unit=mode==='koop'?'eenmalig':'per maand';
-    return '<button type="button" class="modechip '+mode+(on?' on':'')+'" data-mode="'+mode+'"><span class="ml">'+lab+'</span><span class="mp">'+price+'</span><span class="mu">'+unit+'</span></button>';
+    return '<button type="button" class="modechip '+mode+(on?' on':'')+'" data-mode="'+mode+'" aria-pressed="'+(on?'true':'false')+'"><span class="ml">'+lab+'</span><span class="mp">'+price+'</span><span class="mu">'+unit+'</span></button>';
   }
   function specHtml(h){
     var desc=h.desc?'<div class="hw-desc">'+h.desc.map(function(p){ return '<p>'+p+'</p>'; }).join('')+'</div>':'';
@@ -274,36 +356,44 @@
     return desc+model+'<div class="hw-spec-list">'+rows+'</div>';
   }
   /* Two groups, split on h.huur: rows with a huur price offer Kopen and Huren, the rest are
-     koop-only (one chip, no "binnenkort" Huren). Array order is kept within each group. Only
-     rows with h.specs or h.desc get the toggle and panel ("Meer info" when there's only desc). */
+     koop-only (one chip, no "binnenkort" Huren). Array order is kept within each group. Each
+     card shows the first three spec rows of a row that has specs; the toggle opens the full
+     specs and/or desc ("Meer info" when there's only desc). */
   var GROUPS=[
     {title:"Camera's, videodeurbellen & recorder — kopen of huren", huur:true},
     {title:'Extra sensoren & accessoires — eenmalig te koop', huur:false}
   ];
   function rowEl(h){
-    var l=state.lines[h.k], q=l?l.qty:0, hasMode=!!(l&&l.mode);
+    var l=state.lines[h.k], q=l?l.qty:0, hasMode=!!(l&&l.mode), open=!!state.open[h.k];
     var chosenSku=hasMode&&l.mode==='huur'&&h.huurSku?h.huurSku:h.sku;
     var chosen=hasMode?'<span class="hw-chosen">Gekozen: '+(l.mode==='koop'?'Kopen · eenmalig':'Huren · maandelijks')+' &middot; '+chosenSku+'</span>':'';
     var specsId='specs-'+h.k;
     var hasInfo=!!(h.specs||h.desc);
-    var specBtn=hasInfo?'<button type="button" class="hw-spec-btn" aria-expanded="false" aria-controls="'+specsId+'">'+(h.specs?'Specificaties':'Meer info')+'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>':'';
-    var specPanel=hasInfo?'<div class="hw-specs" id="'+specsId+'" role="region"><div class="hw-specs-in">'+specHtml(h)+'</div></div>':'';
-    var el=document.createElement('div'); el.className='hw'+(q>0?' has':''); el.setAttribute('data-k',h.k);
+    var key=h.specs?'<dl class="hw-key">'+h.specs.slice(0,3).map(function(s){ return '<div><dt>'+s[0]+'</dt><dd>'+s[1]+'</dd></div>'; }).join('')+'</dl>':'';
+    var specBtn=hasInfo?'<button type="button" class="hw-spec-btn" aria-expanded="'+(open?'true':'false')+'" aria-controls="'+specsId+'">'+(h.specs?'Alle specificaties':'Meer info')+'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>':'';
+    var specPanel=hasInfo?'<div class="hw-specs" id="'+specsId+'" role="region"'+(open?' style="max-height:none"':'')+'><div class="hw-specs-in">'+specHtml(h)+'</div></div>':'';
+    var el=document.createElement('article'); el.className='hw'+(q>0?' has':'')+(open?' specs-open':''); el.setAttribute('data-k',h.k);
     el.innerHTML=
-      '<div class="hw-main"><div class="hw-name">'+h.n+specBtn+'</div>'+chosen+'</div>'+
-      '<div class="hw-modes">'+modeChip(h,'koop')+(h.huur!=null?modeChip(h,'huur'):'')+'</div>'+
-      '<div class="stepper"><button type="button" data-d="-1"'+(q===0?' disabled':'')+'>−</button><span class="q">'+q+'</span><button type="button" data-d="1"'+(hasMode?'':' disabled')+'>+</button></div>'+
-      specPanel;
+      '<div class="hw-media" aria-hidden="true">'+iconFor(h)+'<span class="hw-type">'+h.type.replace('+',' / ')+'</span></div>'+
+      '<h3 class="hw-name">'+h.n+'</h3>'+
+      (h.model?'<div class="hw-model">'+h.model+'</div>':'')+
+      key+specBtn+specPanel+
+      '<div class="hw-buy">'+
+        '<div class="hw-modes">'+modeChip(h,'koop')+(h.huur!=null?modeChip(h,'huur'):'')+'</div>'+
+        '<div class="stepper"><button type="button" data-d="-1" aria-label="Eén minder"'+(q===0?' disabled':'')+'>−</button><span class="q">'+q+'</span><button type="button" data-d="1" aria-label="Eén meer"'+(hasMode?'':' disabled')+'>+</button></div>'+
+        chosen+
+      '</div>';
     return el;
   }
   function renderRows(){
     var rows=document.getElementById('rows'); rows.innerHTML='';
     GROUPS.forEach(function(g){
-      var list=HW.filter(function(h){ return (h.huur!=null)===g.huur; });
+      var list=HW.filter(function(h){ return (h.huur!=null)===g.huur && (!state.filter || catsOf(h).indexOf(state.filter)>-1); });
       if(!list.length) return;
       var head=document.createElement('h3'); head.className='hw-group-h'; head.textContent=g.title;
-      rows.appendChild(head);
-      list.forEach(function(h){ rows.appendChild(rowEl(h)); });
+      var grid=document.createElement('div'); grid.className='hw-grid';
+      list.forEach(function(h){ grid.appendChild(rowEl(h)); });
+      rows.appendChild(head); rows.appendChild(grid);
     });
   }
   document.getElementById('rows').addEventListener('click',function(e){
@@ -311,8 +401,10 @@
     if(specBtn){
       var hwEl=specBtn.closest('.hw'), panel=hwEl.querySelector('.hw-specs');
       var open=hwEl.classList.toggle('specs-open');
+      state.open[hwEl.getAttribute('data-k')]=open;
       specBtn.setAttribute('aria-expanded', open?'true':'false');
-      panel.style.maxHeight=open?panel.scrollHeight+'px':'0';
+      panel.style.maxHeight=panel.scrollHeight+'px';
+      if(!open){ panel.offsetHeight; panel.style.maxHeight='0'; }
       return;
     }
     var chip=e.target.closest('.modechip');
@@ -329,13 +421,31 @@
     renderRows(); renderSummary();
   });
 
+  // Filter chips: count per category from the HW data; a chip with no match is hidden.
+  var filters=scope.querySelector('.ch-filters');
+  filters.querySelectorAll('[data-filter]').forEach(function(b){
+    var f=b.getAttribute('data-filter');
+    var n=f?HW.filter(function(h){ return catsOf(h).indexOf(f)>-1; }).length:HW.length;
+    b.querySelector('.n').textContent=n;
+    if(!n) b.hidden=true;
+  });
+  filters.addEventListener('click',function(e){
+    var b=e.target.closest('[data-filter]'); if(!b) return;
+    state.filter=b.getAttribute('data-filter');
+    filters.querySelectorAll('[data-filter]').forEach(function(x){
+      var on=x===b; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on?'true':'false');
+    });
+    renderRows();
+  });
+
   function renderSummary(){
     var list=document.getElementById('sumList'), keys=Object.keys(state.lines);
     list.innerHTML='';
-    var cams=0, koop=0, huur=0;
+    var cams=0, items=0, koop=0, huur=0;
     keys.forEach(function(k){
       var h=HW.find(function(x){return x.k===k;}); var l=state.lines[k], q=l.qty;
       if(h.type!=='Recorder' && h.type!=='Sensor' && h.type!=='Accessoire') cams+=q;
+      items+=q;
       var isKoop=l.mode==='koop', unit=isKoop?h.koop:h.huur, line=unit*q;
       if(isKoop) koop+=line; else huur+=line;
       list.insertAdjacentHTML('beforeend','<div class="sl"><span><span class="q">'+q+'×</span> '+h.n+' <em style="color:'+(isKoop?'var(--belt)':'var(--indigo-2)')+';font-style:normal;font-weight:800">('+(isKoop?'Kopen':'Huren')+')</em></span><span class="v">'+euro(line)+(isKoop?'':'/m')+'</span></div>');
@@ -343,6 +453,8 @@
     document.getElementById('camCount').textContent=cams;
     document.getElementById('sumEmpty').style.display=keys.length?'none':'block';
     document.getElementById('sumBtn').disabled=!keys.length;
+    document.getElementById('chBar').hidden=!keys.length;
+    document.getElementById('chBarT').innerHTML='<b>'+items+'</b> '+(items===1?'product':'producten')+' &middot; '+euro(koop)+' eenmalig'+(huur?' &middot; '+euro(huur)+'/mnd':'');
     var tot=document.getElementById('sumTot');
     if(!keys.length){ tot.innerHTML=''; return; }
     tot.innerHTML=
@@ -410,6 +522,16 @@
     if(hl){ hl.classList.add('is-hl'); gw.scrollIntoView({block:'start'}); }
   }
 
+  // FAQ accordion, same behaviour as the Veelgestelde vragen page.
+  scope.querySelectorAll('.ch-faq .fq-item').forEach(function(it){
+    var q=it.querySelector('.fq-q'), a=it.querySelector('.fq-a');
+    q.addEventListener('click',function(){
+      var open=it.classList.toggle('open');
+      q.setAttribute('aria-expanded', open?'true':'false');
+      a.style.maxHeight=open?a.scrollHeight+'px':'0';
+    });
+  });
+
   renderRows(); renderSummary();
 })();
 </script>
@@ -423,7 +545,7 @@
   --line:#e8e0cd; --line-2:#ded6c0; --muted:#6f6786; --muted-2:#8c84a6;
   color:var(--ink); line-height:1.5; background:linear-gradient(180deg,#fbf5e9,#f4ecda);
 }
-.zv-camera .wrap { max-width:1180px; margin:0 auto; padding:0 clamp(20px,3.4vw,48px); }
+.zv-camera .wrap { max-width:1180px; margin:0 auto; padding:0 clamp(16px,3.4vw,48px); }
 .zv-camera .topbar { background:var(--paper); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
 .zv-camera .topbar .wrap { display:flex; align-items:center; gap:9px; padding-top:13px; padding-bottom:13px; }
 .zv-camera .crumb { font-size:13px; font-weight:600; color:var(--muted); display:flex; align-items:center; gap:8px; }
@@ -431,14 +553,88 @@
 .zv-camera .crumb a svg { width:15px; height:15px; }
 .zv-camera .crumb .sep { color:var(--line-2); }
 .zv-camera .crumb b { color:var(--indigo); font-weight:800; }
-.zv-camera .lede { padding:clamp(30px,4vw,50px) 0 6px; }
-.zv-camera .eyebrow { font-size:12px; font-weight:800; letter-spacing:.22em; text-transform:uppercase; color:var(--red); }
-.zv-camera .lede h1 { font-size:clamp(30px,4.2vw,46px); font-weight:900; letter-spacing:-.02em; line-height:1.03; color:var(--indigo); margin-top:10px; }
-.zv-camera .lede p { font-size:16.5px; font-weight:600; color:var(--muted); margin-top:12px; max-width:640px; line-height:1.5; }
-.zv-camera .shop { display:grid; grid-template-columns:1fr 340px; gap:26px; padding:clamp(28px,3.4vw,44px) 0 80px; align-items:start; }
-@media(max-width:920px){ .zv-camera .shop { grid-template-columns:1fr; } }
-/* Grotere woning (2026-09-25): extra sensor sets for Beschermd and Protect, above the product rows. */
-.zv-camera .gw { background:var(--paper); border:1.5px solid var(--line); border-radius:16px; padding:clamp(18px,2.2vw,24px); margin-bottom:28px; scroll-margin-top:132px; }
+.zv-camera a:focus-visible, .zv-camera button:focus-visible { outline:2px solid var(--indigo); outline-offset:3px; }
+.zv-camera .btn svg { width:17px; height:17px; }
+
+/* Hero */
+.zv-camera .ch-hero .wrap { padding-top:clamp(30px,4.4vw,56px); padding-bottom:clamp(26px,3.4vw,40px); }
+.zv-camera .eyebrow { display:inline-flex; align-items:center; gap:8px; font-size:11.5px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:var(--rood); background:var(--paper); border:1px solid var(--line); border-radius:999px; padding:7px 14px; }
+.zv-camera .eyebrow::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--red); }
+.zv-camera .ch-hero h1 { font-size:clamp(30px,4.4vw,48px); font-weight:900; letter-spacing:-.02em; line-height:1.04; color:var(--indigo); margin:16px 0 0; max-width:760px; }
+.zv-camera .ch-hero p { font-size:16.5px; font-weight:600; color:var(--muted); margin:14px 0 0; max-width:640px; line-height:1.5; }
+.zv-camera .ch-ctas { display:flex; flex-wrap:wrap; gap:12px; margin-top:24px; }
+
+/* Trust strip */
+.zv-camera .ch-trust { background:var(--paper); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.zv-camera .ch-trust ul { list-style:none; margin:0 auto; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px 22px; padding-top:16px; padding-bottom:16px; }
+@media(max-width:860px){ .zv-camera .ch-trust ul { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.zv-camera .ch-trust li { display:flex; align-items:center; gap:9px; font-size:14px; font-weight:800; color:var(--indigo); line-height:1.3; }
+.zv-camera .ch-trust li svg { width:18px; height:18px; flex:none; color:var(--ok); }
+.zv-camera .ch-trust a { color:inherit; text-decoration:underline; text-decoration-color:var(--line-2); text-underline-offset:3px; }
+.zv-camera .ch-trust a:hover { text-decoration-color:currentColor; }
+
+/* Shop: filters + grid */
+.zv-camera .ch-shop { padding-top:clamp(30px,3.6vw,46px); scroll-margin-top:132px; }
+.zv-camera .cat-head { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:14px; }
+.zv-camera .cat-head h2 { font-size:clamp(21px,2.4vw,28px); font-weight:900; color:var(--indigo); letter-spacing:-.015em; margin:0; }
+.zv-camera .cat-hint { margin-left:auto; font-size:12.5px; font-weight:700; color:var(--muted); display:inline-flex; align-items:center; gap:7px; }
+.zv-camera .cat-hint svg { width:15px; height:15px; color:var(--belt); }
+@media(max-width:680px){ .zv-camera .cat-hint { margin-left:0; } }
+.zv-camera .ch-filters { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
+.zv-camera .ch-chip { font-family:inherit; font-size:13.5px; font-weight:800; color:var(--indigo); background:#fff; border:1.5px solid var(--line-2); border-radius:999px; padding:9px 15px; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:border-color .14s,background .14s,color .14s; }
+.zv-camera .ch-chip:hover { border-color:var(--indigo); }
+.zv-camera .ch-chip .n { font-size:11.5px; font-weight:800; color:var(--muted); background:var(--cream); border-radius:999px; padding:1px 7px; }
+.zv-camera .ch-chip.on { background:var(--indigo); border-color:var(--indigo); color:#fff; }
+.zv-camera .ch-chip.on .n { background:rgba(255,255,255,.18); color:#fff; }
+.zv-camera .ch-chip[hidden] { display:none; }
+.zv-camera .hw-group-h { font-size:17px; font-weight:900; color:var(--indigo); letter-spacing:-.01em; line-height:1.2; margin:0 0 12px; }
+.zv-camera .hw-grid + .hw-group-h { margin-top:30px; }
+.zv-camera .hw-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+@media(max-width:980px){ .zv-camera .hw-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:620px){ .zv-camera .hw-grid { grid-template-columns:1fr; } }
+.zv-camera .hw { display:flex; flex-direction:column; gap:10px; min-width:0; background:var(--paper); border:1.5px solid var(--line); border-radius:16px; padding:12px 12px 16px; transition:border-color .14s,box-shadow .14s; }
+.zv-camera .hw.has { border-color:var(--indigo); box-shadow:0 10px 26px -18px rgba(50,36,105,.6); }
+.zv-camera .hw-media { position:relative; aspect-ratio:5/2; border-radius:11px; background:linear-gradient(135deg,var(--indigo-soft),#f6f1e3); display:grid; place-items:center; color:var(--indigo); }
+.zv-camera .hw-media svg { width:46px; height:46px; opacity:.8; }
+.zv-camera .hw-type { position:absolute; top:10px; left:10px; font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--indigo); background:#fff; border-radius:999px; padding:4px 9px; }
+.zv-camera .hw-name { font-size:16px; font-weight:800; color:var(--ink); line-height:1.25; margin:4px 4px 0; }
+.zv-camera .hw-model { font-size:11px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:var(--muted); margin:-4px 4px 0; }
+.zv-camera .hw-key { margin:0 4px; display:flex; flex-direction:column; gap:4px; }
+.zv-camera .hw-key div { display:grid; grid-template-columns:82px 1fr; gap:8px; font-size:12.5px; line-height:1.4; }
+.zv-camera .hw-key dt { color:var(--muted); font-weight:700; }
+.zv-camera .hw-key dd { margin:0; color:#3a3550; font-weight:600; overflow-wrap:anywhere; }
+.zv-camera .hw-spec-btn { align-self:flex-start; display:inline-flex; align-items:center; gap:4px; font-family:inherit; font-size:12px; font-weight:800; color:var(--indigo); background:none; border:none; padding:2px 4px; cursor:pointer; }
+.zv-camera .hw-spec-btn svg { width:12px; height:12px; transition:transform .16s; }
+.zv-camera .hw-spec-btn[aria-expanded="true"] svg { transform:rotate(180deg); }
+.zv-camera .hw-specs { max-height:0; overflow:hidden; transition:max-height .2s ease; margin:0 4px; }
+.zv-camera .hw-specs-in { padding-top:10px; border-top:1px solid var(--line); }
+.zv-camera .hw-desc p { font-size:12.5px; font-weight:500; line-height:1.55; color:#3a3550; margin:0 0 8px; }
+.zv-camera .hw-desc + .hw-spec-model { margin-top:12px; }
+.zv-camera .hw-spec-model { font-size:11px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+.zv-camera .hw-spec-list { display:flex; flex-direction:column; gap:6px; }
+.zv-camera .hw-spec-row { display:flex; flex-direction:column; gap:1px; font-size:12.5px; font-weight:600; color:#3a3550; }
+.zv-camera .hw-spec-l { color:var(--muted); font-weight:700; }
+.zv-camera .hw-buy { margin-top:auto; padding:6px 4px 0; display:flex; flex-direction:column; gap:10px; }
+.zv-camera .hw-modes { display:flex; gap:8px; }
+.zv-camera .modechip { flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:1px; font-family:inherit; border:1.5px solid var(--line-2); background:#fff; border-radius:11px; padding:7px 12px; text-align:left; cursor:pointer; transition:border-color .14s,background .14s,box-shadow .14s; }
+.zv-camera .modechip:hover { border-color:#c9bda0; }
+.zv-camera .modechip .ml { font-size:10.5px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); }
+.zv-camera .modechip .mp { font-size:16px; font-weight:900; color:var(--ink); line-height:1.15; }
+.zv-camera .modechip .mu { font-size:10.5px; font-weight:700; color:var(--muted); }
+.zv-camera .modechip.on { border-color:var(--indigo); background:var(--indigo-soft); box-shadow:0 8px 20px -14px rgba(50,36,105,.7); }
+.zv-camera .modechip.on .ml { color:var(--indigo); }
+.zv-camera .modechip.on .mp { color:var(--indigo); }
+.zv-camera .modechip.koop.on { border-color:var(--belt); background:#fbf1e0; }
+.zv-camera .modechip.koop.on .ml, .zv-camera .modechip.koop.on .mp { color:var(--belt); }
+.zv-camera .stepper { align-self:flex-start; display:inline-flex; align-items:center; border:1.5px solid var(--line-2); border-radius:11px; overflow:hidden; background:#fff; }
+.zv-camera .stepper button { width:38px; height:40px; border:none; background:#fff; color:var(--indigo); font-size:20px; font-weight:800; line-height:1; display:grid; place-items:center; cursor:pointer; }
+.zv-camera .stepper button:disabled { color:var(--line-2); cursor:default; }
+.zv-camera .stepper button:hover:not(:disabled) { background:var(--indigo-soft); }
+.zv-camera .stepper .q { min-width:34px; text-align:center; font-size:15px; font-weight:900; color:var(--ink); }
+.zv-camera .hw-chosen { display:block; font-size:11px; font-weight:800; color:var(--ok); }
+
+/* Grotere woning (2026-09-25): extra sensor sets for Beschermd and Protect, below the grid. */
+.zv-camera .gw { background:var(--paper); border:1.5px solid var(--line); border-radius:16px; padding:clamp(18px,2.2vw,24px); margin-top:clamp(32px,4vw,48px); scroll-margin-top:132px; }
 .zv-camera .gw h2 { font-size:clamp(19px,2.2vw,24px); font-weight:900; color:var(--indigo); letter-spacing:-.015em; line-height:1.15; margin:0; }
 .zv-camera .gw-lead { font-size:14px; font-weight:600; color:var(--muted); line-height:1.5; margin:8px 0 0; max-width:640px; }
 .zv-camera .gw-sets { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px; }
@@ -458,80 +654,49 @@
 .zv-camera .gw-done { font-size:12px; font-weight:800; color:var(--ok); }
 .zv-camera .gw-done[hidden] { display:none; }
 .zv-camera .gw-note { font-size:12px; font-weight:600; color:var(--muted); line-height:1.5; margin:14px 0 0; }
-.zv-camera .cat-head { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:18px; }
-.zv-camera .step-n { width:30px; height:30px; border-radius:50%; background:var(--indigo); color:#fff; font-size:14px; font-weight:900; display:grid; place-items:center; flex:none; }
-.zv-camera .cat-head h2 { font-size:clamp(19px,2.2vw,25px); font-weight:900; color:var(--indigo); letter-spacing:-.015em; }
-.zv-camera .cat-hint { margin-left:auto; font-size:12.5px; font-weight:700; color:var(--muted); display:inline-flex; align-items:center; gap:7px; }
-.zv-camera .cat-hint svg { width:15px; height:15px; color:var(--belt); }
-@media(max-width:680px){ .zv-camera .cat-hint { margin-left:0; } }
-.zv-camera .hw-modes { display:flex; gap:8px; }
-.zv-camera .modechip { display:flex; flex-direction:column; align-items:flex-start; gap:1px; border:1.5px solid var(--line-2); background:#fff; border-radius:11px; padding:7px 13px; min-width:106px; text-align:left; transition:border-color .14s,background .14s,box-shadow .14s; }
-.zv-camera .modechip:hover { border-color:#c9bda0; }
-.zv-camera .modechip .ml { font-size:10.5px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); }
-.zv-camera .modechip .mp { font-size:15px; font-weight:900; color:var(--ink); line-height:1.1; }
-.zv-camera .modechip .mu { font-size:10.5px; font-weight:700; color:var(--muted); }
-.zv-camera .modechip.on { border-color:var(--indigo); background:var(--indigo-soft); box-shadow:0 8px 20px -14px rgba(50,36,105,.7); }
-.zv-camera .modechip.on .ml { color:var(--indigo); }
-.zv-camera .modechip.on .mp { color:var(--indigo); }
-.zv-camera .modechip.koop.on { border-color:var(--belt); background:#fbf1e0; }
-.zv-camera .modechip.koop.on .ml, .zv-camera .modechip.koop.on .mp { color:var(--belt); }
-.zv-camera .rows { display:flex; flex-direction:column; gap:10px; }
-.zv-camera .hw-group-h { font-size:16px; font-weight:900; color:var(--indigo); letter-spacing:-.01em; line-height:1.2; margin:0 0 2px; }
-.zv-camera .hw + .hw-group-h { margin-top:18px; }
-.zv-camera .hw { display:grid; grid-template-columns:1fr auto auto; gap:16px; align-items:center; background:var(--paper); border:1.5px solid var(--line); border-radius:14px; padding:14px 16px; transition:border-color .14s,box-shadow .14s; }
-.zv-camera .hw.has { border-color:var(--indigo); box-shadow:0 10px 26px -18px rgba(50,36,105,.6); }
-.zv-camera .hw .hw-main { min-width:0; }
-.zv-camera .hw .hw-name { font-size:15px; font-weight:800; color:var(--ink); line-height:1.2; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-.zv-camera .hw .hw-chosen { display:block; margin-top:7px; font-size:11px; font-weight:800; color:var(--ok); }
-.zv-camera .hw-spec-btn { display:inline-flex; align-items:center; gap:4px; font-family:inherit; font-size:11px; font-weight:800; letter-spacing:.01em; color:var(--indigo); background:none; border:none; padding:2px 0; cursor:pointer; }
-.zv-camera .hw-spec-btn svg { width:12px; height:12px; transition:transform .16s; }
-.zv-camera .hw-spec-btn[aria-expanded="true"] svg { transform:rotate(180deg); }
-.zv-camera .hw-specs { grid-column:1 / -1; max-height:0; overflow:hidden; transition:max-height .2s ease; }
-.zv-camera .hw-specs-in { padding-top:12px; margin-top:2px; border-top:1px solid var(--line); }
-.zv-camera .hw-desc p { font-size:12.5px; font-weight:500; line-height:1.55; color:#3a3550; margin:0 0 8px; }
-.zv-camera .hw-desc + .hw-spec-model { margin-top:12px; }
-.zv-camera .hw-spec-model { font-size:11px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
-.zv-camera .hw-spec-list { display:flex; flex-direction:column; gap:6px; }
-.zv-camera .hw-spec-row { display:flex; justify-content:space-between; gap:14px; font-size:12.5px; font-weight:600; color:#3a3550; }
-.zv-camera .hw-spec-l { color:var(--muted); font-weight:700; flex:none; }
-.zv-camera .hw-spec-v { text-align:right; }
-@media(max-width:680px){ .zv-camera .hw-spec-row { flex-direction:column; gap:1px; } .zv-camera .hw-spec-v { text-align:left; } }
-.zv-camera .stepper { display:inline-flex; align-items:center; border:1.5px solid var(--line-2); border-radius:11px; overflow:hidden; background:#fff; }
-.zv-camera .stepper button { width:38px; height:40px; border:none; background:#fff; color:var(--indigo); font-size:20px; font-weight:800; line-height:1; display:grid; place-items:center; }
-.zv-camera .stepper button:disabled { color:var(--line-2); cursor:default; }
-.zv-camera .stepper button:hover:not(:disabled) { background:var(--indigo-soft); }
-.zv-camera .stepper .q { min-width:34px; text-align:center; font-size:15px; font-weight:900; color:var(--ink); }
-@media(max-width:680px){ .zv-camera .hw { grid-template-columns:1fr; } .zv-camera .hw-modes { flex-wrap:wrap; } .zv-camera .stepper { justify-self:start; } }
-.zv-camera .adv-note { margin-top:18px; display:flex; align-items:flex-start; gap:12px; background:var(--indigo-soft); border:1px solid #ddd5f0; border-radius:14px; padding:14px 16px; max-width:760px; }
-.zv-camera .adv-note svg { width:20px; height:20px; color:var(--indigo); flex:none; margin-top:1px; }
-.zv-camera .adv-note p { font-size:13.5px; font-weight:600; color:#3a3550; line-height:1.5; margin:0; }
-.zv-camera .adv-actions { display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; }
-.zv-camera .adv-actions a { font-size:12.5px; font-weight:800; color:var(--indigo); border:1.5px solid var(--indigo); border-radius:999px; padding:7px 14px; text-decoration:none; }
-.zv-camera .summary { position:sticky; top:16px; background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:22px; box-shadow:0 26px 56px -42px rgba(26,18,48,.5); }
-.zv-camera .summary h3 { font-size:17px; font-weight:900; color:var(--indigo); }
+
+/* Sticky setup bar: shown once something is chosen, settles above Uw camera-setup. Right-
+   aligned so it clears the contact FAB (bottom-left, assets/zv-contact-fab.css); below 960px
+   the two don't fit side by side, so the bar sits above the FAB (96px tall, 72px <=600px). */
+.zv-camera .ch-bar { position:sticky; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); z-index:5; display:flex; justify-content:flex-end; padding:0 20px; margin-top:24px; pointer-events:none; }
+@media(max-width:960px){ .zv-camera .ch-bar { bottom:calc(128px + env(safe-area-inset-bottom, 0px)); } }
+@media(max-width:600px){ .zv-camera .ch-bar { bottom:calc(100px + env(safe-area-inset-bottom, 0px)); padding:0 16px; } }
+.zv-camera .ch-bar[hidden] { display:none; }
+.zv-camera .ch-bar-in { pointer-events:auto; display:flex; align-items:center; gap:14px; max-width:100%; background:var(--indigo); color:#fff; border-radius:999px; padding:8px 8px 8px 18px; box-shadow:0 18px 40px -18px rgba(26,18,48,.7); }
+.zv-camera .ch-bar-t { font-size:13.5px; font-weight:700; }
+.zv-camera .ch-bar-t b { font-weight:900; }
+.zv-camera .ch-bar a { flex:none; font-size:13.5px; font-weight:800; color:var(--ink); background:var(--gold); border-radius:999px; padding:9px 15px; text-decoration:none; }
+@media(max-width:620px){ .zv-camera .ch-bar-in { gap:10px; padding-left:14px; } .zv-camera .ch-bar-t { font-size:12.5px; } }
+
+/* Uw camera-setup: summary + callback */
+.zv-camera .ch-setup { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); gap:20px; align-items:start; padding-top:clamp(28px,3.4vw,40px); scroll-margin-top:132px; }
+@media(max-width:860px){ .zv-camera .ch-setup { grid-template-columns:1fr; } }
+.zv-camera .summary, .zv-camera .cam-contact { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:22px; box-shadow:0 26px 56px -42px rgba(26,18,48,.5); }
+.zv-camera .summary h2 { font-size:clamp(19px,2.2vw,24px); font-weight:900; color:var(--indigo); letter-spacing:-.015em; margin:0; }
 .zv-camera .sum-cams { display:flex; align-items:center; gap:10px; margin-top:14px; background:var(--cream); border:1px solid var(--line-2); border-radius:13px; padding:12px 14px; }
 .zv-camera .sum-cams .ci { width:34px; height:34px; border-radius:10px; background:#fff; display:grid; place-items:center; flex:none; box-shadow:inset 0 0 0 1px var(--line-2); }
 .zv-camera .sum-cams .ci svg { width:19px; height:19px; color:var(--indigo); }
 .zv-camera .sum-cams b { font-size:21px; font-weight:900; color:var(--ink); line-height:1; }
 .zv-camera .sum-cams span { font-size:12px; font-weight:700; color:var(--muted); display:block; margin-top:2px; }
-.zv-camera .sum-list { margin-top:14px; display:flex; flex-direction:column; gap:8px; max-height:200px; overflow:auto; }
+.zv-camera .sum-list { margin-top:14px; display:flex; flex-direction:column; gap:8px; max-height:260px; overflow:auto; }
 .zv-camera .sum-list .sl { display:flex; justify-content:space-between; gap:10px; font-size:13px; font-weight:600; color:#3a3550; }
 .zv-camera .sum-list .sl .q { color:var(--muted); font-weight:800; }
 .zv-camera .sum-list .sl .v { font-weight:800; white-space:nowrap; }
 .zv-camera .sum-empty { font-size:13px; font-weight:600; color:var(--muted-2); margin-top:14px; line-height:1.5; }
 .zv-camera .sum-tot { border-top:1.5px solid var(--line); margin-top:14px; padding-top:14px; display:flex; flex-direction:column; gap:7px; }
+.zv-camera .sum-tot:empty { display:none; }
 .zv-camera .sum-tot .tr { display:flex; justify-content:space-between; font-size:13.5px; font-weight:700; color:#3a3550; }
 .zv-camera .sum-tot .tr.big { font-size:17px; font-weight:900; color:var(--ink); }
 .zv-camera .sum-tot .tr.big .accent { color:var(--indigo); }
 .zv-camera .sum-tot .muted { font-size:12px; font-weight:600; color:var(--muted-2); }
-.zv-camera .sumbtn { margin-top:16px; width:100%; font-weight:800; font-size:15.5px; border:none; border-radius:13px; padding:15px; display:inline-flex; align-items:center; justify-content:center; gap:9px; background:var(--gold); color:var(--ink); box-shadow:0 2px 0 var(--belt); transition:transform .14s,box-shadow .14s; cursor:pointer; }
+.zv-camera .sumbtn { margin-top:16px; width:100%; font-family:inherit; font-weight:800; font-size:15.5px; border:none; border-radius:13px; padding:15px; display:inline-flex; align-items:center; justify-content:center; gap:9px; background:var(--gold); color:var(--ink); box-shadow:0 2px 0 var(--belt); transition:transform .14s,box-shadow .14s; cursor:pointer; }
 .zv-camera .sumbtn:hover { transform:translateY(-1px); box-shadow:0 4px 0 var(--belt),0 12px 24px -12px rgba(180,126,10,.7); }
 .zv-camera .sumbtn:disabled { background:var(--sand); color:var(--muted-2); box-shadow:none; cursor:default; transform:none; }
 .zv-camera .sumbtn svg { width:18px; height:18px; }
 .zv-camera .sum-note { display:flex; align-items:center; gap:8px; justify-content:center; font-size:12px; font-weight:700; color:var(--muted); margin-top:11px; text-align:center; }
 .zv-camera .sum-note svg { width:14px; height:14px; color:var(--ok); flex:none; }
-.zv-camera .cam-contact { margin-top:20px; padding-top:18px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:9px; }
-.zv-camera .cam-contact-h { font-size:13px; font-weight:800; color:var(--indigo); margin-bottom:2px; }
+.zv-camera .cam-contact { display:flex; flex-direction:column; gap:9px; }
+.zv-camera .cam-contact-h { font-size:15px; font-weight:900; color:var(--indigo); margin-bottom:2px; }
 .zv-camera .cam-contact input { font-family:inherit; font-size:13.5px; font-weight:600; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; padding:11px 12px; background:#fff; }
 .zv-camera .cam-contact-consent { display:flex; align-items:flex-start; gap:10px; cursor:pointer; }
 .zv-camera .cam-contact-consent input { width:18px; height:18px; margin-top:2px; flex:none; accent-color:var(--indigo); }
@@ -541,6 +706,29 @@
 .zv-camera .cam-contact-err { font-size:12px; font-weight:700; color:var(--red); display:none; }
 .zv-camera .cam-contact-done { display:none; align-items:center; gap:8px; font-size:13px; font-weight:700; color:#2f8f5b; }
 .zv-camera .cam-contact-done svg { width:16px; height:16px; flex:none; }
+
+/* Niet gevonden wat u zocht? */
+.zv-camera .ch-cta { padding-top:clamp(36px,4.4vw,56px); }
+.zv-camera .ch-cta-in { display:flex; align-items:center; justify-content:space-between; gap:20px 32px; flex-wrap:wrap; background:var(--indigo); color:#fff; border-radius:20px; padding:clamp(22px,3vw,34px); }
+.zv-camera .ch-cta-in > div:first-child { flex:1 1 380px; }
+.zv-camera .ch-cta h2 { font-size:clamp(21px,2.4vw,28px); font-weight:900; letter-spacing:-.015em; line-height:1.15; margin:0; color:#fff; }
+.zv-camera .ch-cta p { font-size:15px; font-weight:600; line-height:1.5; margin:8px 0 0; color:rgba(255,255,255,.82); max-width:620px; }
+.zv-camera .ch-cta-actions { display:flex; flex-wrap:wrap; gap:10px; }
+
+/* FAQ: the Veelgestelde vragen accordion (.fq-item), scoped here. */
+.zv-camera .ch-faq { padding-top:clamp(36px,4.4vw,56px); padding-bottom:80px; }
+.zv-camera .ch-faq > * { max-width:880px; }
+.zv-camera .ch-faq h2 { font-size:clamp(21px,2.4vw,28px); font-weight:900; color:var(--indigo); letter-spacing:-.015em; line-height:1.15; margin:0 0 16px; }
+.zv-camera .fq-item { background:var(--paper); border:1px solid var(--line); border-radius:14px; margin-bottom:10px; overflow:hidden; box-shadow:0 12px 30px -34px rgba(26,18,48,.5); }
+.zv-camera .fq-q { width:100%; display:flex; align-items:center; justify-content:space-between; gap:16px; text-align:left; font-family:inherit; background:none; border:none; padding:18px 20px; font-size:16px; font-weight:800; color:var(--indigo); line-height:1.35; cursor:pointer; }
+.zv-camera .fq-q .pm { flex:none; width:26px; height:26px; border-radius:50%; background:var(--cream); color:var(--indigo); display:grid; place-items:center; transition:transform .2s,background .15s; }
+.zv-camera .fq-q .pm svg { width:15px; height:15px; }
+.zv-camera .fq-item.open .fq-q .pm { transform:rotate(45deg); background:var(--gold); }
+.zv-camera .fq-a { max-height:0; overflow:hidden; transition:max-height .28s ease; }
+.zv-camera .fq-a-in { padding:0 20px 20px; font-size:15px; font-weight:500; color:#5b5374; line-height:1.6; }
+.zv-camera .fq-a-in a { font-weight:800; color:var(--indigo); }
+.zv-camera .ch-faq-more { font-size:14px; font-weight:600; color:var(--muted); margin:16px 0 0; }
+.zv-camera .ch-faq-more a { font-weight:800; color:var(--indigo); }
 {% endstylesheet %}
 
 {% schema %}
@@ -550,8 +738,21 @@
   "settings": [
     { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Mijn Thuis · camerahardware" },
     { "type": "text", "id": "title", "label": "Titel", "default": "Voeg camera's toe aan uw huis" },
-    { "type": "textarea", "id": "lead", "label": "Lead" }
+    { "type": "textarea", "id": "lead", "label": "Lead" },
+    { "type": "text", "id": "cta_shop", "label": "Knop naar de producten", "default": "Bekijk alle camera's" },
+    { "type": "text", "id": "cta_advice", "label": "Knop naar advies (Contact)", "default": "Vraag advies aan" }
   ],
+  "blocks": [
+    {
+      "type": "trust",
+      "name": "Vertrouwenspunt",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Tekst" },
+        { "type": "text", "id": "route", "label": "Link (zv-route sleutel)", "info": "Optioneel, bijv. borg, herroepingsrecht, contact of kc/hoe-werkt-een-meldkamer." }
+      ]
+    }
+  ],
+  "max_blocks": 6,
   "presets": [{ "name": "Camerahardware" }]
 }
 {% endschema %}
