@@ -21,4 +21,8 @@ Decision deferred (Thijs, 2026-10-24): leave as-is until real spec sheets are re
 over, then delete `cam_730`, `vdb_750` and `vdb_780` and port their specs onto the ADC-* rows.
 `vdb_755` has no real product to fold into, so whether it goes too is part of that decision.
 
-Not yet actioned — do not remove these rows without checking this note first.
+**Actioned 2026-10-26** (`fix/camera-hardware-dedupe-2026-10-26`): `model` + `specs` of `cam_730`,
+`vdb_750` and `vdb_780` copied verbatim onto `cam_730_adc`, `vdb_750_adc` and `vdb_780_adc`
+(before their `desc`), then all four placeholder rows deleted, `vdb_755` included. Side effect:
+the page no longer offers Huren for the 730 camera and the 750/780 doorbells. Those huur prices
+lived only on the placeholder rows (no huur SKU), and the ADC rows are koop-only (`huur:null`).
