@@ -1762,9 +1762,9 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
   /* Videodeurbel/Afstandsbediening (2026-09-26): the only two "Uitbreidingen toevoegen"
      checkboxes with a real backing Shopify product today (see ltc_addons in the Liquid above).
      Unlike the plain Uitbreidingen text property (which just records a name for Odoo), these
-     two also keep ONE shared priced cart line per add-on in sync — same qty-3/discount
-     mechanic as the Woning line above, minus its per-floor quantity: an add-on is either
-     wanted (recorded in some package line's Uitbreidingen property) or not, never a multiple.
+     two also keep ONE shared priced cart line per add-on in sync: an add-on is either wanted
+     (recorded in some package line's Uitbreidingen property) or not, never a multiple
+     (quantity 1; only Ontzorgpakket, a monthly service, takes PKG_QTY — see syncAddonLines()).
      Variant ids come from the page's own data attributes (resolved server-side by handle,
      never hardcoded here); an add-on whose product doesn't resolve is skipped — its name can
      still be recorded in the Uitbreidingen property, just no line is added for it. */
@@ -1797,11 +1797,12 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     return wanted;
   }
   /* Brings every add-on line to its target, one product at a time (so two add-ons never race
-     each other in the same request): target is PKG_QTY when its name is wanted, else 0 (which
-     removes the line). Several lines for the same variant merge into one, same shape as
-     woningLinePlan(). Threads the (possibly updated) cart through each step, same convention
-     used by the cart guard elsewhere in this theme. A failed write for one add-on keeps the
-     cart as it was and still lets the next add-on's plan run. */
+     each other in the same request): target is 1 when its name is wanted (PKG_QTY for
+     Ontzorgpakket, see below), else 0 (which removes the line). Several lines for the same
+     variant merge into one, same shape as woningLinePlan(). Threads the (possibly updated)
+     cart through each step, same convention used by the cart guard elsewhere in this theme.
+     A failed write for one add-on keeps the cart as it was and still lets the next add-on's
+     plan run. */
   function syncAddonLines(cart) {
     var names = Object.keys(ADDON_VARIANT_IDS);
     return names.reduce(function (prev, name) {
@@ -1809,13 +1810,15 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
         var variantId = ADDON_VARIANT_IDS[name];
         if (!variantId) return cart;
         var items = (cart && cart.items) || [];
-        // 2026-10-22 fix: add-ons are never a multiple (see comment above) — they must
-        // sync to quantity 1, not PKG_QTY. PKG_QTY is the package's own "prepay 3 months"
-        // promo quantity (3) and only belongs on the package/Woning lines; reusing it here
-        // made a flat €299 one-time Videodeurbel charge ring up as €897 (3×) whenever it
-        // was checked. Ontzorgpakket is explicitly excluded from the ×3 promo mechanic in
-        // pricing.config.json for the same reason.
-        var target = addonsWanted(items)[name] ? 1 : 0;
+        // 2026-10-22 fix: one-time add-ons are never a multiple (see comment above) — they
+        // must sync to quantity 1, not PKG_QTY. PKG_QTY is the package's own "prepay 3 months"
+        // promo quantity (3); reusing it here made a flat €299 one-time Videodeurbel charge
+        // ring up as €897 (3×) whenever it was checked.
+        // 2026-10-26: Ontzorgpakket is the one exception. It's a recurring monthly service,
+        // not a one-off, so like a package line it prepays PKG_QTY months — at full price,
+        // since it stays outside the "Eerste 3 maanden" discount (see its addonNames note in
+        // pricing.config.json). No PKG_QTY (pricing config missing) falls back to 1.
+        var target = addonsWanted(items)[name] ? (name === 'Ontzorgpakket' ? (PKG_QTY || 1) : 1) : 0;
         var lines = items.filter(function (it) { return String(it.variant_id) === String(variantId); });
         var plan = null;
         if (lines.length > 1) {
