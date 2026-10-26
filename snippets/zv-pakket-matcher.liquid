@@ -255,7 +255,7 @@
             {%- endfor -%}
           </tr>
           {%- comment -%} feat | small | val1 | val2 | … (one val per pkg_meta_arr entry, same order) — § splits rows, | splits fields {%- endcomment -%}
-          {%- assign rows = feature_rows | default: 'Discrete sensoren|Beweging en routine, geen camera|y|y|n§App voor familie|Meldingen delen met mantelzorgers|y|y|n§Melding bij afwijking|Alleen als er iets verandert|Dag|y|n§Dag- en nachtinzicht|24-uurs patroonherkenning|y|y|n§Meerdere contactpersonen|Familie samen op de hoogte|n|y|y§Meldkameropvolging|Nederlandse meldkamer, 24/7|n|n|y§Alarmknop met opvolging|Directe hulp bij nood|n|n|y§Jaarlijks onderhoud|Systeem blijft betrouwbaar|y|y|y' | strip | split: '§' -%}
+          {%- assign rows = feature_rows | default: 'Discrete sensoren|Beweging en routine, geen camera|y|y|n§App voor familie|Meldingen delen met mantelzorgers|y|y|n§Melding bij afwijking|Alleen als er iets verandert|y|y|n§Dag- en nachtinzicht|24-uurs patroonherkenning|y|y|n§Meerdere contactpersonen|Familie samen op de hoogte|n|y|y§Meldkameropvolging|Nederlandse meldkamer, 24/7|n|n|y§Alarmknop met opvolging|Directe hulp bij nood|n|n|y§Jaarlijks onderhoud|Systeem blijft betrouwbaar|y|y|y§Precieze lokalisering|Weet in welke ruimte er iets misgaat|n|y|y' | strip | split: '§' -%}
           {%- for row in rows -%}
             {%- assign r = row | split: '|' -%}
             <tr>
