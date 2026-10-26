@@ -687,7 +687,7 @@
             surcharge applies to the NAMI packages only (Inzicht, Zeker, Alert); Beschermd and
             Protect are extended with extra sensors via the hardware page. Package names come from
             pricing.config.json via zv-package-name, the amount from zv_woning_unit_cents; the rest
-            of the line (lease/koop, installatie, bedenktijd) is unchanged.
+            of the line (lease/koop, bedenktijd) is unchanged.
           {%- endcomment -%}
           {%- if anchor == 'langer-thuis' or anchor == 'mijn-thuis' -%}
             {%- capture fn_inzicht -%}{%- render 'zv-package-name', finder_key: 'aware', names: zv_package_names_by_fk -%}{%- endcapture -%}
@@ -695,7 +695,7 @@
             {%- capture fn_alert -%}{%- render 'zv-package-name', finder_key: 'secure', names: zv_package_names_by_fk -%}{%- endcapture -%}
             {%- capture fn_beschermd -%}{%- render 'zv-package-name', finder_key: 'care', names: zv_package_names_by_fk -%}{%- endcapture -%}
             {%- capture fn_protect -%}{%- render 'zv-package-name', finder_key: 'guard', names: zv_package_names_by_fk -%}{%- endcapture -%}
-            <p class="ltc__footnote">Alleen bij {{ fn_inzicht | strip }}, {{ fn_zeker | strip }} en {{ fn_alert | strip }}: +{{ zv_woning_unit_cents | money_without_trailing_zeros }}/mnd per extra verdieping of per 100 m² extra woonoppervlak. {{ fn_beschermd | strip }} en {{ fn_protect | strip }} breidt u uit met extra sensoren. Apparatuur zit in uw maandbedrag (lease) of koopt u los. Alles wordt vakkundig geïnstalleerd. U hebt 14 dagen bedenktijd na levering.</p>
+            <p class="ltc__footnote">Alleen bij {{ fn_inzicht | strip }}, {{ fn_zeker | strip }} en {{ fn_alert | strip }}: +{{ zv_woning_unit_cents | money_without_trailing_zeros }}/mnd per extra verdieping of per 100 m² extra woonoppervlak. {{ fn_beschermd | strip }} en {{ fn_protect | strip }} breidt u uit met extra sensoren. Apparatuur zit in uw maandbedrag (lease) of koopt u los. U hebt 14 dagen bedenktijd na levering.</p>
           {%- endif -%}
         {%- elsif request.design_mode -%}
           <p class="ph-sub" style="text-align:center;">Koppel de collectie "{{ b.settings.collection }}".</p>
@@ -2463,7 +2463,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
             '<div class="pbd-plat">' + esc(plat) + '</div><div class="pbd-buy-name">' + esc(name) + '</div>' +
             (pk.noPrice ? '' : '<div class="pbd-price"><span class="pbd-amt" data-pb-amt data-base="' + baseCents + '">' + esc(d.price) + '</span>' + perHtml + '</div>') +
             (pk.sub ? '<div class="pbd-sub">' + esc(pk.sub) + '</div>' : '') + plusHtml + buyHtml +
-          '</div><div class="pbd-guarantee">' + ICON.info + '<span>Apparatuur zit in uw maandbedrag (lease) of koopt u los. Alles wordt vakkundig geïnstalleerd. U hebt <b>14 dagen bedenktijd</b> na levering.</span></div>' +
+          '</div><div class="pbd-guarantee">' + ICON.info + '<span>Apparatuur zit in uw maandbedrag (lease) of koopt u los. U hebt <b>14 dagen bedenktijd</b> na levering.</span></div>' +
           '</aside></div>' +
         '</div>' +
       '</div>';
