@@ -147,7 +147,7 @@
       </label>
       <div class="cam-contact-err" id="ccErr"></div>
       <button type="submit">Verstuur terugbelverzoek</button>
-      <div class="cam-contact-done" id="ccDone"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Bedankt, wij bellen u terug.</div>
+      <div class="cam-contact-done" id="ccDone"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Dank voor je interesse, we nemen snel contact met u op.</div>
     </form>
   </section>
 
@@ -496,7 +496,8 @@
       item_name:setup.length?setup.join(', '):null, one_time_price:koop?euro(koop):null, monthly_price:huur?euro(huur):null };
     if (window.ZVLeadWebhook) { window.ZVLeadWebhook.send(payload, 'camera_hardware'); }
     try{ var leads=JSON.parse(localStorage.getItem('zv_leads')||'[]'); leads.push(payload); localStorage.setItem('zv_leads', JSON.stringify(leads)); }catch(ex){}
-    document.getElementById('camContact').style.display='none';
+    /* #ccDone sits inside the form, so hide the fields, not the form, or the thank-you never shows. */
+    Array.prototype.forEach.call(this.children, function(el){ if(el.id!=='ccDone') el.style.display='none'; });
     document.getElementById('ccDone').style.display='flex';
   });
 

@@ -129,6 +129,9 @@ the ancestor is hidden) — so the "Bedankt" message has apparently never been v
 real visitor since this form shipped. Not touched here (out of scope for a consent-checkbox
 task); worth a follow-up ticket — likely fix is moving `#ccDone` to be a sibling of
 `#camContact` instead of a child, or swapping which classes get toggled.
+**Fixed 2026-10-26** (branch `fix/camera-hardware-callback-setup-2026-10-26`): the handler now
+hides the form's other children instead of the form, so `#ccDone` shows inside the card. The
+copy changed to "Dank voor je interesse, we nemen snel contact met u op." (Thijs).
 
 ### contact-page "Plan een gratis adviesgesprek"
 
