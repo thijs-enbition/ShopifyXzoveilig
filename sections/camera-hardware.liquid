@@ -486,8 +486,18 @@
     if(!name || !phone){ err.textContent='Vul uw naam en telefoonnummer in.'; err.style.display='block'; return; }
     if(!consent){ err.textContent=this.getAttribute('data-consent-error'); err.style.display='block'; return; }
     err.style.display='none';
+    /* The configured setup rides along so Odoo's Pakket/Prijs fields aren't blank: every line of
+       state.lines in summary order, plus the Kopen and Huren totals. Nothing configured (a plain
+       callback) sends null for all three, never empty strings. */
+    var koop=0, huur=0;
+    var setup=Object.keys(state.lines).map(function(k){
+      var h=HW.find(function(x){return x.k===k;}); var l=state.lines[k], isKoop=l.mode==='koop';
+      if(isKoop) koop+=h.koop*l.qty; else huur+=h.huur*l.qty;
+      return l.qty+'x '+h.n+' ('+(isKoop?'Kopen':'Huren')+')';
+    });
     var payload={ lead_type:'camerahardware', source_page:'camera-hardware', name:name, phone:phone, email:email||null,
-      consent:consent, cta_location:'camera_hardware_page', source:captureSource() };
+      consent:consent, cta_location:'camera_hardware_page', source:captureSource(),
+      item_name:setup.length?setup.join(', '):null, one_time_price:koop?euro(koop):null, monthly_price:huur?euro(huur):null };
     if (window.ZVLeadWebhook) { window.ZVLeadWebhook.send(payload, 'camera_hardware'); }
     try{ var leads=JSON.parse(localStorage.getItem('zv_leads')||'[]'); leads.push(payload); localStorage.setItem('zv_leads', JSON.stringify(leads)); }catch(ex){}
     document.getElementById('camContact').style.display='none';
