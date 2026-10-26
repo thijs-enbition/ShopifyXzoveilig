@@ -2409,7 +2409,8 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     var baseCents = parseInt(d.priceCents, 10) || 0;
 
     var tabsHtml = '';
-    var siblings = cardsIn(panel);
+    // Vista (secure_plus) is maatwerk/lead-only, not a fixed package — never offered as a switch tab here.
+    var siblings = cardsIn(panel).filter(function (c) { return c.dataset.finderKey !== 'secure_plus'; });
     if (siblings.length > 1) {
       tabsHtml = '<div class="pbd-switch" role="tablist" aria-label="Andere pakketten">' + siblings.map(function (c) {
         var cfk = c.dataset.finderKey, cn = (DATA.pkg[cfk] && DATA.pkg[cfk].name) || c.dataset.packageName || cfk;
