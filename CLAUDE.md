@@ -319,8 +319,13 @@ accordion holding the two checkboxes plus, as its last row below a divider, the 
 "Extra uitbreidingen" link any more, on any card); it renders even with no add-on resolved,
 since the hardware link alone still needs the panel. NAMI keeps its existing accordion (Woning +
 the Videodeurbel checkbox + Ontzorgpakket), no hardware link.
-Checking a box keeps one shared cart line at `zv_promo_package_qty`, same discount mechanic as
-Woning. Both were confirmed "sold out" (inventory tracked, DENY, stock <= 0) on 2026-09-26 —
+Checking a box keeps one shared cart line per add-on in sync (`syncAddonLines()` on Oplossingen).
+**Videodeurbel/Afstandsbediening sync to flat quantity 1** (one-time purchases; quantity
+`zv_promo_package_qty` tripled them, fixed 2026-10-22). **Ontzorgpakket (Inzicht,
+`maandelijks-ontzorg-inzicht-oh`) syncs to `PKG_QTY` like a package line** (2026-10-26): it is a
+recurring monthly service, so it prepays the 3 months, at full price — it stays outside the
+"Eerste 3 maanden" discount (3 × €4,95 = €14,85 today). Videodeurbel and Afstandsbediening
+were both confirmed "sold out" (inventory tracked, DENY, stock <= 0) on 2026-09-26 —
 the checkbox and its live price still work, but no line can be added until that's fixed in
 Shopify Admin. Clean names come from a name-only `addonNames` array in pricing.config.json
 (deliberately not the pre-existing
