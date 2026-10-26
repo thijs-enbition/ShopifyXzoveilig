@@ -18,7 +18,7 @@
     <div class="wrap">
       <div class="intro-media">
         {%- if section.settings.intro_image != blank -%}
-          {{ section.settings.intro_image | image_url: width: 900 | image_tag: alt: intro_alt, loading: 'lazy' }}
+          {{ section.settings.intro_image | image_url: width: 640 | image_tag: alt: intro_alt, loading: 'lazy' }}
         {%- else -%}
           <div class="intro-media-fallback" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="10" rx="1.5"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/><circle cx="12" cy="15" r="1.6" fill="currentColor" stroke="none"/></svg>
@@ -28,7 +28,7 @@
       <div class="intro-copy">
         <span class="eyebrow">{{ section.settings.eyebrow | default: 'Verzekeringscertificaten' | escape }}</span>
         <h1>{{ section.settings.heading | default: 'Inbraakbeveiliging met BORG-keurmerk' | escape }}</h1>
-        <p class="lead">{{ section.settings.intro_text | default: "Met het BORG-certificaat kunt u aantonen dat uw bedrijfspand of woning goed beveiligd is tegen inbraak. Bij het verzekeren van uw pand kan een verzekeraar een BORG-certificaat eisen. Zo is de verzekeraar er zeker van dat de beveiligingsinstallatie door een echte vakman is aangelegd. Er zijn verzekeraars die korting op de premie bieden als u een BORG-certificaat kunt overleggen. Hieronder vindt u de linkjes naar de certificaten per component type terug." }}</p>
+        <p class="lead">{{ section.settings.intro_text | default: "Met het BORG-certificaat kunt u aantonen dat uw bedrijfspand of woning goed beveiligd is tegen inbraak. Bij het verzekeren van uw pand kan een verzekeraar een BORG-certificaat eisen. Zo is de verzekeraar er zeker van dat de beveiligingsinstallatie door een echte vakman is aangelegd. Er zijn verzekeraars die korting op de premie bieden als u een BORG-certificaat kunt overleggen. Onderaan deze pagina vindt u de certificaten per component." }}</p>
 
         <div class="borg-ctas">
           {%- if section.settings.cta1_label != blank -%}
@@ -45,24 +45,6 @@
     </div>
   </section>
 
-  <section class="borg-certs">
-    <div class="wrap">
-      <div class="certs-box">
-        <img class="certs-mark" src="{{ 'zo-veilig-logo.png' | asset_url }}" alt="" loading="lazy" width="90" height="24" aria-hidden="true">
-        <div class="certs-grid">
-          {%- for block in section.blocks -%}
-            {%- if block.type == 'certificaat' -%}
-              {%- if block.settings.pdf_url != blank -%}
-                <a class="cert-pill" href="{{ block.settings.pdf_url }}" target="_blank" rel="noopener" {{ block.shopify_attributes }}>{{ block.settings.label }}</a>
-              {%- else -%}
-                <span class="cert-pill cert-pill--empty" {{ block.shopify_attributes }}>{{ block.settings.label }}</span>
-              {%- endif -%}
-            {%- endif -%}
-          {%- endfor -%}
-        </div>
-      </div>
-    </div>
-  </section>
 
   {%- comment -%} ===== NIEUW: informatie over BORG-installaties ===== {%- endcomment -%}
 
@@ -134,7 +116,7 @@
           <li>De brief of e-mail van uw verzekeraar met de vereiste risicoklasse</li>
           <li>Een plattegrond van uw woning en eventuele bijgebouwen</li>
           <li>Het keurmerk en het aantal sterren van uw hang- en sluitwerk</li>
-          <li>Gegevens over een eventuele kluis</li>
+          <li>De waarde van de attractieve goederen</li>
         </ul>
       </div>
     </div>
@@ -182,6 +164,26 @@
       </div>
     </div>
   </section>
+  <section class="borg-certs">
+    <div class="wrap">
+      <h2 class="certs-title">Certificaten van de componenten</h2>
+      <p class="certs-text">Heeft u al een BORG-certificering via Zo Veilig? Dan kunt u hieronder de certificaten van de componenten downloaden.</p>
+      <div class="certs-box">
+        <img class="certs-mark" src="{{ 'zo-veilig-logo.png' | asset_url }}" alt="" loading="lazy" width="90" height="24" aria-hidden="true">
+        <div class="certs-grid">
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'certificaat' -%}
+              {%- if block.settings.pdf_url != blank -%}
+                <a class="cert-pill" href="{{ block.settings.pdf_url }}" target="_blank" rel="noopener" {{ block.shopify_attributes }}>{{ block.settings.label }}</a>
+              {%- else -%}
+                <span class="cert-pill cert-pill--empty" {{ block.shopify_attributes }}>{{ block.settings.label }}</span>
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
 
 {% stylesheet %}
@@ -208,7 +210,8 @@
 @media(max-width:880px){ .zv-borg .borg-intro .wrap{ grid-template-columns:1fr; gap:32px; padding:44px 20px; } }
 .zv-borg .intro-media-fallback { display:flex; align-items:center; justify-content:center; aspect-ratio:1/1; max-width:320px; margin:0 auto; border-radius:24px; background:var(--paper); border:1px solid var(--line); color:var(--blue); }
 .zv-borg .intro-media-fallback svg { width:35%; height:35%; }
-.zv-borg .intro-media img { width:100%; display:block; border-radius:24px; }
+.zv-borg .intro-media { background:var(--paper); border:1px solid var(--line); border-radius:24px; padding:32px; max-width:340px; margin:0 auto; }
+.zv-borg .intro-media img { width:100%; max-width:240px; height:auto; display:block; margin:0 auto; object-fit:contain; }
 .zv-borg .borg-ctas { display:flex; flex-wrap:wrap; gap:12px; margin-top:26px; }
 .zv-borg .borg-ctas .btn:not(.btn--wide) { flex:1 1 220px; }
 .zv-borg .borg-ctas .btn--wide { flex:1 1 100%; }
@@ -225,6 +228,8 @@
 .zv-borg .cert-pill--empty:hover { background:#fbe9c7; transform:none; }
 
 /* ===== Nieuw: informatieblokken ===== */
+.zv-borg .certs-title { font-size:clamp(22px,3vw,28px); font-weight:900; color:var(--indigo); line-height:1.15; margin:0 0 8px; }
+.zv-borg .certs-text { font-size:16px; color:#473f5e; line-height:1.62; margin:0 0 20px; max-width:68ch; }
 .zv-borg .borg-info .wrap { padding-bottom:56px; }
 .zv-borg .borg-info h2 { font-size:clamp(22px,3vw,28px); font-weight:900; color:var(--indigo); line-height:1.15; margin:0 0 14px; }
 .zv-borg .borg-info h3 { font-size:17px; font-weight:800; color:var(--indigo); margin:0 0 6px; }
