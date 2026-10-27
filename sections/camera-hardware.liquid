@@ -126,7 +126,7 @@
 
   <section class="wrap ch-faq" aria-labelledby="ch-faq-h">
     <h2 id="ch-faq-h">Veelgestelde vragen over camerahardware</h2>
-    <div class="fq-item"><button class="fq-q" type="button" aria-expanded="false" aria-controls="ch-fqa-1">Wat is het verschil tussen kopen en huren?<span class="pm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></span></button><div class="fq-a" id="ch-fqa-1" role="region"><div class="fq-a-in">Kiest u kopen, dan betaalt u één keer. Kiest u huren, dan betaalt u een vast bedrag per maand via SEPA-incasso. Huren kan bij de camera's, videodeurbellen en de recorder; de extra sensoren en accessoires zijn alleen te koop. U kiest het per product.</div></div></div>
+    <div class="fq-item"><button class="fq-q" type="button" aria-expanded="false" aria-controls="ch-fqa-1">Wat is het verschil tussen kopen en huren?<span class="pm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></span></button><div class="fq-a" id="ch-fqa-1" role="region"><div class="fq-a-in">Kiest u kopen, dan betaalt u één keer. Kiest u huren, dan betaalt u een vast bedrag per maand via SEPA-incasso. Huren kan bij de meeste producten; een enkel product is alleen te koop. U kiest het per product.</div></div></div>
     <div class="fq-item"><button class="fq-q" type="button" aria-expanded="false" aria-controls="ch-fqa-2">Hoe bestel ik camerahardware?<span class="pm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></span></button><div class="fq-a" id="ch-fqa-2" role="region"><div class="fq-a-in">Bestellen gaat altijd via een kort telefoongesprek. Stel op deze pagina uw set samen en bel <a href="tel:0881221111">088 122 11 11</a>, of laat uw naam en telefoonnummer achter, dan bellen wij u terug.</div></div></div>
     <div class="fq-item"><button class="fq-q" type="button" aria-expanded="false" aria-controls="ch-fqa-3">Wat heb ik nodig om een camera te gebruiken?<span class="pm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></span></button><div class="fq-a" id="ch-fqa-3" role="region"><div class="fq-a-in">Voor onze camera's is een cloudopslag-abonnement vereist. Daarnaast heeft u een stabiele internetverbinding nodig met een uploadsnelheid van minimaal 2,0 Mbps per camera, en voldoende wifi-signaal op de plek waar de camera komt.</div></div></div>
     <p class="ch-faq-more">Meer vragen? <a href="{% render 'zv-route', key: 'faq' %}">Bekijk alle veelgestelde vragen</a></p>
@@ -159,9 +159,9 @@
     {n:'Dome camera met SD kaart', type:'Dome', koop:399.00, huur:34.91, k:'cam_dome', sku:'CAM-DOME'},
     {n:'Wifi floodlight camera (ADC-V7294)', type:'Buiten', koop:475.00, huur:41.56, k:'cam_flood', sku:'CAM-FLOOD'},
     {n:'Streamrecorder (NVR)', type:'Recorder', koop:500.00, huur:43.75, k:'nvr', sku:'NVR-STREAM'},
-    {n:'(Koop) Magneetcontact (DC-23)', type:'Sensor', koop:60.00, huur:null, huurSku:null, k:'magneetcontact_dc23', sku:'CL001'},
-    {n:'(Koop) 729 WiFi Camera Floodlight (Mickey)', type:'Camera', koop:475.00, huur:null, huurSku:null, k:'cam_adc_mm', sku:'ADC-MM'},
-    {n:'(Koop) Binnencamera 516', type:'Binnen', koop:175.00, huur:null, huurSku:null, k:'cam_516', sku:'ADC-516', desc:[
+    {n:'Magneetcontact (DC-23)', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0001', k:'magneetcontact_dc23', sku:'CL001'},
+    {n:'729 WiFi Camera Floodlight (Mickey)', type:'Camera', koop:475.00, huur:15.17, huurSku:'H729', k:'cam_adc_mm', sku:'ADC-MM'},
+    {n:'Binnencamera 516', type:'Binnen', koop:175.00, huur:5.59, huurSku:'H515', k:'cam_516', sku:'ADC-516', desc:[
       'De ADC-V516 is een binnencamera die werkt via wifi en is gekoppeld aan het Alarm.com platform. Via de app kunt u live meekijken, meldingen ontvangen en beelden terugkijken.',
       'De camera maakt gebruik van wifi (draadloze verbinding) en wordt aangesloten op netstroom (230V via adapter). De camera wordt binnenshuis geplaatst en kan eenvoudig op een vlakke ondergrond worden neergezet of gemonteerd.',
       'De camera werkt met cloudopslag (gebeurtenissen): Cloud: opslag van bewegingen, ca. 30 dagen terugkijken. In de app ziet u een overzicht van gebeurtenissen en kunt u filteren op basis van beweging.',
@@ -185,7 +185,7 @@
       'De camera kan worden uitgebreid met een Alarm.com recorder (SVR) voor continue opname en langere opslag van meerdere camera\'s.',
       'Vereisten: Cloudabonnement; stabiele internetverbinding (min. 2 Mbps upload per camera); voldoende wifi-signaal op de montageplek (2,4 &amp; 5 GHz); stroompunt in de buurt. Installatie wordt verzorgd door de monteur, inclusief afwerking van de bekabeling.'
     ]},
-    {n:'(Koop) Video Deurbel 750', type:'Deurbel', koop:299.00, huur:null, huurSku:null, k:'vdb_750_adc', sku:'ADC-750', model:'Alarm.com ADC-VDB750', specs:[
+    {n:'Video Deurbel 750', type:'Deurbel', koop:299.00, huur:9.55, huurSku:'H750', k:'vdb_750_adc', sku:'ADC-750', model:'Alarm.com ADC-VDB750', specs:[
       ['Resolutie','max 1440×1440 (2MP, 1/2.4" HDR-sensor)'],
       ['Beeldhoek','165° horizontaal, 145° verticaal'],
       ['Tweerichtingsaudio','ja, full-duplex'],
@@ -201,7 +201,7 @@
       'Wij leveren onze deurbellen altijd met een chime, die een geluidssignaal in huis afgeeft als er wordt aangebeld, draadloos verbindt met de deurbel en het wifi-signaal rond de deurbel versterkt; deze wordt geplaatst in een stopcontact binnen (meestal in de woonkamer).',
       'Installatie: wordt aangesloten op bestaande deurbelbedrading. In de meeste gevallen geen extra voeding nodig.'
     ]},
-    {n:'(Koop) Video Deurbel 780', type:'Deurbel', koop:425.00, huur:null, huurSku:null, k:'vdb_780_adc', sku:'ADC-780', model:'Alarm.com ADC-VDB780B', specs:[
+    {n:'Video Deurbel 780 (accu)', type:'Deurbel', koop:425.00, huur:13.58, huurSku:'H780', k:'vdb_780_adc', sku:'ADC-780', model:'Alarm.com ADC-VDB780B', specs:[
       ['Resolutie','1920×1080, 2.12MP Sony IMX323-sensor'],
       ['Beeldhoek','160° horizontaal, 90° verticaal, 175° diagonaal'],
       ['Tweerichtingsaudio','ja; 1W/8Ω speaker, omnidirectionele microfoon'],
@@ -217,47 +217,48 @@
       'Wij leveren onze deurbellen altijd met een chime, die een geluidssignaal in huis afgeeft als er wordt aangebeld, draadloos verbindt met de deurbel en het wifi-signaal rond de deurbel versterkt; deze wordt geplaatst in een stopcontact binnen (meestal in de woonkamer).',
       'Installatie: wordt draadloos geplaatst en werkt op batterij. Voor gebruik is een Alarm.com chime (gong) nodig voor het ontvangen van de bel binnen (werkt niet op een bestaande bekabelde gong).'
     ]},
-    {n:'(Koop) Buitencamera bedraad Dome 826', type:'Buiten', koop:199.00, huur:null, huurSku:null, k:'cam_dome_826', sku:'ADC826'},
-    {n:'(Koop) huisdier fotopir (bewegingsmelder)', type:'Sensor', koop:125.00, huur:null, huurSku:null, k:'huisdier_fotopir', sku:'C00H01', desc:[
+    {n:'Buitencamera bedraad Dome 826', type:'Buiten', koop:199.00, huur:12.75, huurSku:'H067', k:'cam_dome_826', sku:'ADC826'},
+    {n:'Huisdier fotopir (bewegingsmelder)', type:'Sensor', koop:125.00, huur:3.99, huurSku:'H0004A', k:'huisdier_fotopir', sku:'C00H01', desc:[
       'De fotobewegingsmelder bevat een kleine digitale fotocamera. Wanneer een beweging gedetecteerd wordt als het alarmsysteem is ingeschakeld, worden er 3 foto\'s gemaakt. U kunt op elk moment nagaan waarom er foto\'s werden gemaakt. De SecuritasHome app stelt u bovendien in staat om zowel overdag als \'s nachts foto\'s te maken wanneer u dat wenst (dus ook als er geen alarm afgaat, maar u wilt zien wat er in uw huis gebeurt). De foto\'s kunt u indien gewenst op uw mobiele telefoon ontvangen. Bij een ideale plaatsing is de bewegingsdetector een fantastisch wapen tegen inbrekers.',
       'De fotobewegingsdetector kan ook gebruikt worden in een huis met huisdieren. Zolang de huisdieren niet hoger zijn dan 1 meter of meer wegen dan 27 kilo. Indien uw huisdieren heel actief zijn, zoals springen en klimmen op het meubilair, dan raden wij het af om de fotobewegingsdetector in de ruimte op te hangen waar uw huisdieren wél komen.'
     ]},
-    {n:'(Koop) Huisdier PIR (bewegingsmelder)', type:'Sensor', koop:49.00, huur:null, huurSku:null, k:'huisdier_pir', sku:'C00H02', desc:[
+    {n:'Huisdier PIR (bewegingsmelder)', type:'Sensor', koop:49.00, huur:1.57, huurSku:'H0062', k:'huisdier_pir', sku:'C00H02', desc:[
       'De bewegingsmelder is een elektronisch apparaat met een sensor die bewegingen waarneemt, echter, deze is specifiek ontwikkeld dat uw huisdier niet gedetecteerd wordt.',
       'Nadat de sensor beweging heeft waargenomen, wordt er een melding doorgestuurd naar de centrale. Zodra het alarmsysteem ingeschakeld is en er wordt beweging waargenomen, dan gaat het alarm af en wordt er een melding gestuurd naar uw telefoon en, indien u bent aangesloten op de meldkamer van Securitas, dan worden zij ook gealarmeerd en komen zij in actie volgens het protocol.'
     ]},
-    {n:'(Koop) PIR Bewegingsdetector', type:'Sensor', koop:60.00, huur:null, huurSku:null, k:'pir_bewegingsdetector', sku:'CL002', desc:[
+    {n:'PIR Bewegingsdetector', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0003', k:'pir_bewegingsdetector', sku:'CL002', desc:[
       'Nadat de sensor beweging heeft waargenomen, wordt er een melding doorgestuurd naar de centrale. Zodra het alarmsysteem ingeschakeld is en er wordt beweging waargenomen, dan gaat het alarm af en wordt er een melding gestuurd naar uw telefoon en, indien u bent aangesloten op de meldkamer van Securitas, dan worden zij ook gealarmeerd en komen zij in actie volgens het protocol.'
     ]},
-    {n:'(Koop) Foto bewegingsdetector 868', type:'Sensor', koop:125.00, huur:null, huurSku:null, k:'foto_bewegingsdetector_868', sku:'CL003A'},
-    {n:'(Koop) Afstandsbediening', type:'Accessoire', koop:40.00, huur:null, huurSku:null, k:'afstandsbediening', sku:'CL004', desc:[
+    /* huurSku 'H004*' is verbatim from Alex's sheet, asterisk included: unconfirmed, check the real SKU before mapping it in Odoo. CL003A is archived in Shopify. */
+    {n:'Foto bewegingsdetector 868', type:'Sensor', koop:125.00, huur:3.99, huurSku:'H004*', k:'foto_bewegingsdetector_868', sku:'CL003A'},
+    {n:'Afstandsbediening', type:'Accessoire', koop:40.00, huur:1.28, huurSku:'H0010', k:'afstandsbediening', sku:'CL004', desc:[
       'Met deze afstandsbediening kunt u uw alarmsysteem in- en uitschakelen. De afstandsbediening kan gemakkelijk aan uw sleutelbos gehangen worden.',
       'De afstandsbediening telt vier knoppen, om uw alarmsysteem geheel of gedeeltelijk in- of uit te schakelen. Ze is voorzien van een ring en een beschermklep om te verhinderen dat de knopjes per ongeluk worden ingeduwd. Via de afstandsbediening kunt u ook een panieksignaal versturen. Activeer uw alarmsysteem of doof zeer eenvoudig automatisch uw verlichting.'
     ]},
-    {n:'(Koop) Rookmelder', type:'Sensor', koop:60.00, huur:null, huurSku:null, k:'rookmelder', sku:'CL005', desc:[
+    {n:'Rookmelder', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0011', k:'rookmelder', sku:'CL005', desc:[
       'Wij leveren het alarmsysteem altijd met één rookmelder. De rookmelder is gekoppeld aan de centrale en geeft bij het detecteren van rook of warmte, een zeer luid geluidssignaal van 95 dB af en tegelijk wordt de ingebouwde sirene in de centrale in werking gesteld. U ontvangt dan direct een melding op uw telefoon. Dit zorgt ervoor dat ook als u niet thuis bent, u snel in actie kan komen, om zodoende de schade zoveel mogelijk beperkt te houden.',
       'Als u heeft gekozen dat uw alarmsysteem gekoppeld wordt aan de meldkamer van Securitas, dan komt Securitas direct in actie bij een alarmsituatie.'
     ]},
-    {n:'(Koop) Binnensirene', type:'Sensor', koop:90.00, huur:null, huurSku:null, k:'binnensirene', sku:'CL006A'},
+    {n:'Binnensirene', type:'Sensor', koop:90.00, huur:2.88, huurSku:'H018', k:'binnensirene', sku:'CL006A'},
     {n:'(Koop) Glasbreukmelder', type:'Sensor', koop:75.00, huur:null, huurSku:null, k:'glasbreukmelder', sku:'CL007'},
     {n:'(Koop) Magneetcontact met shocksensor', type:'Sensor', koop:60.00, huur:null, huurSku:null, k:'magneetcontact_shocksensor', sku:'CL2212'},
-    {n:'(Koop) Koolmonoxidemelder', type:'Sensor', koop:90.00, huur:null, huurSku:null, k:'koolmonoxidemelder', sku:'CL008', desc:[
+    {n:'Koolmonoxidemelder', type:'Sensor', koop:90.00, huur:2.88, huurSku:'H0013', k:'koolmonoxidemelder', sku:'CL008', desc:[
       'Koolmonoxide, ook bekend als CO, staat niet voor niets bekend als sluipmoordenaar. U ziet of ruikt het niet, maar wanneer u het inademt, kan dit ernstige lichamelijke gevolgen hebben.',
       'De CO-detector levert 24/7 bescherming van u en uw familie door de detectie van het gevaarlijke koolstofmonoxide (CO) in uw woning. De elektrochemische CO-sensor is in staat om reeds zeer lage monoxide-niveaus (tot 30ppm) te detecteren en een alarm door te sturen naar de centrale, waarna u direct via de app een bericht ontvangt met de melding, uw alarm gaat af en, indien u heeft gekozen om uw beveiligingssysteem te koppelen aan de meldkamer van Securitas, dan ontvangen zij ook direct een melding en komen in actie.'
     ]},
-    {n:'(Koop) Paniek wandschakelaar HELP', type:'Sensor', koop:60.00, huur:null, huurSku:null, k:'paniek_wandschakelaar', sku:'CL013', desc:[
+    {n:'Paniek wandschakelaar HELP', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0007', k:'paniek_wandschakelaar', sku:'CL013', desc:[
       'Hoort u een verdacht geluid en voelt u zich niet veilig, dan kunt u op discrete manier hulp inroepen. Met een simpele druk op de knop stelt u bij gevaar of paniek een stil alarm in werking.',
       'Bent u aangesloten op de meldkamer, dan zal Securitas direct in actie komen en contact met u en uw naasten opnemen, tevens zullen wij, door het inschatten van de situatie, schakelen met de hulpdiensten. Kiest u ervoor om uw beveiligingssysteem niet aan te sluiten op de meldkamer, dan worden alleen de mensen ingelicht die u zelf heeft aangemeld in de app of de portal. Onze monteur helpt u er graag bij om de instellingen goed voor u in orde te maken.'
     ]},
-    {n:'(Koop) Paniekknop PB 15 KLEIN', type:'Sensor', koop:60.00, huur:null, huurSku:null, k:'paniekknop_pb15', sku:'CL014'},
-    {n:'(Koop) Paniekhorloge', type:'Sensor', koop:60.00, huur:null, huurSku:null, k:'paniekhorloge', sku:'CL015'},
-    {n:'(Koop) Hittemelder', type:'Sensor', koop:75.00, huur:null, huurSku:null, k:'hittemelder', sku:'CL016', desc:[
+    {n:'Paniekknop PB 15 klein', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0008', k:'paniekknop_pb15', sku:'CL014'},
+    {n:'Paniekhorloge', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0009', k:'paniekhorloge', sku:'CL015'},
+    {n:'Hittemelder', type:'Sensor', koop:75.00, huur:2.40, huurSku:'H0012', k:'hittemelder', sku:'CL016', desc:[
       'Alle nieuwbouwwoningen zijn tegenwoordig voorzien van rookmelders. Rookmelders geven een luid alarm wanneer er rook wordt gedetecteerd. Helaas is het niet altijd mogelijk om een rookmelder te gebruiken, bijvoorbeeld in stoffige ruimtes. Een hittemelder is hier vaak de oplossing. Een hittemelder is een brandmelder die warmte detecteert in plaats van rook om u te waarschuwen bij brand. Een hittemelder wordt toegepast in ruimtes waar damp, stof of gassen ervoor zorgen dat een rookmelder vals alarm zou slaan, zoals: keukens, garages, natte ruimtes.',
       'Bij het maken van de keuze tussen een rookmelder en een hittemelder moet u met een aantal factoren rekening houden. De ruimte waarin u een brandalarm wilt plaatsen bepaalt het type alarm dat het meest geschikt is. Een hittemelder, ook wel thermische brandmelder genoemd, slaat alarm wanneer deze een snelle temperatuurstijging constateert, doorgaans rond de 58 graden Celsius. Door een rookmelder te combineren met een hittemelder in de ruimtes waar dat nodig is zorgt u voor optimale veiligheid in huis.'
     ]},
-    {n:'(Koop) Watersensor', type:'Sensor', koop:45.00, huur:null, huurSku:null, k:'watersensor', sku:'CL020'},
-    {n:'(Koop) Rook- en koolmonoxidemelder', type:'Sensor', koop:150.00, huur:null, huurSku:null, k:'rook_en_koolmonoxidemelder', sku:'CL102'},
-    {n:'(Koop) SA-220 Roldeur behuizing', type:'Accessoire', koop:129.00, huur:null, huurSku:null, k:'roldeur_behuizing', sku:'ROL'}
+    {n:'Watersensor', type:'Sensor', koop:45.00, huur:1.44, huurSku:'H0014', k:'watersensor', sku:'CL020'},
+    {n:'Rook- en koolmonoxidemelder', type:'Sensor', koop:150.00, huur:4.79, huurSku:'H0045', k:'rook_en_koolmonoxidemelder', sku:'CL102'},
+    {n:'Roldeurmagneetcontact (behuizing + magneetcontact)', type:'Accessoire', koop:129.00, huur:3.16, huurSku:'H0071', k:'roldeur_behuizing', sku:'ROL'}
   ];
   var state={ lines:{}, filter:'', open:{} };
   function euro(n){ return '€ '+Number(n).toFixed(2).replace('.',','); }
@@ -314,7 +315,7 @@
      card shows the first three spec rows of a row that has specs; the toggle opens the full
      specs and/or desc ("Meer info" when there's only desc). */
   var GROUPS=[
-    {title:"Camera's, videodeurbellen & recorder — kopen of huren", huur:true},
+    {title:'Onze hardware — kopen of huren', huur:true},
     {title:'Extra sensoren & accessoires — eenmalig te koop', huur:false}
   ];
   function rowEl(h){
