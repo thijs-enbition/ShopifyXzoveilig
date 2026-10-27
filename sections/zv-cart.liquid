@@ -63,13 +63,14 @@
   simply not want any more, not a per-package attribute.
 {%- endcomment -%}
 {%- comment -%}
-  Ontzorgpakket Inzicht (2026-10-13): same treatment as the two add-ons above — resolved by
-  handle only, name via zv-install-name/zv_install_names_by_handle. It's a confirmed monthly
-  service (Thijs, EUR 5,95/mnd), so its unit price also counts toward "Daarna" below — see the
-  true_month_cents addition further down. NOTE: Afstandsbediening (huur-afstandsbediening,
-  productType "Huur Componenten") may also be a recurring monthly rental rather than a one-off
-  — unconfirmed, and if so it has the same "Daarna" gap this fix closes for Ontzorgpakket.
-  Worth checking with Alex; not addressed here since it predates this change.
+  Ontzorgpakket (Inzicht since 2026-10-13; one product per package since 2026-10-27: MOIOH,
+  MOZOH, MOAOH, OHC012 for Beschermd/Protect): same treatment as the two add-ons above —
+  resolved by handle only (zv_ontzorg_variant_id_list from zv-hidden-cart-lines), name via
+  zv-install-name/zv_install_names_by_handle. A confirmed monthly service, so its unit price
+  also counts toward "Daarna" below — see the true_month_cents addition further down. NOTE:
+  the Huren hardware add-ons (huur-afstandsbediening H0010, huur-video-deurbel-750 H750, both
+  productType "Huur Componenten", EUR/mnd) are monthly rentals too but sync at quantity 1 and
+  are not in "Daarna" — the same open question for both (how Odoo bills them); not decided here.
 {%- endcomment -%}
 {%- comment -%}
   Woning line (2026-09-25, NAMI packages only): resolved like the packages, by handle and only
@@ -107,7 +108,11 @@
 {%- liquid
   assign zv_visible_item_count = 0
   for item in cart.items
-    unless item.variant_id == woning_variant_id or item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_addon_ontzorg_inzicht_variant_id or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id
+    assign item_vid = item.variant_id | append: ''
+    if zv_ontzorg_variant_id_list contains item_vid
+      continue
+    endif
+    unless item.variant_id == woning_variant_id or item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id
       assign zv_visible_item_count = zv_visible_item_count | plus: 1
     endunless
   endfor
@@ -168,8 +173,8 @@
               {%- if cfg_name != blank -%}{%- assign item_name = cfg_name -%}{%- endif -%}
               {%- assign is_install = false -%}
               {%- if item.variant_id == activation_variant_id or item.variant_id == nami_install_geen_variant_id or item.variant_id == nami_install_telefonisch_variant_id or item.variant_id == nami_install_huis_variant_id -%}{%- assign is_install = true -%}{%- endif -%}
-              {%- assign is_addon = false -%}
-              {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_addon_ontzorg_inzicht_variant_id or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}{%- assign is_addon = true -%}{%- endif -%}
+              {%- assign is_addon = false -%}{%- assign item_vid = item.variant_id | append: '' -%}
+              {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or zv_ontzorg_variant_id_list contains item_vid or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}{%- assign is_addon = true -%}{%- endif -%}
               <div class="citem">
                 <div class="ci-thumb">
                   {%- if item.image -%}
@@ -242,14 +247,16 @@
               {%- if li_koop_fk != blank and li_koop_fk != 'invalid' -%}{%- assign li_sub = false -%}{%- endif -%}
               {%- assign today_cents = today_cents | plus: item.final_line_price -%}
               {%- comment -%}
-                Ontzorgpakket Inzicht (2026-10-13): a confirmed recurring monthly service
-                (EUR 5,95/mnd), so its unit price counts toward "Daarna" too — see the note on
+                Ontzorgpakket (per package since 2026-10-27): a confirmed recurring monthly
+                service, so its unit price counts toward "Daarna" too — see the note on
                 Afstandsbediening's own billing nature further up this file. Added independently
                 of the row-classification chain below, so this true_month_cents addition doesn't
                 depend on which branch renders its row — it now has its own elsif branch there
                 (the "× 3 — eerste 3 maanden" row), not the generic zv-install-name fallback.
               {%- endcomment -%}
-              {%- if zv_addon_ontzorg_inzicht_variant_id != blank and item.variant_id == zv_addon_ontzorg_inzicht_variant_id -%}
+              {%- assign item_vid = item.variant_id | append: '' -%}
+              {%- assign li_ontzorg = false -%}{%- if zv_ontzorg_variant_id_list contains item_vid -%}{%- assign li_ontzorg = true -%}{%- endif -%}
+              {%- if li_ontzorg -%}
                 {%- assign true_month_cents = true_month_cents | plus: item.original_price -%}
               {%- endif -%}
               {%- comment -%}
@@ -282,9 +289,9 @@
                 <div class="srow"><span>{{ li_koop_name | strip | escape }} — kopen, eenmalig</span><b>{{ item.final_line_price | money }}</b></div>
               {%- elsif item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}
                 <div class="srow"><span>{% if item.variant_id == zv_koop_addon_videodeurbel_variant_id %}Videodeurbel{% else %}Afstandsbediening{% endif %} (kopen)</span><b>{{ item.final_line_price | money }}</b></div>
-              {%- elsif zv_addon_ontzorg_inzicht_variant_id != blank and item.variant_id == zv_addon_ontzorg_inzicht_variant_id -%}
+              {%- elsif li_ontzorg -%}
                 {%- comment -%}
-                  Ontzorgpakket Inzicht (2026-10-13): same "× 3 — eerste 3 maanden" shape as a
+                  Ontzorgpakket (2026-10-13, every package's own product since 2026-10-27): same "× 3 — eerste 3 maanden" shape as a
                   package row, so the 3-months-prepaid structure is explained the same way, but
                   with zv_label_commitment_no_discount (no "(50% korting)") since this line isn't
                   discounted — see pricing.config.json labels.forbidden.

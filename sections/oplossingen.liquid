@@ -48,39 +48,48 @@
   assign woning_applies_list = zv_woning_applies_handles | split: '|'
 -%}
 {%- comment -%}
-  Videodeurbel + Afstandsbediening (2026-09-26): two real Shopify products (ADC-750, H0010),
-  resolved by handle only — never a hardcoded variant id, price or purchase type (Alex is
-  converting Videodeurbel from a one-time purchase to a rental shortly; its discount will
-  apply once that's done, read live, never assumed). Unresolved (not published to Online
-  Store, or missing) leaves the variant id blank: the checkbox in the Uitbreidingen accordion
-  below still renders (via ltc_addons), just with no live price and no cart line, same
-  "Prijs volgt" fallback as any other unresolved add-on.
+  Videodeurbel + Afstandsbediening (2026-09-26): real Shopify products, resolved by handle
+  only — never a hardcoded variant id or price. Since 2026-10-27 Videodeurbel's Huren row is
+  the rental huur-video-deurbel-750 (H750, /mnd) and its Kopen row the one-time
+  koop-video-deurbel-750 (ADC-750), see the Huren/Kopen comment below; Afstandsbediening is
+  H0010. Unresolved (not published to Online Store, or missing) leaves the variant id blank:
+  the checkbox in the Uitbreidingen accordion below still renders (via ltc_addons), just with
+  no live price and no cart line, same "Prijs volgt" fallback as any other unresolved add-on.
 {%- endcomment -%}
-{%- assign zv_addon_videodeurbel_handle = 'koop-video-deurbel-750' -%}
+{%- assign zv_addon_videodeurbel_handle = 'huur-video-deurbel-750' -%}
 {%- assign zv_addon_afstandsbediening_handle = 'huur-afstandsbediening' -%}
 {%- assign zv_addon_videodeurbel_variant_id = all_products[zv_addon_videodeurbel_handle].variants.first.id -%}
 {%- assign zv_addon_afstandsbediening_variant_id = all_products[zv_addon_afstandsbediening_handle].variants.first.id -%}
 {%- comment -%}
-  Ontzorgpakket Inzicht (2026-10-13; handle maandelijks-ontzorg-inzicht-oh and EUR 4,95/mnd since 2026-10-23): real Shopify product, Inzicht
-  (fk 'aware') only for now — see pricing.config.json addonNames note: shipped deliberately
-  without the "Eerste 3 maanden" promo discount, full price today (Thijs, 2026-10-13). IF that
-  changes (product added to the discount later), this note and the config note both need
-  updating — "shipped deliberately without" will no longer be true. Same live-price/
-  live-availability resolution as Videodeurbel/Afstandsbediening above, never a hardcoded
-  amount. Zeker/Beschermd keep the static 'Prijs volgt' placeholder until their own Ontzorgpakket
-  variants go live.
+  Ontzorgpakket per package (Thijs, 2026-10-27; was Inzicht only since 2026-10-13): one real
+  Shopify product per package, finder_key -> handle from pricing.config.json addonNames
+  (zv_ontzorg_handle_by_fk): Inzicht MOIOH, Zeker MOZOH, Alert MOAOH, Beschermd and Protect
+  both OHC012. Vista and Veilig Onderweg have none. Shipped deliberately without the "Eerste 3
+  maanden" promo discount, full price today (Thijs, 2026-10-13); if that changes, this note and
+  the config notes need updating. Live price/availability like Videodeurbel above, never a
+  hardcoded amount. zv_ontzorg_variant_ids (every Ontzorgpakket variant on this page) lets the
+  script recognise their cart lines; each card carries its own variant (data-ontzorg-variant).
+  Four handles here keep the page at 17 unique all_products handles (limit 20).
 {%- endcomment -%}
-{%- assign zv_addon_ontzorg_inzicht_handle = 'maandelijks-ontzorg-inzicht-oh' -%}
-{%- assign zv_addon_ontzorg_inzicht_variant_id = all_products[zv_addon_ontzorg_inzicht_handle].variants.first.id -%}
+{%- assign zv_ontzorg_fk_list = zv_ontzorg_handle_by_fk | split: '|' -%}
+{%- assign zv_ontzorg_variant_ids = '' -%}
+{%- for kv in zv_ontzorg_fk_list -%}
+  {%- assign kvp = kv | split: ':' -%}
+  {%- assign ov = all_products[kvp[1]].variants.first.id -%}
+  {%- if ov != blank -%}{%- assign ov_s = ov | append: '' -%}{%- assign ov_list = zv_ontzorg_variant_ids | split: '|' -%}{%- unless ov_list contains ov_s -%}{%- assign zv_ontzorg_variant_ids = zv_ontzorg_variant_ids | append: '|' | append: ov_s -%}{%- endunless -%}{%- endif -%}
+{%- endfor -%}
+{%- assign zv_ontzorg_variant_ids = zv_ontzorg_variant_ids | remove_first: '|' -%}
 {%- comment -%}
   Huren/Kopen (2026-10-23, draft, docs/huren-kopen-toggle-2026-10-23.md): the five package cards
   and their hardware add-on rows get a Huren/Kopen choice. Kopen prices come from zv-pricing
   (zv_<pakket>_koop_*_cents, zv_koop_addon_cents_by_handle), never from Shopify or this file. The
-  Koop variant ids come only from the theme settings (Zo Veilig · Huren/Kopen): an empty setting
-  shows "binnenkort" and adds nothing. The intro promo is Huren only, so a Koop variant never goes
+  package and Afstandsbediening Koop variant ids come from the theme settings (Zo Veilig ·
+  Huren/Kopen): an empty setting shows "binnenkort" and adds nothing. Videodeurbel's Koop variant
+  is resolved by handle instead (koop-video-deurbel-750, ADC-750; 2026-10-27): it is a real product
+  already, so it needs no setting. The intro promo is Huren only, so a Koop variant never goes
   through addToCart() (PKG_QTY) but through addKoopToCart() at quantity 1.
 {%- endcomment -%}
-{%- assign zv_koop_variant_videodeurbel = settings.zv_koop_variant_videodeurbel | strip -%}
+{%- assign zv_koop_variant_videodeurbel = all_products['koop-video-deurbel-750'].variants.first.id | append: '' -%}
 {%- assign zv_koop_variant_afstandsbediening = settings.zv_koop_variant_afstandsbediening | strip -%}
 {%- assign zv_koop_addon_list = zv_koop_addon_cents_by_handle | split: '|' -%}
 {%- assign partners = shop.metaobjects.partner.values | where: 'active', true | sort: 'display_order' -%}
@@ -99,7 +108,7 @@
 <script src="{{ 'zv-vergelijk-pakketten.js' | asset_url }}" defer="defer"></script>
 
 {%- if sols.size > 0 -%}
-<div class="opl-page" id="oplossingen-page" data-zv-oplossingen data-activation-variant-id="{{ activation_variant_id }}" data-install-handles="{{ zv_activation_handle }}|{{ zv_nami_install_geen_handle }}|{{ zv_nami_install_telefonisch_handle }}|{{ zv_nami_install_huis_handle }}" data-woning-variant-id="{{ woning_variant_id }}" data-cart-url="{{ routes.cart_url }}" data-addon-videodeurbel-variant-id="{{ zv_addon_videodeurbel_variant_id }}" data-addon-afstandsbediening-variant-id="{{ zv_addon_afstandsbediening_variant_id }}" data-addon-ontzorg-inzicht-variant-id="{{ zv_addon_ontzorg_inzicht_variant_id }}" data-koop-addon-videodeurbel-variant-id="{{ zv_koop_variant_videodeurbel }}" data-koop-addon-afstandsbediening-variant-id="{{ zv_koop_variant_afstandsbediening }}">
+<div class="opl-page" id="oplossingen-page" data-zv-oplossingen data-activation-variant-id="{{ activation_variant_id }}" data-install-handles="{{ zv_activation_handle }}|{{ zv_nami_install_geen_handle }}|{{ zv_nami_install_telefonisch_handle }}|{{ zv_nami_install_huis_handle }}" data-woning-variant-id="{{ woning_variant_id }}" data-cart-url="{{ routes.cart_url }}" data-addon-videodeurbel-variant-id="{{ zv_addon_videodeurbel_variant_id }}" data-addon-afstandsbediening-variant-id="{{ zv_addon_afstandsbediening_variant_id }}" data-ontzorg-variant-ids="{{ zv_ontzorg_variant_ids }}" data-koop-addon-videodeurbel-variant-id="{{ zv_koop_variant_videodeurbel }}" data-koop-addon-afstandsbediening-variant-id="{{ zv_koop_variant_afstandsbediening }}">
 
   <div class="catnav" role="tablist" aria-label="Onze oplossingen">
     <span class="catnav__lbl">Onze oplossingen</span>
@@ -282,12 +291,11 @@
               {%- comment -%}
                 ltc_addons: per-package "Veel gekozen uitbreidingen" list, replacing the old
                 b.settings.uitbreidingen shared textarea (2026-09-16). One item per '§', each
-                item 'Name|shopify-handle' — the rendering loop below resolves the live price
+                item 'Name|shopify-handle|per' — the rendering loop below resolves the live price
                 (and, since 2026-09-26, whether the product is available) via all_products,
-                never a hardcoded price or purchase type; there is deliberately no third
-                'billing' field any more (there was never a live-readable signal for it in this
-                store's qty-3/automatic-discount model, so guessing one would have been exactly
-                the kind of hardcoded purchase type CLAUDE.md warns against). Beschermd/Protect
+                never a hardcoded price. 'per' (2026-10-27) is only the suffix shown after that
+                price: '/mnd' for the rentals (H750, H0010) and the Ontzorgpakket service, all
+                monthly products; it never changes what goes in the cart. Beschermd/Protect
                 (care/guard) used to share a list of seven one-off koop-* hardware add-ons;
                 those Shopify products were deleted on purpose, so the list was removed
                 2026-09-23 (docs/pakket-wijzigingen-2026-09-23.md). aware/aware_plus/secure
@@ -299,21 +307,24 @@
                 Videodeurbel; Climax (care/guard — Beschermd/Protect) is unchanged and still
                 gets both.
               {%- endcomment -%}
-              {%- assign ltc_addons = 'Videodeurbel|' | append: zv_addon_videodeurbel_handle -%}
+              {%- assign ltc_addons = 'Videodeurbel|' | append: zv_addon_videodeurbel_handle | append: '|/mnd' -%}
               {%- unless fk == 'aware' or fk == 'aware_plus' or fk == 'secure' -%}
-                {%- assign ltc_addons = ltc_addons | append: '§Afstandsbediening|' | append: zv_addon_afstandsbediening_handle -%}
+                {%- assign ltc_addons = ltc_addons | append: '§Afstandsbediening|' | append: zv_addon_afstandsbediening_handle | append: '|/mnd' -%}
               {%- endunless -%}
               {%- comment -%}
-                Ontzorgpakket Inzicht (2026-10-13): added to the shared "Veel gekozen
-                uitbreidingen" group ONLY for fk 'aware' (Inzicht), so it inherits the same
-                live-price/live-availability rendering and the same real cart-line wiring
-                (ADDON_VARIANT_IDS / syncAddonLines in the script below) as Videodeurbel —
-                no separate mechanism needed. Zeker/Beschermd are deliberately untouched here;
-                their static "Ontzorgpakket · Prijs volgt" row further down still applies to
-                them. Appended after the unless block above on purpose, so this never interacts
-                with whether Afstandsbediening is included.
+                Ontzorgpakket per package (2026-10-27): this package's own product from
+                zv_ontzorg_handle_by_fk (see the top of this section), added to the shared "Veel
+                gekozen uitbreidingen" group so it gets the same live-price rendering. Vista and
+                Veilig Onderweg have no entry, so no row (they never read ltc_addons anyway).
+                ontzorg_variant goes on the card (data-ontzorg-variant): syncAddonLines() keeps
+                the line of the package's own product, not one shared Ontzorgpakket variant.
               {%- endcomment -%}
-              {%- if fk == 'aware' -%}{%- assign ltc_addons = ltc_addons | append: '§Ontzorgpakket|' | append: zv_addon_ontzorg_inzicht_handle -%}{%- endif -%}
+              {%- assign ontzorg_handle = '' -%}{%- assign ontzorg_variant = '' -%}
+              {%- for kv in zv_ontzorg_fk_list -%}{%- assign kvp = kv | split: ':' -%}{%- if kvp[0] == fk -%}{%- assign ontzorg_handle = kvp[1] -%}{%- endif -%}{%- endfor -%}
+              {%- if ontzorg_handle != blank -%}
+                {%- assign ltc_addons = ltc_addons | append: '§Ontzorgpakket|' | append: ontzorg_handle | append: '|/mnd' -%}
+                {%- assign ontzorg_variant = all_products[ontzorg_handle].variants.first.id -%}
+              {%- endif -%}
               {%- case fk -%}
                 {%- when 'aware' -%}
                   {%- assign ltc_tagline = 'Rust, weet dat het goed gaat' -%}
@@ -376,10 +387,10 @@
               {%- comment -%}
                 Woning is NAMI only (Thijs, 2026-09-25): only a card whose product handle is in
                 zv_woning_applies_handles (Inzicht, Zeker, Alert) keeps the full Uitbreidingen
-                panel (Woning + Uitbreidingen toevoegen + Extra diensten), byte-identical to
-                before. The Climax cards (Beschermd, Protect) still have no Woning and no Extra
-                diensten (Ontzorgpakket): they get their OWN single Uitbreidingen accordion
-                instead — the real, live-priced add-ons (Videodeurbel, Afstandsbediening) first,
+                panel (Woning + the add-ons group, Ontzorgpakket included since 2026-10-27).
+                The Climax cards (Beschermd, Protect) still have no Woning: they get their OWN
+                single Uitbreidingen accordion instead — the real, live-priced add-ons
+                (Videodeurbel, Afstandsbediening and, since 2026-10-27, Ontzorgpakket OHC012) first,
                 then, as the panel's last row (2026-09-26, folded in from what was a separate
                 "Uitbreiding hardware" button, per Thijs's mockup feedback), the link to the
                 hardware page's #grotere-woning block. So the cart drawer now does find an
@@ -408,14 +419,18 @@
                       {%- assign aparts = a | split: '|' -%}
                       {%- assign a_name = aparts[0] -%}
                       {%- assign a_product = all_products[aparts[1]] -%}
-                      {%- assign a_price_display = 'Prijs volgt' -%}
-                      {%- if a_product.price > 0 -%}{%- assign a_price_display = a_product.price | money | prepend: '+' -%}{%- endif -%}
+                      {%- assign a_price_display = 'Prijs volgt' -%}{%- assign a_huur_pill = 'Huren' -%}
+                      {%- if a_product.price > 0 -%}
+                        {%- assign a_price_display = a_product.price | money | prepend: '+' | append: aparts[2] -%}
+                        {%- assign a_huur_pill = a_product.price | money | prepend: 'Huren ' | append: aparts[2] -%}
+                      {%- endif -%}
                       {%- comment -%}
                         Huren/Kopen (2026-10-23): a hardware add-on with a koop price in zv-pricing
                         (zv_koop_addon_cents_by_handle) gets its own Huren/Kopen choice under the row.
                         The Huren price stays the live product price above; the row's first span stays
                         the plain name (optName() in the script adds the koop suffix). Without a Koop
-                        variant id (theme setting), Kopen unchecks and disables the checkbox.
+                        variant id, Kopen unchecks and disables the checkbox. Since 2026-10-27 each pill
+                        carries its own price ("Huren <live price>/mnd", "Kopen <koop price>"), not a bare label.
                       {%- endcomment -%}
                       {%- assign a_koop_cents = nil -%}
                       {%- for kv in zv_koop_addon_list -%}{%- assign kvp = kv | split: ':' -%}{%- if kvp[0] == aparts[1] -%}{%- assign a_koop_cents = kvp[1] | plus: 0 -%}{%- endif -%}{%- endfor -%}
@@ -425,8 +440,9 @@
                           {%- when 'Videodeurbel' -%}{%- assign a_koop_variant = zv_koop_variant_videodeurbel -%}
                           {%- when 'Afstandsbediening' -%}{%- assign a_koop_variant = zv_koop_variant_afstandsbediening -%}
                         {%- endcase -%}
-                        {%- capture a_koop_pr -%}+{{ a_koop_cents | money_without_trailing_zeros }} eenmalig{% if a_koop_variant == blank %} · binnenkort{% endif %}{%- endcapture -%}
-                        <div class="pcard__plus-item"><label class="pcard__plus-opt" data-huur-pr="{{ a_price_display | escape }}" data-koop-pr="{{ a_koop_pr | escape }}" data-koop-variant="{{ a_koop_variant | escape }}"><input type="checkbox"><span>{{ a_name }}</span><span class="pcard__plus-pr">{{ a_price_display }}</span></label><div class="ltc__mode ltc__mode--sm" role="radiogroup" aria-label="Huren of kopen: {{ a_name | escape }}"><label><input type="radio" name="zv-mode-{{ p.id }}-{{ forloop.index }}" value="huur" data-zv-mode="addon" checked><span>Huren</span></label><label><input type="radio" name="zv-mode-{{ p.id }}-{{ forloop.index }}" value="koop" data-zv-mode="addon"><span>Kopen</span></label></div></div>
+                        {%- capture a_koop_pr -%}+{{ a_koop_cents | money }} eenmalig{% if a_koop_variant == blank %} · binnenkort{% endif %}{%- endcapture -%}
+                        {%- capture a_koop_pill -%}Kopen {% if a_koop_variant == blank %}· binnenkort{% else %}{{ a_koop_cents | money }}{% endif %}{%- endcapture -%}
+                        <div class="pcard__plus-item"><label class="pcard__plus-opt" data-huur-pr="{{ a_price_display | escape }}" data-koop-pr="{{ a_koop_pr | escape }}" data-koop-variant="{{ a_koop_variant | escape }}"><input type="checkbox"><span>{{ a_name }}</span><span class="pcard__plus-pr">{{ a_price_display }}</span></label><div class="ltc__mode ltc__mode--sm" role="radiogroup" aria-label="Huren of kopen: {{ a_name | escape }}"><label><input type="radio" name="zv-mode-{{ p.id }}-{{ forloop.index }}" value="huur" data-zv-mode="addon" checked><span>{{ a_huur_pill }}</span></label><label><input type="radio" name="zv-mode-{{ p.id }}-{{ forloop.index }}" value="koop" data-zv-mode="addon"><span>{{ a_koop_pill }}</span></label></div></div>
                       {%- elsif a_name != blank -%}<label class="pcard__plus-opt"><input type="checkbox"><span>{{ a_name }}</span><span class="pcard__plus-pr">{{ a_price_display }}</span></label>{%- endif -%}
                     {%- endfor -%}
                   </div>
@@ -436,7 +452,7 @@
                 <article class="pcard pcard--ltc{% if popular %} pop{% endif %}" data-odoo-sku="{{ v.sku }}"
                          data-zv-event="package_view" data-solution-type="{{ anchor }}" data-solution-name="{{ b.settings.eyebrow | escape }}" data-package-name="{{ short_name | escape }}"
                          data-package-sku="{{ v.sku }}" data-product-handle="{{ p.handle }}" data-product-id="{{ p.id }}" data-variant-id="{{ v.id }}"
-                         data-finder-key="{{ fk }}" data-popular="{{ popular }}" data-available="{{ v.available }}"
+                         data-finder-key="{{ fk }}" data-popular="{{ popular }}" data-available="{{ v.available }}" data-ontzorg-variant="{{ ontzorg_variant }}"
                          data-price-known="{{ price_known }}" data-price="{% if price_known %}{{ p.price | money_without_trailing_zeros }}{% else %}Prijs volgt{% endif %}" data-price-cents="{{ p.price }}" data-per="{% if price_known %}/mnd{% endif %}">
                   {%- if popular -%}<span class="pcard__flag">Meest gekozen</span>{%- endif -%}
                   <div class="ltc__head">
@@ -556,20 +572,10 @@
                             </div>
                             {{ ltc_addons_group_html }}
                             {%- comment -%}
-                              Ontzorgpakket Inzicht (2026-10-13): Inzicht's real, purchasable
-                              Ontzorgpakket now lives in ltc_addons_group_html above (its only
-                              Ontzorgpakket row) — this static "Prijs volgt" placeholder would
-                              otherwise show the same name twice on the Inzicht card, so it's
-                              hidden for fk 'aware' only. Zeker (aware_plus) and Alert (secure)
-                              still need it until their own Ontzorgpakket variants are live.
+                              The static "Extra diensten · Ontzorgpakket · Prijs volgt" placeholder that
+                              stood here was removed 2026-10-27: every package's own Ontzorgpakket is a
+                              priced row in ltc_addons_group_html above now.
                             {%- endcomment -%}
-                            {%- if fk != 'aware' -%}
-                            <div class="ltc__optgroup" data-group="terms">
-                              <p class="ltc__optgroup-h">Extra diensten (optioneel)</p>
-                              <p class="pcard__plus-hint">Maandelijkse diensten naast uw abonnement.</p>
-                              <label class="pcard__plus-opt"><input type="checkbox"><span>Ontzorgpakket</span><span class="pcard__plus-pr">Prijs volgt</span></label>
-                            </div>
-                            {%- endif -%}
                           </div>
                         </details>{% elsif climax_pakket != blank %}<details class="ltc__uitbreidingen">
                           <summary>Uitbreidingen<svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
@@ -642,11 +648,7 @@
                           <label class="pcard__plus-opt"><input type="checkbox"><span>{{ parts[0] | strip }}</span><span class="pcard__plus-pr">{{ parts[1] | default: 'Prijs volgt' | strip }}</span></label>
                         {%- endif -%}{%- endfor -%}
                       </details>
-                      <details class="pcard__plus" data-group="terms">
-                        <summary>Extra diensten (optioneel)<svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
-                        <p class="pcard__plus-hint">Maandelijkse diensten naast uw abonnement.</p>
-                        <label class="pcard__plus-opt"><input type="checkbox"><span>Ontzorgpakket</span><span class="pcard__plus-pr">Prijs volgt</span></label>
-                      </details>
+                      {%- comment -%} No Ontzorgpakket on a tile card (Vista, Veilig Onderweg; Thijs, 2026-10-27): it was a static "Prijs volgt" placeholder here. {%- endcomment -%}
                     {%- endif -%}
 
                     {%- if term != blank -%}<div class="pcard__term">Looptijd: {{ term }} maanden</div>{%- endif -%}
@@ -1138,7 +1140,7 @@
 .ltc__mode input:checked + span { background: var(--indigo); color: #fff; }
 .ltc__mode input:focus-visible + span { outline: 2px solid var(--indigo); outline-offset: 2px; }
 .ltc__mode--sm { margin: -6px 0 12px 28px; padding: 2px; }
-.ltc__mode--sm span { padding: 3px 11px; font-size: 11.5px; }
+.ltc__mode--sm span { padding: 3px 11px; font-size: 11.5px; white-space: nowrap; }
 .pcard--ltc:not(.is-koop) .ltc__koop-only { display: none; }
 .pcard--ltc.is-koop > .pcard__price, .pcard--ltc.is-koop > .ltc__term, .pcard--ltc.is-koop .ltc__buy[data-zv-add] { display: none; }
 .ltc__koopprice { display: flex; align-items: baseline; gap: 7px; }
@@ -1770,55 +1772,66 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
      still be recorded in the Uitbreidingen property, just no line is added for it. */
   var ADDON_VARIANT_IDS = {
     'Videodeurbel': page.dataset.addonVideodeurbelVariantId || null,
-    'Afstandsbediening': page.dataset.addonAfstandsbedieningVariantId || null,
-    // Ontzorgpakket Inzicht (2026-10-13): only ever rendered/checkable on the Inzicht card
-    // (see ltc_addons above), but harmless to key in globally the same way as the other two —
-    // syncAddonLines() only acts on it when 'Ontzorgpakket' actually appears in some package
-    // line's Uitbreidingen property.
-    'Ontzorgpakket': page.dataset.addonOntzorgInzichtVariantId || null
+    'Afstandsbediening': page.dataset.addonAfstandsbedieningVariantId || null
   };
-  // Huren/Kopen: a bought hardware add-on syncs to its Koop variant (theme setting), quantity 1.
+  // Huren/Kopen: a bought hardware add-on syncs to its Koop variant, quantity 1 (Videodeurbel:
+  // ADC-750 by handle since 2026-10-27; Afstandsbediening: theme setting).
   ADDON_VARIANT_IDS['Videodeurbel' + KOOP_SUFFIX] = page.dataset.koopAddonVideodeurbelVariantId || null;
   ADDON_VARIANT_IDS['Afstandsbediening' + KOOP_SUFFIX] = page.dataset.koopAddonAfstandsbedieningVariantId || null;
+  /* Ontzorgpakket per package (2026-10-27): not one name -> one variant like the hardware
+     add-ons, but the package's own product (Inzicht MOIOH, Zeker MOZOH, Alert MOAOH, Beschermd
+     and Protect OHC012). A package line finds its card through its SKU property (cardsBySku, as
+     hydrateLineOptions() does), and the card carries data-ontzorg-variant. ONTZORG_VARIANT_IDS
+     is every one of them on this page, so their lines are recognised and removed when unwanted. */
+  var ONTZORG_NAME = 'Ontzorgpakket';
+  var ONTZORG_VARIANT_IDS = (page.dataset.ontzorgVariantIds || '').split('|').filter(Boolean);
   function isAddonLine(it) {
     for (var name in ADDON_VARIANT_IDS) {
       if (ADDON_VARIANT_IDS[name] && String(it.variant_id) === String(ADDON_VARIANT_IDS[name])) return true;
     }
-    return false;
+    return ONTZORG_VARIANT_IDS.indexOf(String(it.variant_id)) !== -1;
   }
-  // Which add-on names are recorded on any package line's Uitbreidingen property right now.
-  function addonsWanted(items) {
-    var wanted = {};
+  // variant id -> wanted quantity, from the add-on names recorded on the package lines'
+  // Uitbreidingen properties right now.
+  // 2026-10-22 fix: one-time add-ons are never a multiple (see comment above) — they sync to
+  // quantity 1, not PKG_QTY. PKG_QTY is the package's own "prepay 3 months" promo quantity (3);
+  // reusing it made a flat €299 one-time Videodeurbel charge ring up as €897 (3×).
+  // 2026-10-26: Ontzorgpakket is the one exception. It's a recurring monthly service, not a
+  // one-off, so like a package line it prepays PKG_QTY months — at full price, since it stays
+  // outside the "Eerste 3 maanden" discount (see its addonNames notes in pricing.config.json).
+  // No PKG_QTY (pricing config missing) falls back to 1. Beschermd and Protect share OHC012:
+  // one line, either or both wanting it.
+  function addonTargets(items) {
+    var targets = {};
     (items || []).forEach(function (it) {
-      ((it.properties || {})['Uitbreidingen'] || '').split(',').forEach(function (n) {
-        n = n.trim(); if (n) wanted[n] = true;
+      var p = it.properties || {};
+      (p['Uitbreidingen'] || '').split(',').forEach(function (n) {
+        n = n.trim();
+        if (n === ONTZORG_NAME) {
+          var card = cardsBySku[p['SKU'] || ''];
+          var ov = card && card.getAttribute('data-ontzorg-variant');
+          if (ov) targets[ov] = PKG_QTY || 1;
+        } else if (n && ADDON_VARIANT_IDS[n]) {
+          targets[String(ADDON_VARIANT_IDS[n])] = 1;
+        }
       });
     });
-    return wanted;
+    return targets;
   }
-  /* Brings every add-on line to its target, one product at a time (so two add-ons never race
-     each other in the same request): target is 1 when its name is wanted (PKG_QTY for
-     Ontzorgpakket, see below), else 0 (which removes the line). Several lines for the same
-     variant merge into one, same shape as woningLinePlan(). Threads the (possibly updated)
-     cart through each step, same convention used by the cart guard elsewhere in this theme.
-     A failed write for one add-on keeps the cart as it was and still lets the next add-on's
-     plan run. */
+  /* Brings every add-on line to its target (addonTargets), one product at a time (so two
+     add-ons never race each other in the same request); not wanted is 0, which removes the
+     line. Several lines for the same variant merge into one, same shape as woningLinePlan().
+     Threads the (possibly updated) cart through each step, same convention used by the cart
+     guard elsewhere in this theme. A failed write for one add-on keeps the cart as it was and
+     still lets the next add-on's plan run. */
   function syncAddonLines(cart) {
-    var names = Object.keys(ADDON_VARIANT_IDS);
-    return names.reduce(function (prev, name) {
+    var variantIds = [];
+    Object.keys(ADDON_VARIANT_IDS).map(function (n) { return ADDON_VARIANT_IDS[n]; }).concat(ONTZORG_VARIANT_IDS)
+      .forEach(function (id) { if (id && variantIds.indexOf(String(id)) === -1) variantIds.push(String(id)); });
+    return variantIds.reduce(function (prev, variantId) {
       return prev.then(function (cart) {
-        var variantId = ADDON_VARIANT_IDS[name];
-        if (!variantId) return cart;
         var items = (cart && cart.items) || [];
-        // 2026-10-22 fix: one-time add-ons are never a multiple (see comment above) — they
-        // must sync to quantity 1, not PKG_QTY. PKG_QTY is the package's own "prepay 3 months"
-        // promo quantity (3); reusing it here made a flat €299 one-time Videodeurbel charge
-        // ring up as €897 (3×) whenever it was checked.
-        // 2026-10-26: Ontzorgpakket is the one exception. It's a recurring monthly service,
-        // not a one-off, so like a package line it prepays PKG_QTY months — at full price,
-        // since it stays outside the "Eerste 3 maanden" discount (see its addonNames note in
-        // pricing.config.json). No PKG_QTY (pricing config missing) falls back to 1.
-        var target = addonsWanted(items)[name] ? (name === 'Ontzorgpakket' ? (PKG_QTY || 1) : 1) : 0;
+        var target = addonTargets(items)[variantId] || 0;
         var lines = items.filter(function (it) { return String(it.variant_id) === String(variantId); });
         var plan = null;
         if (lines.length > 1) {

@@ -1,7 +1,7 @@
 {%- comment -%}
   Zo Veilig — variant ids for cart lines that are not a product the customer chose from
   a product page: the Woning surcharge line and the add-on lines (Videodeurbel,
-  Afstandsbediening, Ontzorgpakket Inzicht, and the Koop add-ons). Shared by zv-header.liquid, zv-cart.liquid
+  Afstandsbediening, the per-package Ontzorgpakket products, and the Koop add-ons). Shared by zv-header.liquid, zv-cart.liquid
   and the add-to-cart drawer in oplossingen.liquid, so every "N artikelen"/cart-count
   display agrees on what counts as a visible line.
 
@@ -12,9 +12,10 @@
   pages. The Woning handle/SKU come from the generated zv-package-handles.liquid
   (line: 'woning'; render, not include — it only echoes text, no script tag, so it's
   safe sitewide), so pricing.config.json stays their only source and check_pricing.py's
-  "no theme file names the Woning product" guard holds. The three add-on handles stay
-  hardcoded literals, mirroring zv-cart.liquid and oplossingen.liquid (not covered by
-  that guard); if they ever change, update this file too.
+  "no theme file names the Woning product" guard holds. The Ontzorgpakket handles come from
+  the same generated snippet (line: 'ontzorg', 2026-10-27). The Videodeurbel/Afstandsbediening
+  handles stay hardcoded literals, mirroring zv-cart.liquid and oplossingen.liquid (not
+  covered by that guard); if they ever change, update this file too.
 
   activation_variant_id is resolved here too for convenience (both existing callers
   already need it for their own row display) but it is NOT excluded from any count —
@@ -34,13 +35,28 @@
 {%- if zv_hidden_woning_handle != blank and woning_product != blank and woning_product.id != blank and woning_product.variants.first.sku == zv_hidden_woning_sku -%}
   {%- assign woning_variant_id = woning_product.variants.first.id -%}
 {%- endif -%}
-{%- assign zv_addon_videodeurbel_variant_id = all_products['koop-video-deurbel-750'].variants.first.id -%}
+{%- assign zv_addon_videodeurbel_variant_id = all_products['huur-video-deurbel-750'].variants.first.id -%}
 {%- assign zv_addon_afstandsbediening_variant_id = all_products['huur-afstandsbediening'].variants.first.id -%}
-{%- assign zv_addon_ontzorg_inzicht_variant_id = all_products['maandelijks-ontzorg-inzicht-oh'].variants.first.id -%}
 {%- comment -%}
-  Koop add-on lines (Huren/Kopen, 2026-10-24): the Koop variants from the theme settings (Zo
-  Veilig · Huren/Kopen), which syncAddonLines() on Oplossingen keeps at quantity 1 and the drawer
-  hides like the huur add-ons. 0 when the setting is empty, so it never matches a line.
+  Ontzorgpakket per package (2026-10-27): every Ontzorgpakket product's variant id, as a string
+  array (zv_ontzorg_variant_id_list) for `contains item_vid` checks, where item_vid is
+  item.variant_id | append: '' (a number never matches a string in contains), and as a pipe
+  string (zv_ontzorg_variant_ids) for data attributes.
 {%- endcomment -%}
-{%- assign zv_koop_addon_videodeurbel_variant_id = settings.zv_koop_variant_videodeurbel | strip | plus: 0 -%}
+{%- capture zv_hidden_ontzorg_handles -%}{% render 'zv-package-handles', line: 'ontzorg', what: 'handles' %}{%- endcapture -%}
+{%- assign zv_ontzorg_variant_ids = '' -%}
+{%- assign zv_hidden_ontzorg_list = zv_hidden_ontzorg_handles | strip | split: '|' -%}
+{%- for h in zv_hidden_ontzorg_list -%}
+  {%- assign ov = all_products[h].variants.first.id -%}
+  {%- if ov != blank -%}{%- assign zv_ontzorg_variant_ids = zv_ontzorg_variant_ids | append: '|' | append: ov -%}{%- endif -%}
+{%- endfor -%}
+{%- assign zv_ontzorg_variant_ids = zv_ontzorg_variant_ids | remove_first: '|' -%}
+{%- assign zv_ontzorg_variant_id_list = zv_ontzorg_variant_ids | split: '|' -%}
+{%- comment -%}
+  Koop add-on lines (Huren/Kopen, 2026-10-24): Videodeurbel's Koop product ADC-750 by handle
+  (2026-10-27), Afstandsbediening's Koop variant from the theme setting (Zo Veilig ·
+  Huren/Kopen). syncAddonLines() on Oplossingen keeps them at quantity 1 and the drawer hides
+  them like the huur add-ons. 0 when unresolved or the setting is empty, so it never matches a line.
+{%- endcomment -%}
+{%- assign zv_koop_addon_videodeurbel_variant_id = all_products['koop-video-deurbel-750'].variants.first.id | plus: 0 -%}
 {%- assign zv_koop_addon_afstandsbediening_variant_id = settings.zv_koop_variant_afstandsbediening | strip | plus: 0 -%}

@@ -1476,7 +1476,7 @@
       { "type": "text", "id": "zv_koop_variant_alert", "label": "Alert · Koop variant-ID" },
       { "type": "text", "id": "zv_koop_variant_protect", "label": "Protect · Koop variant-ID" },
       { "type": "header", "content": "Uitbreidingen" },
-      { "type": "text", "id": "zv_koop_variant_videodeurbel", "label": "Videodeurbel · Koop variant-ID" },
+      { "type": "paragraph", "content": "Videodeurbel heeft geen instelling meer: Kopen is altijd koop-video-deurbel-750 (ADC-750), Huren huur-video-deurbel-750 (H750), beide op handle opgezocht." },
       { "type": "text", "id": "zv_koop_variant_afstandsbediening", "label": "Afstandsbediening · Koop variant-ID" }
     ]
   }

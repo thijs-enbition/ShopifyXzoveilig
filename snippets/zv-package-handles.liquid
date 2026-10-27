@@ -41,6 +41,14 @@
       else
         echo 'extra-etage-of-100m2'
       endif
+    when 'ontzorg'
+      if what == 'skus'
+        echo 'MOIOH|MOZOH|OHC012|MOAOH'
+      elsif what == 'name'
+        echo 'Ontzorgpakket'
+      else
+        echo 'maandelijks-ontzorg-inzicht-oh|maandelijks-ontzorg-zeker-oh|maandelijks-onderhoud-alarmsysteem|maandelijks-ontzorg-alert-oh'
+      endif
     when 'all'
       if what == 'skus'
         echo 'A0071|A0072|LT-BES|A0073|MT-PRO|MT-VIS|VO-SOLO|VO-GUARD'
