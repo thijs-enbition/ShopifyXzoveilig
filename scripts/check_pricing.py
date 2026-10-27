@@ -16,10 +16,12 @@ Covers:
  10 no theme file carries an independent price or duration
  11 commercial pricing status
  12 package display order
- 13 Woning surcharge: unit, property values, monthly amounts, contract value (NAMI only),
-    the N0008 product it is collected by, and no theme file naming that product itself
+ 13 Woning surcharge: unit, property values, monthly amounts, contract value, the products
+    it is collected by (N0008 nami, E001 climax) and no theme file naming those products itself
  14 packages by handle
  15 Huren/Kopen: koop figures per package and hardware add-on, never a promo figure
+ 16 Ontzorgpakket per package
+ 17 A102B camera subscription rides with ADC-750, flat at quantity 1
 
 Run:  python3 scripts/check_pricing.py
 """
@@ -341,13 +343,15 @@ check(m is not None and m.group(1).split("|") == expected_order,
       "snippets/zv-pricing.liquid's zv_package_order_fks matches the generated order",
       f"got {m.group(1) if m else None}")
 
-print("\n13. Woning surcharge (extra-etage: NAMI only, Woning property + one priced N0008 line)")
+print("\n13. Woning surcharge (Woning property + one priced line per platform: N0008 nami, E001 climax)")
 # Spec §7, decisions by Thijs 2026-09-24 and 2026-09-25 (docs/woning-surcharge-research-2026-09-23.md,
-# docs/woning-n0008-line-2026-09-25.md). The unit is surcharges[extra-etage]. Option N = N extra
-# floors (or N x 100 m²) = N x unit per month from month 4, billed by Odoo. The cart also carries
-# one N0008 line at promo.months x floors, in the "Eerste 3 maanden" discount, so each floor costs
-# promo.months x half_up(unit x rate) today. The ICV adds N x (that + unit x (termMonths -
-# promo.months)), for the NAMI packages in appliesTo only; Climax packages never get Woning.
+# docs/woning-n0008-line-2026-09-25.md); Climax since 2026-10-27 (docs/a102b-e001-climax-woning-2026-10-27.md).
+# The unit is surcharges[extra-etage]. Option N = N extra floors (or N x 100 m²) = N x unit per month
+# from month 4, billed by Odoo. The cart also carries one line per Woning product (the surcharge
+# entry whose appliesTo lists the package: N0008 for NAMI, E001 for Climax) at promo.months x
+# floors, in the "Eerste 3 maanden" discount, so each floor costs promo.months x half_up(unit x
+# rate) today. The ICV adds N x (that + unit x (termMonths - promo.months)) on every package that
+# offers Woning. A package never resolves to another platform's Woning product.
 etage = next((s for s in cfg["surcharges"] if s["id"] == "extra-etage"), None)
 check(etage is not None, "config has surcharges[extra-etage]")
 unit = etage["price"]["amountCents"] if etage else None
@@ -375,37 +379,54 @@ for floors, value in EXPECTED_WONING_VALUES.items():
 check(woning.get("legacyValuePrefix") == "Groter dan 100 m²",
       "legacy Woning values (prefix 'Groter dan 100 m²') are recognised",
       f"got {woning.get('legacyValuePrefix')!r}")
-# The N0008 product the surcharge is collected by (Thijs, 2026-09-25). Never created or edited
-# from this repo; the theme resolves it by handle and checks its first variant's SKU.
-woning_shopify = (etage or {}).get("shopify") or {}
-check(woning_shopify.get("sku") == "N0008", "extra-etage is collected by SKU N0008",
-      f"got {woning_shopify.get('sku')!r}")
-check(bool(woning_shopify.get("handle")), "extra-etage has a Shopify product handle",
-      f"got {woning_shopify.get('handle')!r}")
-check(woning.get("shopify") == {"handle": woning_shopify.get("handle"), "sku": woning_shopify.get("sku")},
-      "generated woning.shopify matches the config", f"got {woning.get('shopify')}")
-# NAMI only (Thijs, 2026-09-25): appliesTo lists package handles, and none may be Climax.
+# The Woning products (N0008: Thijs, 2026-09-25; E001: Admin API, 2026-10-27). Never created or
+# edited from this repo; the theme resolves each by handle and checks its first variant's SKU.
+# One product per installGroup, and its appliesTo holds only packages of that installGroup, so a
+# Climax package can never resolve to N0008 (or a NAMI package to E001).
+EXPECTED_WONING_PRODUCTS = {
+    "nami": ("extra-etage", "extra-etage-of-100m2", "N0008",
+             ["nami-langer-thuis-inzicht", "nami-langer-thuis-zeker", "nami-mijn-thuis-alert"]),
+    "climax": ("extra-etage-climax", "extra-etage-of-100m2-climax", "E001",
+               ["langer-thuis-beschermd", "mijn-thuis-protect"]),
+}
 pkg_by_handle = {pkg.get("productHandle"): pkg for line in cfg["lines"] for pkg in line["packages"]}
-applies = list((etage or {}).get("appliesTo") or [])
-EXPECTED_WONING_APPLIES = ["nami-langer-thuis-inzicht", "nami-langer-thuis-zeker", "nami-mijn-thuis-alert"]
-check(applies == EXPECTED_WONING_APPLIES, "Woning applies to Inzicht, Zeker and Alert only",
-      f"got {applies}")
-climax_in_applies = [h for h in applies if (pkg_by_handle.get(h) or {}).get("installGroup") != "nami"]
-check(not climax_in_applies, "appliesTo contains no Climax (or unknown) package",
-      f"got {climax_in_applies}")
-check(woning.get("appliesTo") == applies, "generated woning.appliesTo matches the config",
+woning_entries = [s for s in cfg["surcharges"] if s.get("shopify")]
+got_products = {s.get("installGroup"): (s["id"], s["shopify"].get("handle"), s["shopify"].get("sku"),
+                                        list(s.get("appliesTo") or [])) for s in woning_entries}
+check(got_products == EXPECTED_WONING_PRODUCTS,
+      "Woning products: N0008 for Inzicht/Zeker/Alert (nami), E001 for Beschermd/Protect (climax)",
+      f"got {got_products}")
+for s in woning_entries:
+    check(s["price"]["amountCents"] == unit, f"surcharges[{s['id']}] has the extra-etage unit",
+          f"got {s['price']['amountCents']}")
+    wrong_group = [h for h in s.get("appliesTo") or []
+                   if (pkg_by_handle.get(h) or {}).get("installGroup") != s.get("installGroup")]
+    check(not wrong_group, f"surcharges[{s['id']}] appliesTo holds only {s.get('installGroup')} packages",
+          f"got {wrong_group}")
+check(sum(1 for s in woning_entries if s.get("woning")) == 1 and (etage or {}).get("woning"),
+      "the Woning choice (heading, values, legacy prefix) exists once, on extra-etage")
+gen_products = [(p.get("installGroup"), p.get("surchargeId"), p.get("handle"), p.get("sku"), p.get("appliesTo"))
+                for p in woning.get("products", [])]
+check(gen_products == [(g, *v) for g, v in EXPECTED_WONING_PRODUCTS.items()],
+      "generated woning.products matches the config, in config order", f"got {gen_products}")
+check("shopify" not in woning, "generated woning has no single-product shopify field any more")
+applies = [h for _, _, _, hs in EXPECTED_WONING_PRODUCTS.values() for h in hs]
+check(woning.get("appliesTo") == applies, "generated woning.appliesTo is every product's appliesTo",
       f"got {woning.get('appliesTo')}")
-# What one floor costs today on the N0008 line: promo.months units at half_up(unit x rate) each.
+seen_twice = [h for h in applies if applies.count(h) > 1]
+check(not seen_twice, "no package is in two Woning products' appliesTo", f"got {seen_twice}")
+# What one floor costs today on a Woning line: promo.months units at half_up(unit x rate) each.
 exp_today_per_floor = promo_months * half_up(Decimal(unit or 0) * promo_rate) if cfg_promo_enabled else 0
 check(woning.get("todayCentsPerFloor") == exp_today_per_floor == 600,
       "one Woning floor costs 3 x half_up(400 x 50%) = 600 today",
       f"got {woning.get('todayCentsPerFloor')} rule {exp_today_per_floor}")
 check(woning.get("cartQuantityPerFloor") == promo_months,
-      "the N0008 line holds promo.months units per floor", f"got {woning.get('cartQuantityPerFloor')}")
-# Contract value per Woning option: N x (3 x half_up(unit x rate) + unit x (term - 3)) on the NAMI
-# packages (EUR 42/84 at 12 months), nothing on Climax.
+      "a Woning line holds promo.months units per floor", f"got {woning.get('cartQuantityPerFloor')}")
+# Contract value per Woning option: N x (3 x half_up(unit x rate) + unit x (term - 3)):
+# EUR 42/84 at 12 months (NAMI), EUR 138/276 at 36 months (Climax).
 EXPECTED_WONING_ICV_CENTS = {"inzicht": {1: 4200, 2: 8400}, "zeker": {1: 4200, 2: 8400},
-                             "alert": {1: 4200, 2: 8400}, "beschermd": {}, "protect": {}}
+                             "alert": {1: 4200, 2: 8400}, "beschermd": {1: 13800, 2: 27600},
+                             "protect": {1: 13800, 2: 27600}}
 for p in priced:
     got = {w["floors"]: w["cents"] for w in p.get("woningContractValue", [])}
     exp = EXPECTED_WONING_ICV_CENTS.get(p["id"])
@@ -414,7 +435,7 @@ for p in priced:
     check(p.get("woningApplies") is is_applies, f"{p['name']} woningApplies is {is_applies}",
           f"got {p.get('woningApplies')}")
     if not is_applies:
-        check(got == {} and exp == {}, f"{p['name']} (Climax) has no Woning contract value", f"got {got}")
+        check(got == {} and exp == {}, f"{p['name']} (no Woning) has no Woning contract value", f"got {got}")
         continue
     for floors in (1, 2):
         rule = floors * (exp_today_per_floor + unit * (p["termMonths"] - promo_months))
@@ -446,23 +467,40 @@ for p in priced:
     for floors in (1, 2):
         exp = EXPECTED_WONING_ICV_CENTS.get(p["id"], {}).get(floors)
         name = f"zv_{pid}_woning_{floors}_icv_cents"
-        check(snippet_int(name) == exp, f"{name} = {exp}" if exp is not None else f"{name} is not emitted (Climax)",
+        check(snippet_int(name) == exp, f"{name} = {exp}" if exp is not None else f"{name} is not emitted",
               f"got {snippet_int(name)}")
-check(snippet_str("zv_woning_handle") == woning_shopify.get("handle"), "zv_woning_handle matches the config",
-      f"got {snippet_str('zv_woning_handle')!r}")
-check(snippet_str("zv_woning_sku") == woning_shopify.get("sku"), "zv_woning_sku matches the config",
-      f"got {snippet_str('zv_woning_sku')!r}")
-check(snippet_str("zv_woning_applies_handles") == "|".join(applies), "zv_woning_applies_handles matches appliesTo",
+exp_products = list(EXPECTED_WONING_PRODUCTS.values())
+check(snippet_str("zv_woning_handles") == "|".join(h for _, h, _, _ in exp_products),
+      "zv_woning_handles lists N0008's then E001's handle", f"got {snippet_str('zv_woning_handles')!r}")
+check(snippet_str("zv_woning_skus") == "|".join(s for _, _, s, _ in exp_products),
+      "zv_woning_skus is N0008|E001, parallel to zv_woning_handles", f"got {snippet_str('zv_woning_skus')!r}")
+check(snippet_str("zv_woning_applies_by_product") == "|".join(",".join(hs) for _, _, _, hs in exp_products),
+      "zv_woning_applies_by_product holds each product's packages, parallel to zv_woning_handles",
+      f"got {snippet_str('zv_woning_applies_by_product')!r}")
+check(snippet_str("zv_woning_applies_handles") == "|".join(applies), "zv_woning_applies_handles is every Woning package",
       f"got {snippet_str('zv_woning_applies_handles')!r}")
-# The theme reads the N0008 product only through zv_woning_handle / zv_woning_sku: no theme file
-# outside the generated ones may name its SKU or handle itself.
+check(snippet_str("zv_woning_applies_fks") == "|".join(pkg_by_handle[h]["finderKey"] for h in applies),
+      "zv_woning_applies_fks matches zv_woning_applies_handles", f"got {snippet_str('zv_woning_applies_fks')!r}")
+for retired in ("zv_woning_handle", "zv_woning_sku"):
+    check(snippet_str(retired) is None, f"{retired} (single product) is no longer emitted")
+    stale = [str(f.relative_to(ROOT)) for d in THEME_DIRS for f in (ROOT / d).rglob("*")
+             if f.is_file() and f.suffix in {".liquid", ".json", ".js"}
+             and re.search(re.escape(retired) + r"\b", f.read_text(encoding="utf-8", errors="ignore"))]
+    check(not stale, f"no theme file reads the retired {retired}", f"found in {stale}")
+ph_text = (PRICING.parent / "snippets" / "zv-package-handles.liquid").read_text(encoding="utf-8")
+blk = ph_text.split("when 'woning'", 1)[1].split("when '", 1)[0] if "when 'woning'" in ph_text else ""
+check(f"echo '{snippet_str('zv_woning_handles')}'" in blk and f"echo '{snippet_str('zv_woning_skus')}'" in blk,
+      "zv-package-handles.liquid 'woning' lists both Woning products")
+# The theme reads the Woning products only through the generated snippets: no theme file outside
+# them may name a Woning SKU or handle itself.
 GENERATED_THEME_FILES = {"zv-pricing.liquid", "zv-item-names.liquid", "zv-package-handles.liquid"}
-for label, needle in (("SKU", woning_shopify.get("sku")), ("handle", woning_shopify.get("handle"))):
-    hits = [str(f.relative_to(ROOT)) for d in THEME_DIRS for f in (ROOT / d).rglob("*")
-            if needle and f.is_file() and f.suffix in {".liquid", ".json", ".css", ".js"}
-            and f.name not in GENERATED_THEME_FILES
-            and needle in f.read_text(encoding="utf-8", errors="ignore")]
-    check(not hits, f"no theme file hardcodes the Woning product {label} ({needle})", f"found in {hits}")
+for _, w_handle, w_sku, _ in exp_products:
+    for label, needle in (("SKU", w_sku), ("handle", w_handle)):
+        hits = [str(f.relative_to(ROOT)) for d in THEME_DIRS for f in (ROOT / d).rglob("*")
+                if needle and f.is_file() and f.suffix in {".liquid", ".json", ".css", ".js"}
+                and f.name not in GENERATED_THEME_FILES
+                and needle in f.read_text(encoding="utf-8", errors="ignore")]
+        check(not hits, f"no theme file hardcodes the Woning product {label} ({needle})", f"found in {hits}")
 
 print("\n14. Packages by handle (pricing.config.json, never a tagged collection)")
 # The theme renders package cards, the pakket-matcher's product map and the homepage finder's
@@ -553,6 +591,29 @@ check((vd.get("productHandle"), vd.get("sku")) == ("huur-video-deurbel-750", "H7
 check((vd.get("koopProduct") or {}) == {"handle": "koop-video-deurbel-750", "sku": "ADC-750"}, "Videodeurbel Kopen is koop-video-deurbel-750 / ADC-750",
       f"got {vd.get('koopProduct')}")
 
+# Afstandsbediening (2026-10-27): Huren = H0010 (huur-afstandsbediening), Kopen = CL004
+# (koop-afstandsbediening), both by handle exactly like Videodeurbel. Climax only (the NAMI cards never
+# list it); Videodeurbel is Koop-only on the NAMI cards (one row, ADC-750 + A102B), a Huren/Kopen choice
+# on the Climax cards. Those scopes live in the card markup, which only a real cart can test.
+ab = next((a for a in cfg.get("addonNames", []) if a.get("name") == "Afstandsbediening"), {})
+check((ab.get("productHandle"), ab.get("sku")) == ("huur-afstandsbediening", "H0010"), "Afstandsbediening Huren is huur-afstandsbediening / H0010",
+      f"got {(ab.get('productHandle'), ab.get('sku'))}")
+check((ab.get("koopProduct") or {}) == {"handle": "koop-afstandsbediening", "sku": "CL004"}, "Afstandsbediening Kopen is koop-afstandsbediening / CL004",
+      f"got {ab.get('koopProduct')}")
+check(snippet_str("zv_koop_addon_product_by_handle") ==
+      "huur-video-deurbel-750:koop-video-deurbel-750|huur-afstandsbediening:koop-afstandsbediening",
+      "zv_koop_addon_product_by_handle maps each hardware add-on's Huren handle to its Koop handle",
+      f"got {snippet_str('zv_koop_addon_product_by_handle')!r}")
+# The Koop variant comes from the handle, never a theme setting: the Afstandsbediening setting was
+# never filled in (its Kopen side read 'binnenkort' for months) and is retired, so it can't go empty again.
+retired_setting = "zv_koop_variant_afstandsbediening"
+stale = [str(f.relative_to(ROOT)) for d in THEME_DIRS for f in (ROOT / d).rglob("*")
+         if f.is_file() and f.suffix in {".liquid", ".json", ".js"} and retired_setting in f.read_text(encoding="utf-8", errors="ignore")]
+check(not stale, f"the retired {retired_setting} theme setting is gone from the theme and its schema", f"found in {stale}")
+check(not re.search(r"settings\.zv_koop_variant_(videodeurbel|afstandsbediening)", "".join(
+        f.read_text(encoding="utf-8", errors="ignore") for d in THEME_DIRS for f in (ROOT / d).rglob("*") if f.is_file() and f.suffix in {".liquid", ".js"})),
+      "no theme file reads a Koop setting for a hardware add-on")
+
 print("\n16. Ontzorgpakket per package (Thijs, 2026-10-27)")
 # One Shopify product per package, picked by finder_key; Vista and Veilig Onderweg get none.
 EXPECTED_ONTZORG = {"aware": ("maandelijks-ontzorg-inzicht-oh", "MOIOH"),
@@ -570,6 +631,41 @@ check(snippet_str("zv_ontzorg_handle_by_fk") == "|".join(f"{fk}:{h}" for fk, (h,
 stale = [f.relative_to(ROOT).as_posix() for d in ("sections", "snippets", "layout", "templates", "assets")
          for f in (ROOT / d).rglob("*") if f.is_file() and "'ontzorgpakket-inzicht'" in f.read_text(encoding="utf-8", errors="ignore")]
 check(not stale, "no theme file looks up the archived ontzorgpakket-inzicht product", f"found in {stale}")
+
+print("\n17. A102B camera subscription rides with a bought Videodeurbel (2026-10-27)")
+# camera-abonnement-videodeurbel-1200-clips / A102B (EUR 3,50/mnd, Admin API 2026-10-27): one line
+# whenever the cart holds a koop-video-deurbel-750 / ADC-750 line, none otherwise. Decided flat at
+# quantity 1, never the N0008 promo treatment: the promo is Huren only and A102B is not in the
+# "Eerste 3 maanden" discount (see its addonNames note).
+a102b = next((a for a in cfg.get("addonNames", []) if a.get("sku") == "A102B"), {})
+check(a102b.get("productHandle") == "camera-abonnement-videodeurbel-1200-clips",
+      "A102B is camera-abonnement-videodeurbel-1200-clips", f"got {a102b.get('productHandle')!r}")
+check(a102b.get("ridesWith") == {"handle": "koop-video-deurbel-750", "sku": "ADC-750"}
+      and a102b.get("ridesWith") == (vd.get("koopProduct") or {}),
+      "A102B rides with the Videodeurbel's Koop product, ADC-750", f"got {a102b.get('ridesWith')}")
+check(a102b.get("cartQuantity") == 1, "A102B syncs flat at quantity 1", f"got {a102b.get('cartQuantity')}")
+check(not {"koopEenmalig", "finderKeys", "koopProduct"} & set(a102b), "A102B is no checkbox, koop row or Ontzorgpakket",
+      f"keys {sorted(a102b)}")
+check("ODOO_ADDON_BILLING" in (a102b.get("note") or "") and "ODOO_ADDON_BILLING" in {u["id"] for u in cfg["unresolved"]},
+      "A102B's note names the open Odoo billing question, and the config tracks it")
+got_riders = [(r["productHandle"], r["sku"], r["ridesWith"]["handle"], r["cartQuantity"]) for r in gen.get("addonRiders", [])]
+check(got_riders == [("camera-abonnement-videodeurbel-1200-clips", "A102B", "koop-video-deurbel-750", 1)],
+      "generated addonRiders is exactly A102B with ADC-750 at 1", f"got {got_riders}")
+check(snippet_str("zv_addon_rider_by_lead") == "koop-video-deurbel-750:camera-abonnement-videodeurbel-1200-clips",
+      "zv_addon_rider_by_lead maps ADC-750's handle to A102B's", f"got {snippet_str('zv_addon_rider_by_lead')!r}")
+rblk = ph_text.split("when 'rider'", 1)[1].split("when '", 1)[0] if "when 'rider'" in ph_text else ""
+check("echo 'camera-abonnement-videodeurbel-1200-clips'" in rblk and "echo 'A102B'" in rblk,
+      "zv-package-handles.liquid 'rider' lists A102B")
+names = json.loads(re.search(r'id="zv-item-names">(.*)</script>',
+                             (ROOT / "snippets" / "zv-item-names.liquid").read_text(encoding="utf-8")).group(1))
+check(names.get("camera-abonnement-videodeurbel-1200-clips") == a102b.get("name"),
+      "A102B shows its config name, never the Shopify title", f"got {names.get('camera-abonnement-videodeurbel-1200-clips')!r}")
+# Like the Woning products, the theme reads A102B only through the generated snippets.
+for needle in ("A102B", "camera-abonnement-videodeurbel-1200-clips"):
+    hits = [str(f.relative_to(ROOT)) for d in THEME_DIRS for f in (ROOT / d).rglob("*")
+            if f.is_file() and f.suffix in {".liquid", ".json", ".css", ".js"}
+            and f.name not in GENERATED_THEME_FILES and needle in f.read_text(encoding="utf-8", errors="ignore")]
+    check(not hits, f"no theme file hardcodes {needle}", f"found in {hits}")
 
 print("\n" + "=" * 60)
 if failures:

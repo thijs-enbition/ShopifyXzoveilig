@@ -1,0 +1,31 @@
+{%- comment -%}
+  zv-addon-riders (2026-10-27): resolves zv_addon_rider_by_lead ('lead-handle:rider-handle|...',
+  from pricing.config.json addonNames[].ridesWith) into 'leadVariantId:riderVariantId:riderCents|...'.
+  Today that is one pair: ADC-750 (koop-video-deurbel-750, the bought Videodeurbel) leads the camera
+  subscription: one subscription line at quantity 1 whenever the cart holds an ADC-750 line,
+  none otherwise. riderCents is the rider's live product price, never a config amount.
+
+  A pair whose lead or rider product doesn't resolve is left out, so nothing is ever synced
+  against a half-known pair. Resolved by handle, never a hardcoded variant id.
+
+  Params: map - zv_addon_rider_by_lead (render scope can't see the caller's variables).
+  Usage: capture it, then `| strip | split: '|'`, and split each entry on ':'.
+{%- endcomment -%}
+{%- liquid
+  assign ar_pairs = map | split: '|'
+  assign ar_out = ''
+  for kv in ar_pairs
+    assign ar_kvp = kv | split: ':'
+    assign ar_lead = all_products[ar_kvp[0]].variants.first
+    assign ar_rider = all_products[ar_kvp[1]].variants.first
+    if ar_lead.id != blank and ar_rider.id != blank
+      assign ar_entry = ar_lead.id | append: ':' | append: ar_rider.id | append: ':' | append: ar_rider.price
+      if ar_out == ''
+        assign ar_out = ar_entry
+      else
+        assign ar_out = ar_out | append: '|' | append: ar_entry
+      endif
+    endif
+  endfor
+  echo ar_out
+-%}

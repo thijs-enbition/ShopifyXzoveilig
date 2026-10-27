@@ -36,14 +36,15 @@
   to 1) and reloads.
 
   Renders zv-cart-guard: keeps the package line at quantity 3, adds the Climax installation
-  line to a Climax package that lacks it, and removes it from a cart without one; keeps the
-  Woning line at 3 x the NAMI floors and strips Woning from a Climax line. See
+  line to a Climax package that lacks it, and removes it from a cart without one; keeps each
+  Woning line at 3 x its own platform's floors (NAMI and Climax each have their own) and keeps the
+  camera subscription in step with a bought Videodeurbel (ADC-750). See
   snippets/zv-cart-guard.liquid.
 
   Koop lines (Huren/Kopen, 2026-10-24, docs/koop-checkout-2026-10-24.md): a bought package
   (Afname: Kopen on a Koop product, snippets/zv-koop-fk.liquid) shows its package name, "Kopen",
   its one-time final_line_price and no +/- (the guard keeps it at 1). It is never counted as a
-  package for "p/m", the promo note or "Daarna". Woning on a bought NAMI package shows as its
+  package for "p/m", the promo note or "Daarna". Woning on a bought package shows as its
   property only; there is no Woning line for it.
 {%- endcomment -%}
 
@@ -73,46 +74,31 @@
   are not in "Daarna" — the same open question for both (how Odoo bills them); not decided here.
 {%- endcomment -%}
 {%- comment -%}
-  Woning line (2026-09-25, NAMI packages only): resolved like the packages, by handle and only
-  if its first variant's SKU is zv_woning_sku. It renders as one non-editable row, "Woning:
-  <option value>", from the NAMI package lines' Woning properties (zv_woning_* values, never
-  the product title). Its final_line_price counts in "Vandaag te betalen" like every line;
-  "Daarna" keeps counting the surcharge from the property on the NAMI package lines only, never
-  the line itself as well. Woning on a Climax line is ignored (zv-cart-guard removes it).
+  Woning lines (2026-09-25; one per platform since 2026-10-27: one for the NAMI packages, one
+  for the Climax packages): resolved by zv-hidden-cart-lines (woning_variant_ids /
+  woning_variant_id_list, by handle and only if the first variant's SKU is the config's). Each
+  renders as one non-editable row, "Woning: <option value>", from the Woning properties of ITS
+  OWN package lines (zv-woning-label, never the product title). Its final_line_price counts in
+  "Vandaag te betalen" like every line; "Daarna" keeps counting the surcharge from the property
+  on the package lines (woning_applies_list: every package that offers Woning), never the line
+  itself as well.
+  Riders (2026-10-27): the camera subscription (zv_rider_variant_id_list) rides with a
+  bought Videodeurbel: an add-on row without a remove link, since zv-cart-guard keeps it in step
+  with the ADC-750 line (removing the doorbell removes it). Quantity 1, one month today, not in
+  "Daarna" (open, like the Huren rentals: unresolved.ODOO_ADDON_BILLING).
 {%- endcomment -%}
-{%- liquid
-  assign woning_applies_list = zv_woning_applies_handles | split: '|'
-  assign woning_label = ''
-  for item in cart.items
-    if woning_applies_list contains item.product.handle
-      capture pre_wf
-        render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix
-      endcapture
-      assign pre_wf = pre_wf | strip | plus: 0
-      assign pre_wl = ''
-      if pre_wf == 2
-        assign pre_wl = zv_woning_2_value
-      elsif pre_wf == 1
-        assign pre_wl = zv_woning_1_value
-      endif
-      if pre_wl != ''
-        if woning_label != ''
-          assign woning_label = woning_label | append: ' + '
-        endif
-        assign woning_label = woning_label | append: pre_wl
-      endif
-    endif
-  endfor
--%}
-{%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_id: woning_variant_id, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles, koop_map: zv_koop_fk_by_handle -%}
+{%- assign woning_applies_list = zv_woning_applies_handles | split: '|' -%}
+{%- assign woning_applies_fk_list = zv_woning_applies_fks | split: '|' -%}
+{%- capture zv_rider_pairs -%}{%- render 'zv-addon-riders', map: zv_addon_rider_by_lead -%}{%- endcapture -%}
+{%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_ids: woning_variant_ids, woning_applies_by_product: zv_woning_applies_by_product, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles, woning_applies_fks: zv_woning_applies_fks, rider_pairs: zv_rider_pairs, koop_map: zv_koop_fk_by_handle -%}
 {%- liquid
   assign zv_visible_item_count = 0
   for item in cart.items
     assign item_vid = item.variant_id | append: ''
-    if zv_ontzorg_variant_id_list contains item_vid
+    if zv_ontzorg_variant_id_list contains item_vid or woning_variant_id_list contains item_vid or zv_rider_variant_id_list contains item_vid
       continue
     endif
-    unless item.variant_id == woning_variant_id or item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id
+    unless item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id
       assign zv_visible_item_count = zv_visible_item_count | plus: 1
     endunless
   endfor
@@ -132,8 +118,11 @@
         <form action="{{ routes.cart_url }}" method="post" id="cart-form" class="clayout">
           <div class="citems">
             {%- for item in cart.items -%}
-              {%- if woning_variant_id != blank and item.variant_id == woning_variant_id -%}
-                {%- comment -%} The Woning line: not editable here (no quantity, no remove, no product link); zv-cart-guard keeps its quantity at 3 x the NAMI floors. Labelled from the NAMI lines' Woning values; an orphan line (no NAMI Woning, the guard removes it) reads just "Woning". {%- endcomment -%}
+              {%- assign item_vid = item.variant_id | append: '' -%}
+              {%- if woning_variant_id_list contains item_vid -%}
+                {%- comment -%} A Woning line: not editable here (no quantity, no remove, no product link); zv-cart-guard keeps its quantity at 3 x its own packages' floors. Labelled from those package lines' Woning values; an orphan line (no Woning left, the guard removes it) reads just "Woning". {%- endcomment -%}
+                {%- capture woning_label -%}{%- render 'zv-woning-label', variant_id: item_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
+                {%- assign woning_label = woning_label | strip -%}
                 <div class="citem citem--woning">
                   <div class="ci-thumb">
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11l9-7 9 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -173,7 +162,8 @@
               {%- if cfg_name != blank -%}{%- assign item_name = cfg_name -%}{%- endif -%}
               {%- assign is_install = false -%}
               {%- if item.variant_id == activation_variant_id or item.variant_id == nami_install_geen_variant_id or item.variant_id == nami_install_telefonisch_variant_id or item.variant_id == nami_install_huis_variant_id -%}{%- assign is_install = true -%}{%- endif -%}
-              {%- assign is_addon = false -%}{%- assign item_vid = item.variant_id | append: '' -%}
+              {%- assign is_rider = false -%}{%- if zv_rider_variant_id_list contains item_vid -%}{%- assign is_rider = true -%}{%- endif -%}
+              {%- assign is_addon = is_rider -%}
               {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or zv_ontzorg_variant_id_list contains item_vid or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}{%- assign is_addon = true -%}{%- endif -%}
               <div class="citem">
                 <div class="ci-thumb">
@@ -191,11 +181,9 @@
                   {%- if item.selling_plan_allocation -%}<div class="ci-meta">{{ item.selling_plan_allocation.selling_plan.name | escape }}</div>{%- endif -%}
                   {%- assign ci_woning_line = false -%}
                   {%- if is_sub and woning_applies_list contains item.product.handle -%}{%- assign ci_woning_line = true -%}{%- endif -%}
-                  {%- if is_koop -%}
-                    {%- if ci_koop_fk == 'aware' or ci_koop_fk == 'aware_plus' or ci_koop_fk == 'secure' -%}{%- assign ci_woning_line = true -%}{%- endif -%}
-                  {%- endif -%}
+                  {%- if is_koop and woning_applies_fk_list contains ci_koop_fk -%}{%- assign ci_woning_line = true -%}{%- endif -%}
                   {%- if ci_woning_line -%}
-                    {%- comment -%} Woning (spec §7): its own line, not a generic property tag, on NAMI package lines only (a Climax line's Woning is ignored). The generic tags below never render (item.properties has no .size), and enabling them would also show internal keys like SKU and Bron. A legacy "Groter dan 100 m²…" value reads as option 1. {%- endcomment -%}
+                    {%- comment -%} Woning (spec §7): its own line, not a generic property tag, on package lines whose package offers Woning (zv_woning_applies_handles / _fks). The generic tags below never render (item.properties has no .size), and enabling them would also show internal keys like SKU and Bron. A legacy "Groter dan 100 m²…" value reads as option 1. {%- endcomment -%}
                     {%- capture ci_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
                     {%- assign ci_wf = ci_wf | strip | plus: 0 -%}
                     {%- if ci_wf > 0 -%}
@@ -204,6 +192,7 @@
                       <div class="ci-meta">Woning: {{ ci_wl | escape }} (+{{ ci_wc | money_without_trailing_zeros }}/mnd)</div>
                     {%- endif -%}
                   {%- endif -%}
+                  {%- if is_rider -%}<div class="ci-meta">Hoort bij uw gekochte videodeurbel.</div>{%- endif -%}
                   {%- if item.properties.size > 0 -%}
                     <div class="ci-tags">
                       {%- for p in item.properties -%}{%- unless p.last == blank or p.first contains '_' -%}<span class="ci-tag">{{ p.first | escape }}: {{ p.last | escape }}</span>{%- endunless -%}{%- endfor -%}
@@ -217,7 +206,9 @@
                       <a href="{{ routes.cart_change_url }}?id={{ item.key }}&quantity={{ item.quantity | plus: 1 }}" aria-label="Aantal verhogen" class="qbtn">+</a>
                     </div>
                     {%- endunless -%}
+                    {%- unless is_rider -%}
                     <a class="ci-remove" href="{{ routes.cart_change_url }}?id={{ item.key }}&quantity=0"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Verwijderen</a>
+                    {%- endunless -%}
                   </div>
                 </div>
                 <div class="ci-right">
@@ -272,8 +263,10 @@
                   {%- assign row_pkg_name = row_pkg_name | strip -%}
                 {%- endif -%}
               {%- endif -%}
-              {%- if woning_variant_id != blank and item.variant_id == woning_variant_id -%}
-                {%- comment -%} The Woning line: its row counts in "Vandaag te betalen" (today_cents above), never in "Daarna" (the NAMI package line's Woning property already carries the surcharge there). {%- endcomment -%}
+              {%- if woning_variant_id_list contains item_vid -%}
+                {%- comment -%} A Woning line: its row counts in "Vandaag te betalen" (today_cents above), never in "Daarna" (the package line's Woning property already carries the surcharge there). {%- endcomment -%}
+                {%- capture woning_label -%}{%- render 'zv-woning-label', variant_id: item_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
+                {%- assign woning_label = woning_label | strip -%}
                 <div class="srow"><span>Woning{% if woning_label != '' %}: {{ woning_label | escape }}{% endif %}</span><b>{{ item.final_line_price | money }}</b></div>
               {%- elsif row_pkg_name != blank -%}
                 {%- assign li_wc = 0 -%}

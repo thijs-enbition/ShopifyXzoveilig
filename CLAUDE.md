@@ -43,8 +43,8 @@ in the theme, it must go through Overzicht the same way; grep for a literal `/ch
 outside `sections/zv-checkout-overview.liquid` itself as a quick regression check.
 
 **A package must never reach checkout in any shape other than "package × 3 + one installation
-line"**, plus, for NAMI packages with a Woning choice, one Woning line (N0008) at 3 x the floors
-(see **Pricing pipeline** below). Enforced twice, since nothing stops a line being changed
+line"**, plus, for a package with a Woning choice, its platform's Woning line at 3 x the floors
+(N0008 for NAMI, E001 for Climax since 2026-10-27; see **Pricing pipeline** below). Enforced twice, since nothing stops a line being changed
 after the fact or a package reaching the cart through an unexpected route:
 - **Client-side:** `snippets/zv-cart-guard.liquid` (rendered on `/cart` and `/cart?view=overzicht`)
   checks the live cart on load, fixes one thing and reloads:
@@ -53,27 +53,32 @@ after the fact or a package reaching the cart through an unexpected route:
   - an installation line is reset to quantity 1;
   - a **climax** package gets the Climax installation line (CL003) added;
   - CL003 is removed from a cart without a climax package;
-  - (lowest priority, since 2026-09-25) the **Woning line** (N0008, see **Pricing pipeline**) is
-    kept at `pkg_qty` x the floors over the NAMI package lines' `Woning` properties: several
-    lines are merged into one, a wrong quantity is set, target 0 removes it, and a legacy NAMI
-    cart with Woning but no line gets it added;
-  - a **climax** package line that still carries a `Woning` property (legacy carts) has it
-    deleted via `/cart/change.js`, quantity kept. A legacy `Abonnement` property is left alone.
+  - (lowest priority, since 2026-09-25; per platform since 2026-10-27) each **Woning line**
+    (N0008 NAMI, E001 Climax, see **Pricing pipeline**) is kept at `pkg_qty` x the floors over
+    its OWN platform's package lines' `Woning` properties: several lines are merged into one, a
+    wrong quantity is set, target 0 removes it, and a cart with Woning but no line gets it added;
+  - a package line whose package doesn't offer Woning but carries a `Woning` property has it
+    deleted via `/cart/change.js`, quantity kept (no package today; until 2026-10-27 this was
+    every Climax line). A legacy `Abonnement` property is left alone;
+  - (2026-10-27) the **A102B** camera subscription is kept at one line at quantity 1 while the cart
+    holds an ADC-750 (bought Videodeurbel) line, and removed without one.
 
   It never picks one of the three **nami** install options on the customer's behalf; that's
   the customer's choice in the required radio group on Overzicht. The Woning line never
   matches the package or installation rules (product type `NAMI_abonnementen`, not
-  `Beveiligingsabonnement`).
+  `Beveiligingsabonnement`); neither does A102B (`ADC Camera ABO`).
 - **Server-side:** `zv-checkout-overview.liquid` disables the checkout button while any of
   these is true:
   - `cart_needs_activation`: an installation line is missing;
-  - `cart_needs_fix`: something the guard is still fixing (including Woning on a climax line);
+  - `cart_needs_fix`: something the guard is still fixing (including an A102B line out of step
+    with ADC-750);
   - `cart_pkg_undiscounted`: a package line carries no discount at all. The guard can't fix
     that, so checkout stays blocked with a contact message. A customer must never pay 3 full
     months;
-  - `cart_woning_bad` (only when the N0008 product resolves, same contact message): the Woning
-    line's quantity isn't `pkg_qty` x the NAMI floors, it carries no discount, or its unit
-    `original_price` isn't `zv_woning_unit_cents`. Never overcharge for Woning.
+  - `cart_woning_bad` (per Woning product that resolves, same contact message): a Woning line's
+    quantity isn't `pkg_qty` x its own platform's floors, it carries no discount, or its unit
+    `original_price` isn't `zv_woning_unit_cents`. Never overcharge for Woning. **E001 is not in
+    the discount yet (2026-10-27), so every Climax Woning checkout is blocked until it is.**
 
 **Known limitation: both checks run in the theme, so any route to Shopify checkout that skips
 Overzicht bypasses them.** A cart permalink (`/cart/<variant>:<qty>`) and typing or bookmarking
@@ -108,7 +113,9 @@ none of them carry `abonnement`:
 | Mijn Thuis Vista | `mijn-thuis-vista` | Beveiligingsabonnement | keuzehulp, Mijn Thuis | `secure_plus` | MT-VIS |
 | Veilig Onderweg Paniek Meldkamer | `veilig-onderweg-paniek-meldkamer` | Beveiligingsabonnement | keuzehulp, prijs-volgt, Veilig Onderweg | `liogo_solo` | — |
 | Veilig Onderweg Zorgmeldkamer | `veilig-onderweg-zorgmeldkamer` | Beveiligingsabonnement | keuzehulp, prijs-volgt, Veilig Onderweg | `liogo_guard` | — |
-| Extra etage of >100m2 (the Woning line, not a package) | `extra-etage-of-100m2` | NAMI_abonnementen | — | — | N0008 |
+| Extra etage of >100m2 (the NAMI Woning line, not a package) | `extra-etage-of-100m2` | NAMI_abonnementen | — | — | N0008 |
+| Extra etage of >100m2 Climax (the Climax Woning line, 2026-10-27) | `extra-etage-of-100m2-climax` | NAMI_abonnementen | — | — | E001 |
+| Camera abonnement Videodeurbel 1200 clips (rides with ADC-750, 2026-10-27) | `camera-abonnement-videodeurbel-1200-clips` | ADC Camera ABO | — | — | A102B |
 
 **SKU switch (Thijs, 2026-10-23): Inzicht/Zeker/Alert sell as A0071/A0072/A0073**, handles
 `nami-langer-thuis-inzicht`, `nami-langer-thuis-zeker`, `nami-mijn-thuis-alert`. N0001/N0002/N0003
@@ -124,10 +131,16 @@ fixed in Admin by Thijs (type and finder_key on 2026-10-23, the discount scope b
 
 N0008 (created in Shopify Admin on 2026-09-25, not from this repo): one variant, inventory
 **untracked**, published to the Online Store. It is the priced Woning line for the NAMI packages
-only (see **Pricing pipeline**), resolved by `surcharges[extra-etage].shopify` handle + SKU.
-Preflight 2026-09-25: its price is **€40,00** (the config unit is €4,00) and it is **not** in the
-"Eerste 3 maanden" discount yet; Overzicht blocks checkout on both (`cart_woning_bad`). See
-`docs/woning-n0008-line-2026-09-25.md`.
+(see **Pricing pipeline**), resolved by `surcharges[extra-etage].shopify` handle + SKU. Its
+2026-09-25 preflight found €40,00 and no discount; by 2026-10-27 it is €4,00 and in "Eerste 3
+maanden". See `docs/woning-n0008-line-2026-09-25.md`.
+
+E001 and A102B (created in Shopify Admin, confirmed via Admin API 2026-10-27, not from this repo):
+one variant each, ACTIVE, inventory tracked with CONTINUE (buyable), published to the Online
+Store. E001 (€4,00) is the Climax Woning line, resolved by `surcharges[extra-etage-climax].shopify`;
+**it is not in "Eerste 3 maanden" yet**, so Overzicht blocks Climax Woning checkouts. A102B (€3,50)
+rides with ADC-750 (`addonNames[].ridesWith`) and is deliberately outside the discount. See
+`docs/a102b-e001-climax-woning-2026-10-27.md`.
 
 Installation products (2026-09-23): NAMI `geen-installatie-nami` N0006 €0,
 `telefonische-ondersteuning-installatie-nami` N0005 €35, `installatie-nami` N0004 €99 (customer
@@ -225,7 +238,8 @@ file carries an independent literal price or duration; CI runs both on every pus
 
 **HARD RULE (Thijs, 2026-09-23): never create products.** The only products sold on this site
 are the 5 packages and their installation products listed in `docs/prepay-qty3-2026-09-23.md`,
-plus the Woning line N0008 (created in Shopify Admin on 2026-09-25, never from here).
+plus the Woning lines N0008 and E001, the add-ons in `addonNames` (H750, ADC-750, H0010, the
+Ontzorgpakket products) and A102B, all created in Shopify Admin, never from here.
 Odoo's contract automation keys off these products, and every new Shopify product becomes a stub
 product in Odoo (the retired PROMO-* products left a `PROMO-ZEK` stub there). Never create
 products, and never modify products or the "Eerste 3 maanden" discount from this repo either. If
@@ -272,37 +286,46 @@ Use these on any surface that shows a product name. GA4 `item_id` stays the SKU.
 checkout page and order e-mails show the Shopify product title** (the formal Odoo name). That's
 intended (Thijs, 2026-09-23); don't work around it in the theme.
 
-**Woning surcharge: NAMI only, collected by one priced N0008 line (Thijs, 2026-09-25).** It
-supersedes "property only, never a priced line" (2026-09-24). `surcharges[extra-etage]` holds the
-unit (400 cents), `shopify` {handle `extra-etage-of-100m2`, sku N0008}, `appliesTo` (Inzicht,
-Zeker, Alert handles; `check_pricing.py` fails on a Climax package there) and `woning` (heading,
-the two option values, the legacy prefix).
-- The `Woning` line-item property on a NAMI package line is unchanged (same values, same legacy
+**Woning surcharge: one priced line per platform (NAMI N0008 since 2026-09-25, Climax E001 since
+2026-10-27).** It supersedes "property only, never a priced line" (2026-09-24). Every
+`surcharges[]` entry with a `shopify` product is one Woning product for the packages of its
+`installGroup`: `extra-etage` (N0008, Inzicht/Zeker/Alert) and `extra-etage-climax` (E001,
+Beschermd/Protect). The Woning choice itself (heading, the two option values, the legacy prefix)
+lives once, on `extra-etage.woning`, for both. A package resolves only to its own platform's
+product: `build_pricing.py` refuses a package in the wrong platform's `appliesTo` (or in two), and
+`check_pricing.py` §13 pins both. The two units must be equal (both 400): the cards, drawer, modal
+and Overzicht gate show/check one price per option; a different Climax price needs that split first.
+- The `Woning` line-item property on a package line is unchanged (same values, same legacy
   prefix, same three writers in `sections/oplossingen.liquid`): the per-package record for Odoo.
-- The cart also carries ONE N0008 line at `promo.months` x the floors over all NAMI package lines
-  (1 floor = 3, 2 floors = 6, none = no line). It is meant to be in the "Eerste 3 maanden"
-  discount, so a floor costs 3 x half_up(400 x 50%) = 600 cents today; Odoo bills 400 per floor
-  per month from month 4.
-- `build_pricing.py` emits `zv_woning_handle`, `zv_woning_sku`, `zv_woning_applies_handles` and,
-  for the NAMI packages only, `zv_<pakket>_woning_<n>_icv_cents` = n x (3 x half_up(unit x rate)
-  + unit x (term - 3)): +4200 / +8400. There are no Climax Woning assigns.
-- The theme resolves N0008 with `all_products[zv_woning_handle]` and checks its first variant's SKU.
-  Unresolved: property only, no line, no Woning gate, one `console.warn` on Oplossingen.
-- Oplossingen: `syncWoningLine(cart)` (card add, where N0008 rides in the same `/cart/add.js`
-  items array right after the package; modal add/buy; the drawer's Woning choice and remove)
-  applies one add/change/remove. The drawer never shows N0008 as a row.
-- `/cart` and Overzicht show it as one non-editable row "Woning: <option value>"; its
-  `final_line_price` counts in "Vandaag te betalen", while "Daarna" and the ICV keep counting
-  the surcharge from the NAMI property only (never the line too). Woning on a Climax line is
-  ignored there and deleted by the guard.
-- No theme file outside the generated snippets names the N0008 SKU or handle (`check_pricing.py`).
+- The cart also carries ONE line per Woning product at `promo.months` x the floors over that
+  product's own package lines (1 floor = 3, 2 floors = 6, none = no line). Both are meant to be in
+  the "Eerste 3 maanden" discount, so a floor costs 3 x half_up(400 x 50%) = 600 cents today; Odoo
+  bills 400 per floor per month from month 4.
+- `build_pricing.py` emits `zv_woning_handles`, `zv_woning_skus`, `zv_woning_applies_by_product`
+  (parallel pipe lists, per product), `zv_woning_applies_handles` / `_fks` (every Woning package)
+  and `zv_<pakket>_woning_<n>_icv_cents` = n x (3 x half_up(unit x rate) + unit x (term - 3)):
+  +4200 / +8400 at 12 months, +13800 / +27600 at 36 (Beschermd, Protect). `zv_woning_handle` and
+  `zv_woning_sku` are gone (§13 fails on a theme file reading them).
+- The theme resolves the products with `snippets/zv-woning-variants.liquid` (handle + first variant's
+  SKU; 0 when unresolved, parallel to `woning.products`). An unresolved product leaves its
+  packages property only: no line, no gate for it, one `console.warn` on Oplossingen.
+- Oplossingen: `WONING_PRODUCTS`; `syncWoningLine(cart)` (card add, where the package's own Woning
+  line rides in the same `/cart/add.js` items array right after it; modal add/buy; the drawer's
+  Woning choice and remove) applies one add/change/remove per product in turn. The drawer never
+  shows a Woning line as a row.
+- `/cart` and Overzicht show each as one non-editable row "Woning: <option value>" from its own
+  packages (`snippets/zv-woning-label.liquid`); its `final_line_price` counts in "Vandaag te
+  betalen", while "Daarna" and the ICV keep counting the surcharge from the property only (never
+  the line too).
+- No theme file outside the generated snippets names N0008, E001 or their handles (`check_pricing.py`).
 
-**Climax packages (Beschermd, Protect) have no Woning and no Uitbreidingen panel** (Thijs,
-2026-09-25). Their Oplossingen cards show "Uitbreiding hardware" (link to
-`/pages/camera-hardware?pakket=beschermd|protect#grotere-woning`) plus a hint in `.ltc__links`
-instead, and so does their Meer informatie modal. The hardware page's `#grotere-woning` block
-lists the extra sensors per verdieping, mapped to its HW rows. Since 2026-10-27 Beschermd and
-Protect offer an Ontzorgpakket again (OHC012, see below). The NAMI cards keep the Woning panel.
+**Climax packages (Beschermd, Protect) have the same Uitbreidingen panel as NAMI since 2026-10-27**:
+Woning + the add-ons group (Videodeurbel and Afstandsbediening, Ontzorgpakket OHC012). From
+2026-09-25 to 2026-10-27 they had no Woning and their own accordion with an "Uitbreiding hardware"
+link to `/pages/camera-hardware?pakket=…#grotere-woning`; that block went in PR #152, and the Woning
+choice (E001) replaces it, so the link, its modal copy and the `climax_hardware_link` event are gone.
+`#opl-modal-data` gives Beschermd/Protect no `plus.items` (what an extra Climax verdieping adds in
+hardware is not confirmed); the modal's Woning box is gated by the config (`woningAppliesFk`).
 
 **Activation fee** (`activation` in the config) is the **Climax** installation product:
 `climax-instalatie`, CL003, €99, since 2026-09-23 (it replaced `activatie-en-installatie` /
@@ -310,19 +333,61 @@ ACT-INSTALL, which no longer exists). It is resolved by handle (`all_products[zv
 never a hardcoded variant id, for Beschermd/Protect only. NAMI packages use
 `installationOptions.nami` instead, chosen by the customer on Overzicht.
 
-**Videodeurbel and Afstandsbediening (H0010, `huur-afstandsbediening`)** are real Shopify
-products with a live-priced checkbox in the Uitbreidingen accordion. **Videodeurbel since
-2026-10-27:** Huren = `huur-video-deurbel-750` (H750, €9,55/mnd), Kopen = `koop-video-deurbel-750`
-(ADC-750, €299 eenmalig), both resolved by handle (the `zv_koop_variant_videodeurbel` theme
-setting is gone). Each pill shows its own price ("Huren <prijs>/mnd", "Kopen <prijs>"); the
-mode decides which variant `syncAddonLines()` keeps (`Videodeurbel` vs `Videodeurbel (koop)` in
-the Uitbreidingen property). Before this, Huren pointed at ADC-750 and Kopen at an empty setting. Climax (Beschermd/Protect) shows both; since 2026-10-13 the NAMI cards
-(Inzicht/Zeker/Alert) show only Videodeurbel, and Vista shows neither. Climax has one
-accordion holding the two checkboxes plus, as its last row below a divider, the existing
-"Uitbreiding hardware" link (folded in 2026-09-26 — there is no separate hardware button or
-"Extra uitbreidingen" link any more, on any card); it renders even with no add-on resolved,
-since the hardware link alone still needs the panel. NAMI keeps its existing accordion (Woning +
-the Videodeurbel checkbox + Ontzorgpakket), no hardware link.
+**Videodeurbel and Afstandsbediening** are real Shopify products with live-priced rows in the
+Uitbreidingen accordion. All their products are resolved by handle, never a variant id or a theme
+setting, and **every price on the rows is read live from the product** (2026-10-27):
+- Videodeurbel: Huren = `huur-video-deurbel-750` (H750, €9,55/mnd), Kopen = `koop-video-deurbel-750`
+  (ADC-750, €299) plus the A102B camera subscription (below).
+- Afstandsbediening: Huren = `huur-afstandsbediening` (H0010, €0,80/mnd), Kopen =
+  `koop-afstandsbediening` (CL004, €40,00). Before 2026-10-27 its Kopen variant came from a theme
+  setting that was never filled in, so the Kopen side read "binnenkort" for months; **that setting
+  is retired** (`config/settings_schema.json`, `oplossingen.liquid`, `zv-hidden-cart-lines`,
+  Overzicht). `check_pricing.py` §15 fails if it comes back or if any Koop setting is read for a
+  hardware add-on. The package Koop variants (K001-K005) still use their settings.
+  `addonNames[].koopProduct` holds the Koop handle; `zv_koop_addon_product_by_handle` maps Huren
+  handle -> Koop handle for the theme.
+- **Platform scope.** Climax (Beschermd, Protect) shows both rows, each with a Huren/Kopen choice.
+  The NAMI cards (Inzicht, Zeker, Alert) show **only Videodeurbel, Koop only**: no Huren side and
+  no Huren/Kopen control, one single-price row like Ontzorgpakket ("€299 + €3,50/mnd") that records
+  `Videodeurbel (koop)`. Afstandsbediening is on no NAMI card. Vista and Veilig Onderweg show
+  neither (Vista's card has no list). The theme decides this by `finder_key` in the `ltc_addons`
+  assignment in `oplossingen.liquid` (a 4th field `koop` makes an entry Koop-only).
+- **Layout (2026-10-27).** The group is one compact bordered list (`.ltc__list`, heading
+  "Uitbreidingen"), one row per add-on: checkbox, name and, only where there is a real Huren/Kopen
+  choice, a two-segment control (`.ltc__mode--seg`, radios inside) on its own full-width line right
+  under the name (grid, two equal columns, each segment one line: "Huren €9,55/mnd", "Kopen
+  €299+€3,50", Afstandsbediening "Kopen €40,00"). The Kopen text is the compact `a_koop_seg`: the
+  full "€299 + €3,50/mnd" is ~145px and a column ~130px, so the control drops the spaces and the
+  "/mnd" after a rider; the full price stays in `data-koop-pr`, the drawer and the radio's
+  `aria-label`. Row padding and the name-to-control gap were halved (10px -> 5px, 8px -> 4px). The
+  list is a container (`container-type: inline-size`): it is ~175px (tablet, 3 columns) to ~316px
+  wide, so the text is 12px from a 262px list, 11px below that, and below 244px the two segments
+  stack (still one line each). A single-option row has no control, just its price at the right.
+  Markup only: the radios, `data-zv-mode`, `.pcard__plus-item` /
+  `.pcard__plus-opt` and the `is-koop` class are what `setAddonMode()`, `optName()`,
+  `readCardOptions()` and the drawer clone (`hydrateLineOptions()`, which drops `.ltc__mode` and
+  shows the chosen mode's price in `.pcard__plus-pr`, hidden on the card while the control is there)
+  already used, so `syncAddonLines()` and the guard are unchanged.
+- The mode decides which variant `syncAddonLines()` keeps (`Videodeurbel` vs `Videodeurbel (koop)`
+  in the Uitbreidingen property). The Koop variants are only added when the product is published
+  to the Online Store: an unpublished one resolves to nothing, its row reads "binnenkort" and its
+  checkbox is disabled (CL004 was ACTIVE but published to no channel until 2026-10-27 14:39 UTC).
+- Handle budget: the Oplossingen page now resolves exactly **20** unique `all_products` handles, the
+  limit (the header's `zv-hidden-cart-lines` shares most of them). Verified 2026-10-27 that the 20th
+  resolves and all five cards render. **Nothing more can be looked up by handle on that page**
+  without freeing one. Which 20, and what could be freed (nothing yet): the audit in
+  `docs/uitbreidingen-koop-only-nami-2026-10-27.md` §7.
+**A102B rides with a bought Videodeurbel (2026-10-27).** `camera-abonnement-videodeurbel-1200-clips`
+(A102B, €3,50/mnd) is no checkbox: `addonNames[].ridesWith` ADC-750, emitted as
+`zv_addon_rider_by_lead` and resolved by `snippets/zv-addon-riders.liquid`. `syncAddonLines()` keeps
+one A102B line at quantity 1 while an ADC-750 line is in the cart (riders sync last), the guard
+does the same on /cart and Overzicht (rule 7), and the Kopen price reads "€299 + €3,50/mnd" (both
+live prices, never a hardcoded string). **Decided flat at quantity 1, not the N0008 promo treatment**: the
+promo is Huren only, A102B is outside the discount, a bought package prepays nothing. It joins
+H750/H0010 in `unresolved.ODOO_ADDON_BILLING` (not in "Daarna"). /cart shows its row without a
+remove link (removing the doorbell removes it). `check_pricing.py` §17 pins it.
+Full write-up of the NAMI Koop-only Videodeurbel, the retired Afstandsbediening setting and the list
+layout: `docs/uitbreidingen-koop-only-nami-2026-10-27.md`.
 **Ontzorgpakket is one product per package (Thijs, 2026-10-27)**, from `addonNames[].finderKeys`
 in pricing.config.json (`zv_ontzorg_handle_by_fk`; `zv-package-handles` line `ontzorg` for the
 cart pages): Inzicht MOIOH `maandelijks-ontzorg-inzicht-oh` €4,95, Zeker MOZOH €5,95, Alert MOAOH
@@ -331,17 +396,15 @@ line). Vista and Veilig Onderweg have none; the static "Ontzorgpakket · Prijs v
 gone. Each card carries `data-ontzorg-variant`; `syncAddonLines()` finds a package line's card
 by its SKU property. `check_pricing.py` section 16 pins the mapping. The archived
 `ontzorgpakket-inzicht` (also SKU MOIOH, €5,95) is never read. With these the Oplossingen page
-resolves 17 unique `all_products` handles (limit 20).
+resolved 17 unique `all_products` handles (limit 20); E001 and A102B (2026-10-27) made it 19 and
+CL004 makes it **20**: none left.
 Checking a box keeps one shared cart line per add-on in sync (`syncAddonLines()` on Oplossingen).
 **Videodeurbel/Afstandsbediening sync to flat quantity 1** in both modes (quantity
 `zv_promo_package_qty` tripled them, fixed 2026-10-22). The Huren variants (H750, H0010) are
 monthly rentals, yet they sit at quantity 1 and are not in Overzicht's "Daarna": an open
 question (how Odoo bills them), not decided in the theme. **Ontzorgpakket syncs to `PKG_QTY`
 like a package line** (2026-10-26): it is a recurring monthly service, so it prepays the 3
-months, at full price, outside the "Eerste 3 maanden" discount, and counts in "Daarna". Videodeurbel and Afstandsbediening
-were both confirmed "sold out" (inventory tracked, DENY, stock <= 0) on 2026-09-26 —
-the checkbox and its live price still work, but no line can be added until that's fixed in
-Shopify Admin. Clean names come from a name-only `addonNames` array in pricing.config.json
+months, at full price, outside the "Eerste 3 maanden" discount, and counts in "Daarna". Clean names come from a name-only `addonNames` array in pricing.config.json
 (deliberately not the pre-existing
 `addons[]` array, which hardcodes a price). See `docs/uitbreidingen-checkboxes-2026-09-26.md`.
 
@@ -359,13 +422,15 @@ check it.
 
 **Huren/Kopen (draft, 2026-10-23, `docs/huren-kopen-toggle-2026-10-23.md`).** The five fixed
 packages and the Videodeurbel/Afstandsbediening add-on rows on Oplossingen get a Huren/Kopen
-choice. Koop prices are config inputs (`koopEenmalig`/`koopMaandelijks` per package,
-`addonNames[].koopEenmalig`), emitted as `zv_<pakket>_koop_*_cents` and
-`zv_koop_addon_cents_by_handle`; `check_pricing.py` section 15 pins them. **The intro promo is
+choice (Climax only for the add-ons; NAMI's Videodeurbel is Koop-only, see above). A package's Koop
+prices are config inputs (`koopEenmalig`/`koopMaandelijks` per package), emitted as
+`zv_<pakket>_koop_*_cents`. The add-ons' `addonNames[].koopEenmalig` and
+`zv_koop_addon_cents_by_handle` are **reference only since 2026-10-27**: the add-on rows read their
+Kopen price live from the Koop product. `check_pricing.py` section 15 pins all of them. **The intro promo is
 Huren only**: `koop.promoApplies` must stay false (`build_pricing.py` refuses otherwise), and a
 Koop variant is added by `addKoopToCart()` at quantity 1, never through `addToCart()`/`PKG_QTY`.
-Koop variant ids come only from the theme settings "Zo Veilig · Huren/Kopen" (empty = a disabled
-"binnenkort" state). Vista stays as-is.
+The package Koop variant ids come only from the theme settings "Zo Veilig · Huren/Kopen" (empty =
+a disabled "binnenkort" state); the add-ons' come from their handles. Vista stays as-is.
 
 **Koop lines in the cart (2026-10-24, `docs/koop-checkout-2026-10-24.md`).** A Koop package line
 = the property `Afname: Kopen` on one of the config's `koopProduct` handles (K001-K005);
@@ -374,8 +439,9 @@ two blocks checkout (`cart_koop_bad`). It is quantity 1 (the guard resets it, ne
 full price with no discount (`cart_koop_bad` if one reaches it), never a huur package for the
 promo, "Daarna", looptijd or ICV, and takes the same installation as huur by installGroup
 (`has_nami_pkg` → the radio group, now shown via `show_nami_install`; `has_climax_pkg` → CL003,
-added by `addKoopToCart()` and the guard). **Woning on a bought NAMI package is the property only:
-no N0008 line** (Thijs, 2026-10-24); Odoo bills it. No monthly service-fee line ever.
+added by `addKoopToCart()` and the guard). **Woning on a bought package is the property only: no
+Woning line** (Thijs, 2026-10-24, for NAMI; Climax mirrors it since 2026-10-27); Odoo bills it. No
+monthly service-fee line ever.
 
 ## Shopify store
 

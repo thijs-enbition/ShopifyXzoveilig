@@ -25,28 +25,39 @@
      fixed fee, one correct answer, safe to add on the customer's behalf.
   4. The Climax installation line in a cart with no Climax package is removed: CL003 must
      never be charged for a NAMI package.
-  5. The Woning line (2026-09-25, NAMI packages only; the product zv_woning_handle /
-     zv_woning_sku, resolved by the caller into woning_variant_id): its target quantity is
-     pkg_qty x the floors over the NAMI package lines' `Woning` properties (woning_applies
-     handles; zv-woning-floors' values and legacy prefix, so a legacy "Groter dan 100 m²…"
-     value counts as 1 floor). More than one Woning line is merged into one at the target; a
-     single line at another quantity is set to the target; target 0 removes it; a NAMI cart
-     with Woning but no line (e.g. from before 2026-09-25) gets the line added.
-  6. A Climax package line that carries a `Woning` property (legacy carts: Beschermd and
-     Protect offered Woning until 2026-09-25) has it deleted via /cart/change.js, same
-     quantity. A legacy Abonnement/Uitbreidingen property on it is left alone.
-  The Woning line never matches the package or installation rules above (its product type
-  is not sub_type and its variant is none of the installation ids). Without woning_variant_id
-  rule 5 is skipped: the property-only fallback.
+  5. The Woning lines (2026-09-25; one per platform since 2026-10-27): one for the NAMI
+     packages, one for the Climax packages (zv_woning_handles / zv_woning_skus, resolved by the
+     caller with zv-woning-variants into woning_variant_ids, parallel to woning_applies_by_product).
+     Per Woning product, its target quantity is pkg_qty x the floors over ITS OWN package lines'
+     `Woning` properties (that product's handles in woning_applies_by_product; zv-woning-floors'
+     values and legacy prefix, so a legacy "Groter dan 100 m²…" value counts as 1 floor), never
+     another platform's. More than one line of a product is merged into one at the target; a
+     single line at another quantity is set to the target; target 0 removes it; a cart with
+     Woning but no line (e.g. a NAMI cart from before 2026-09-25) gets the line added.
+  6. A package line whose package doesn't offer Woning (not in woning_applies) but carries a
+     `Woning` property has it deleted via /cart/change.js, same quantity. Until 2026-10-27 that
+     was every Climax line (Beschermd and Protect had no Woning from 2026-09-25 to 2026-10-27);
+     today all five packages offer it, so the rule only acts if the config ever takes one out.
+     A legacy Abonnement/Uitbreidingen property on it is left alone.
+  7. Riders (2026-10-27, rider_pairs 'leadVariant:riderVariant[:cents]|…', from zv-addon-riders):
+     the camera subscription rides with ADC-750, the bought Videodeurbel. A cart with a
+     lead line keeps exactly one rider line at quantity 1 (added, set or merged); a cart without
+     one has its rider lines removed (the customer removed the doorbell on /cart). Flat quantity
+     1, never pkg_qty: see its addonNames note in pricing.config.json.
+  The Woning and rider lines never match the package or installation rules above (their
+  product types are not sub_type and their variants are none of the installation ids). A
+  Woning product that doesn't resolve (0 in woning_variant_ids) is skipped by rule 5: the
+  property-only fallback for its packages.
 
   Koop package lines (Huren/Kopen, 2026-10-24, docs/koop-checkout-2026-10-24.md): a line with
   the property Afname: Kopen whose handle is one of koop_map's Koop products. It is a one-time
   purchase, never a package line above: rule 2 keeps it at quantity 1 (never pkg_qty) and
-  removes a second line for the same Koop product; a bought Climax package counts for rules 3,
-  4 and 6 exactly like a rented one (CL003 added, kept, Woning stripped). A bought NAMI package
-  keeps its Woning property but never counts towards the Woning line (rule 5): Woning on Koop
-  is the property only (Thijs, 2026-10-24). A line with Afname: Kopen on any other product
-  is left alone here; Overzicht blocks checkout for it.
+  removes a second line for the same Koop product; a bought Climax package counts for rules 3
+  and 4 exactly like a rented one (CL003 added, kept). A bought package keeps its Woning
+  property but never counts towards a Woning line (rule 5): Woning on Koop is the property only
+  (Thijs, 2026-10-24, for NAMI; Climax mirrors it since 2026-10-27). Rule 6 strips it only from
+  a Koop line whose package (woning_applies_fks) doesn't offer Woning. A line with Afname: Kopen
+  on any other product is left alone here; Overzicht blocks checkout for it.
 
   The same rules are exposed as window.zvCartGuard.planFix(cart), which returns the one fix
   or null. Overzicht's checkout button runs it on a fresh /cart.js before it navigates.
@@ -69,11 +80,13 @@
   nami_geen_variant_id, nami_telefonisch_variant_id, nami_huis_variant_id, pkg_qty
   (zv_promo_package_qty), and the package product handles inzicht_handle, zeker_handle,
   alert_handle (NAMI) and beschermd_handle, protect_handle (Climax); for the Woning rules
-  woning_variant_id (nil when unresolved), woning_v1, woning_v2 (zv_woning_1_value /
-  _2_value), woning_legacy (zv_woning_legacy_prefix) and woning_applies
-  (zv_woning_applies_handles, pipe-separated) — passed explicitly because `render` doesn't
-  inherit the caller's scope. koop_map (zv_koop_fk_by_handle, 'handle:finder_key|...') names
-  the Koop products.
+  woning_variant_ids (zv-woning-variants' output, 0 for an unresolved product),
+  woning_applies_by_product (zv_woning_applies_by_product, parallel to it), woning_v1, woning_v2
+  (zv_woning_1_value / _2_value), woning_legacy (zv_woning_legacy_prefix), woning_applies
+  (zv_woning_applies_handles) and woning_applies_fks (zv_woning_applies_fks); for rule 7
+  rider_pairs (zv-addon-riders' output) — passed explicitly because `render` doesn't inherit
+  the caller's scope. koop_map (zv_koop_fk_by_handle, 'handle:finder_key|...') names the Koop
+  products.
 {%- endcomment -%}
 {%- if pkg_qty > 0 -%}
 <script>
@@ -88,10 +101,21 @@
     .map(String);
   var NAMI_PKG_HANDLES = [{{ inzicht_handle | json }}, {{ zeker_handle | json }}, {{ alert_handle | json }}].filter(Boolean);
   var CLIMAX_PKG_HANDLES = [{{ beschermd_handle | json }}, {{ protect_handle | json }}].filter(Boolean);
-  var WONING_ID = {{ woning_variant_id | json }};
-  if (WONING_ID === '') WONING_ID = null;
   var WONING_V1 = {{ woning_v1 | json }}, WONING_V2 = {{ woning_v2 | json }}, WONING_LEGACY = {{ woning_legacy | json }};
   var WONING_APPLIES = String({{ woning_applies | json }} || '').split('|').filter(Boolean);
+  var WONING_APPLIES_FKS = String({{ woning_applies_fks | json }} || '').split('|').filter(Boolean);
+  // One entry per Woning product (NAMI, Climax): its variant id and the package
+  // handles whose floors it carries. An unresolved product (0) is left out: property only.
+  var WONING_PRODUCTS = (function () {
+    var ids = String({{ woning_variant_ids | json }} || '').split('|');
+    var applies = String({{ woning_applies_by_product | json }} || '').split('|');
+    return ids.map(function (id, i) {
+      return { id: id, applies: String(applies[i] || '').split(',').filter(Boolean) };
+    }).filter(function (wp) { return wp.id && wp.id !== '0'; });
+  })();
+  // Rider pairs (rule 7): lead variant -> rider variant.
+  var RIDERS = String({{ rider_pairs | json }} || '').split('|').map(function (s) { return s.split(':'); })
+    .filter(function (p) { return p[0] && p[1]; }).map(function (p) { return { lead: p[0], rider: p[1] }; });
   // Koop product handle -> finder_key; a Koop package line also carries Afname: Kopen.
   var KOOP_FK = {};
   String({{ koop_map | json }} || '').split('|').forEach(function (pair) {
@@ -129,7 +153,9 @@
   // on click with these same rules instead of a copy of them.
   function planFix(cart) {
     var items = (cart && cart.items) || [];
-    var isWoningLine = function (it) { return WONING_ID != null && String(it.variant_id) === String(WONING_ID); };
+    var isWoningLine = function (it) {
+      return WONING_PRODUCTS.some(function (wp) { return String(it.variant_id) === wp.id; });
+    };
     var isPkg = function (it) {
       return !isWoningLine(it) && !isKoopProp(it) && it.product_type === SUB_TYPE && (NAMI_PKG_HANDLES.indexOf(it.handle) !== -1 || CLIMAX_PKG_HANDLES.indexOf(it.handle) !== -1);
     };
@@ -190,14 +216,15 @@
       return { url: '/cart/update.js', body: { updates: rm } };
     }
 
-    // 5. The Woning line: one line at pkg_qty x the NAMI package lines' floors (NAMI only).
-    if (WONING_ID != null) {
+    // 5. The Woning lines: per Woning product, one line at pkg_qty x its own package lines' floors.
+    for (var w = 0; w < WONING_PRODUCTS.length; w++) {
+      var wp = WONING_PRODUCTS[w];
       var floors = 0;
       pkgLines.forEach(function (it) {
-        if (WONING_APPLIES.indexOf(it.handle) !== -1) floors += woningFloors((it.properties || {})['Woning']);
+        if (wp.applies.indexOf(it.handle) !== -1) floors += woningFloors((it.properties || {})['Woning']);
       });
       var target = PKG_QTY * floors;
-      var woningLines = items.filter(isWoningLine);
+      var woningLines = items.filter(function (it) { return String(it.variant_id) === wp.id; });
       if (woningLines.length > 1) {
         var merge = {};
         woningLines.forEach(function (it, i) { merge[it.key] = i === 0 ? target : 0; });
@@ -212,18 +239,36 @@
       // guard runs can't stack it (same reason as rule 3).
       if (!woningLines.length && target > 0) {
         var addWoning = {};
-        addWoning[WONING_ID] = target;
+        addWoning[wp.id] = target;
         return { url: '/cart/update.js', body: { updates: addWoning } };
       }
     }
 
-    // 6. A Climax package line never carries Woning: delete the property, keep the quantity.
-    var climaxWoning = pkgLines.filter(function (it) { return CLIMAX_PKG_HANDLES.indexOf(it.handle) !== -1 && hasWoningProp(it); })
-      .concat(koopLines.filter(function (it) { return isKoopClimax(it) && hasWoningProp(it); }))[0];
-    if (climaxWoning) {
-      var keep = {}, cp = climaxWoning.properties || {};
+    // 6. A package that doesn't offer Woning never carries it: delete the property, keep the quantity.
+    var strayWoning = pkgLines.filter(function (it) { return WONING_APPLIES.indexOf(it.handle) === -1 && hasWoningProp(it); })
+      .concat(koopLines.filter(function (it) { return WONING_APPLIES_FKS.indexOf(KOOP_FK[it.handle]) === -1 && hasWoningProp(it); }))[0];
+    if (strayWoning) {
+      var keep = {}, cp = strayWoning.properties || {};
       for (var pk in cp) { if (Object.prototype.hasOwnProperty.call(cp, pk) && pk !== 'Woning') keep[pk] = cp[pk]; }
-      return { url: '/cart/change.js', body: { id: climaxWoning.key, quantity: climaxWoning.quantity, properties: keep } };
+      return { url: '/cart/change.js', body: { id: strayWoning.key, quantity: strayWoning.quantity, properties: keep } };
+    }
+
+    // 7. Riders: one rider line at quantity 1 while a lead line is in the cart, none otherwise.
+    for (var r = 0; r < RIDERS.length; r++) {
+      var rd = RIDERS[r];
+      var hasLead = items.some(function (it) { return String(it.variant_id) === rd.lead; });
+      var riderLines = items.filter(function (it) { return String(it.variant_id) === rd.rider; });
+      var riderTarget = hasLead ? 1 : 0;
+      if (riderLines.length > 1 || (riderLines.length === 1 && riderLines[0].quantity !== riderTarget)) {
+        var setRider = {};
+        riderLines.forEach(function (it, i) { setRider[it.key] = i === 0 ? riderTarget : 0; });
+        return { url: '/cart/update.js', body: { updates: setRider } };
+      }
+      if (!riderLines.length && riderTarget > 0) {
+        var addRider = {};
+        addRider[rd.rider] = 1;   // absolute, by variant id: two guard runs can't stack it (rule 3)
+        return { url: '/cart/update.js', body: { updates: addRider } };
+      }
     }
     return null;
   }

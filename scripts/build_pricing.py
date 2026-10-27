@@ -8,7 +8,7 @@ Reads pricing.config.json (INPUTS only) and derives every money value once:
     promoWas                = promo.months * monthly                 (undiscounted worth)
     dueToday[option]        = install_option + promoDiscountTotal    (per install option)
     indicativeContractValue = activation + promoDiscountTotal + monthly * (term - promo.months)
-    woning option N         = N * extra-etage per month from month 4 (NAMI packages only)
+    woning option N         = N * extra-etage per month from month 4 (N0008 nami, E001 climax)
     woningContractValue[N]  = N * (promo.months * half_up(extra-etage * promo.rate)
                                    + extra-etage * (term - promo.months))   [added to the ICV]
 
@@ -128,6 +128,24 @@ def build():
             if fk in ontzorg_by_fk:
                 raise SystemExit(f"finderKey {fk!r} has two Ontzorgpakket products")
             ontzorg_by_fk[fk] = a["productHandle"]
+    # Riders (2026-10-27): an add-on product that is never chosen on its own but rides along with
+    # another add-on's Koop product line (A102B, the camera subscription, with ADC-750, the bought
+    # Videodeurbel): one line at cartQuantity whenever the cart holds a ridesWith line, none
+    # otherwise. Only a Koop product may lead, and only flat quantity 1 is supported (see the
+    # A102B note in pricing.config.json for why it is not the N0008 promo treatment).
+    koop_products = {(a.get("koopProduct") or {}).get("handle"): (a.get("koopProduct") or {}).get("sku")
+                     for a in cfg.get("addonNames", []) if a.get("koopProduct")}
+    riders = []
+    for a in cfg.get("addonNames", []):
+        rw = a.get("ridesWith")
+        if not rw:
+            continue
+        if koop_products.get(rw.get("handle")) != rw.get("sku"):
+            raise SystemExit(f"addonNames {a['productHandle']}: ridesWith {rw} is not an add-on's koopProduct")
+        if a.get("cartQuantity") != 1:
+            raise SystemExit(f"addonNames {a['productHandle']}: a rider syncs at cartQuantity 1 only")
+        riders.append({"productHandle": a["productHandle"], "sku": a["sku"], "name": a["name"],
+                       "ridesWith": {"handle": rw["handle"], "sku": rw["sku"]}, "cartQuantity": 1})
 
     # NAMI installation choice (Inzicht/Zeker/Alert only; Climax keeps the fixed `activation`
     # fee above, untouched). display is recomputed via eur(), same as activation's, rather
@@ -195,32 +213,53 @@ def build():
         for line in cfg["lines"]
     ]
 
-    # Woning surcharge (spec §7; Thijs 2026-09-24, NAMI only and a priced N0008 line since
-    # 2026-09-25): NAMI packages only (surcharges[extra-etage].appliesTo: Inzicht, Zeker,
-    # Alert). The choice stays the `Woning` line-item property on the package line, and the
-    # cart also carries ONE line of the Shopify product surcharges[extra-etage].shopify (N0008)
-    # at quantity promo.months x the floors over all NAMI package lines. That line is in the
-    # "Eerste 3 maanden" discount, so each floor costs promo.months x half_up(unit x rate) today
-    # (per unit, like the package line); Odoo bills unit per floor per month from month 4.
+    # Woning surcharge (spec §7; Thijs 2026-09-24, a priced N0008 line for NAMI since
+    # 2026-09-25, and E001 for Climax since 2026-10-27). The choice stays the `Woning` line-item
+    # property on the package line, and the cart also carries ONE line per Woning product: each
+    # surcharges[] entry with a `shopify` product serves the packages of its installGroup
+    # (appliesTo), at quantity promo.months x the floors over those package lines. That line is
+    # in the "Eerste 3 maanden" discount, so each floor costs promo.months x half_up(unit x rate)
+    # today (per unit, like the package line); Odoo bills unit per floor per month from month 4.
     # Option N (N extra floors or N x 100 m²) costs N x unit per month from month 4, and the
     # theme adds woningContractValue[N] = N x (promo.months x half_up(unit x rate) + unit x
-    # (term - promo.months)) to a NAMI package's indicative contract value. Climax packages get
-    # no woningContractValue at all. options[].value is the exact property value.
+    # (term - promo.months)) to the indicative contract value of a package in any appliesTo.
+    # options[].value is the exact property value; the choice (heading, options, legacy prefix)
+    # lives once, on surcharges[extra-etage].woning, for every platform.
     etage = next(s for s in cfg["surcharges"] if s["id"] == "extra-etage")
     woning_cfg = etage["woning"]
     woning_unit_cents = etage["price"]["amountCents"]
-    woning_shopify = etage.get("shopify") or {}
-    woning_applies = list(etage.get("appliesTo") or [])
+    pkg_by_handle = {pkg.get("productHandle"): pkg for line in cfg["lines"] for pkg in line["packages"]}
+    woning_entries = [s for s in cfg["surcharges"] if s.get("shopify")]
+    if sum(1 for s in woning_entries if s.get("woning")) != 1:
+        raise SystemExit("exactly one Woning surcharge (extra-etage) may carry the woning choice block")
+    woning_products = []
+    for s in woning_entries:
+        group = s.get("installGroup")
+        if not group or any(p["installGroup"] == group for p in woning_products):
+            raise SystemExit(f"surcharges[{s['id']}]: each Woning product needs its own installGroup, got {group!r}")
+        # One price per Woning option is all the cards, drawer and modal can show.
+        if s["price"]["amountCents"] != woning_unit_cents:
+            raise SystemExit(f"surcharges[{s['id']}]: unit {s['price']['amountCents']} differs from extra-etage's "
+                             f"{woning_unit_cents}; the theme shows one price per Woning option")
+        for h in s.get("appliesTo") or []:
+            if (pkg_by_handle.get(h) or {}).get("installGroup") != group:
+                raise SystemExit(f"surcharges[{s['id']}] appliesTo {h!r} is not a {group} package")
+            if any(h in p["appliesTo"] for p in woning_products):
+                raise SystemExit(f"package {h!r} is in two Woning products' appliesTo")
+        woning_products.append({
+            "surchargeId": s["id"],
+            "installGroup": group,
+            "handle": s["shopify"].get("handle"),
+            "sku": s["shopify"].get("sku"),
+            "appliesTo": list(s.get("appliesTo") or []),
+            "appliesToFinderKeys": [pkg_by_handle[h].get("finderKey") for h in s.get("appliesTo") or []],
+        })
+    woning_applies = [h for p in woning_products for h in p["appliesTo"]]
     # What one floor costs today on the N0008 line: promo.months units, each at the unit price
     # after the promo discount (rounded per unit, as Shopify does for the package line).
     woning_promo_unit_cents = cents_half_up(Decimal(woning_unit_cents) * promo_rate) if promo_enabled else woning_unit_cents
     woning_today_per_floor_cents = promo_months * woning_promo_unit_cents if promo_enabled else 0
-    woning_applies_fks = [
-        pkg.get("finderKey")
-        for line in cfg["lines"]
-        for pkg in line["packages"]
-        if pkg.get("productHandle") in woning_applies
-    ]
+    woning_applies_fks = [fk for p in woning_products for fk in p["appliesToFinderKeys"]]
     woning_options = [
         {
             "floors": o["floors"],
@@ -237,13 +276,14 @@ def build():
         "heading": woning_cfg["heading"],
         "legacyValuePrefix": woning_cfg["legacyValuePrefix"],
         "options": woning_options,
-        # The priced cart line (N0008), resolved by handle and checked by SKU in the theme.
-        "shopify": {"handle": woning_shopify.get("handle"), "sku": woning_shopify.get("sku")},
-        # NAMI package handles (and their finder_keys) that may carry Woning and count
-        # towards the N0008 quantity. Nothing else ever does.
+        # The priced cart lines, one per installGroup (N0008 nami, E001 climax), each resolved
+        # by handle and checked by SKU in the theme, with the packages whose floors it carries.
+        "products": woning_products,
+        # Every package handle (and finder_key) that may carry Woning, over all products.
+        # Nothing else ever does.
         "appliesTo": woning_applies,
         "appliesToFinderKeys": woning_applies_fks,
-        # N0008 cart quantity per floor (one unit per prepaid month) and what that costs today.
+        # Woning cart quantity per floor (one unit per prepaid month) and what that costs today.
         "cartQuantityPerFloor": promo_months if promo_enabled else 0,
         "todayCentsPerFloor": woning_today_per_floor_cents,
     }
@@ -275,6 +315,8 @@ def build():
         "koop": {"status": koop_cfg.get("status"), "promoApplies": False, "addons": koop_addons},
         # Ontzorgpakket per package: handle, SKU and the finder_keys it serves.
         "ontzorg": ontzorg,
+        # Add-ons that ride along with another add-on's Koop line (A102B with ADC-750).
+        "addonRiders": riders,
         "labels": cfg["labels"],
         # Display order for package cards (see package_order_fks above): the finder_key
         # values in pricing.config.json order. Theme surfaces must render in this order,
@@ -360,10 +402,10 @@ def build():
             # 3-month total, never a monthly figure, so it must never be shown with /mnd.
             promo_was = monthly * promo_months if promo_enabled else 0
 
-            # Woning (NAMI packages only): per floor, the N0008 line's prepaid months at what they
-            # cost today (promo.months x half_up(unit x rate)) plus the unit for every month Odoo
-            # bills, the same months the ICV bills the package at the plain rate. Climax packages
-            # get no Woning contract value.
+            # Woning (every package in a Woning product's appliesTo): per floor, the Woning line's
+            # prepaid months at what they cost today (promo.months x half_up(unit x rate)) plus the
+            # unit for every month Odoo bills, the same months the ICV bills the package at the
+            # plain rate. A package without Woning (none of the five today) gets none.
             recurring_months = term - (promo_months if promo_enabled else 0)
             woning_applies_pkg = pkg.get("productHandle") in woning_applies
             woning_contract_value = [
@@ -499,16 +541,20 @@ def build():
             f"{{%- assign zv_nami_install_{oid}_handle = '{o['productHandle']}' -%}}",
             f"{{%- assign zv_nami_install_{oid}_sku = '{o['sku']}' -%}}",
         ]
-    # Woning surcharge: the unit, the heading, the legacy prefix, the N0008 product (handle and
-    # the SKU its first variant must have), the NAMI package handles it applies to and, per
-    # option, the exact property value and its monthly amount (zv_woning_<floors>_value / _cents).
+    # Woning surcharge: the unit, the heading, the legacy prefix, the Woning products (N0008
+    # nami, E001 climax: handles, the SKUs their first variants must have, and per product the
+    # package handles whose floors it carries, comma-separated; three parallel pipe lists), every
+    # package handle and finder_key that offers Woning and, per option, the exact property value
+    # and its monthly amount (zv_woning_<floors>_value / _cents).
     lines += [
         f"{{%- assign zv_woning_unit_cents = {woning['unitCents']} -%}}",
         f"{{%- assign zv_woning_heading = '{woning['heading']}' -%}}",
         f"{{%- assign zv_woning_legacy_prefix = '{woning['legacyValuePrefix']}' -%}}",
-        f"{{%- assign zv_woning_handle = '{woning['shopify'].get('handle') or ''}' -%}}",
-        f"{{%- assign zv_woning_sku = '{woning['shopify'].get('sku') or ''}' -%}}",
+        f"{{%- assign zv_woning_handles = '{'|'.join(p['handle'] for p in woning['products'])}' -%}}",
+        f"{{%- assign zv_woning_skus = '{'|'.join(p['sku'] for p in woning['products'])}' -%}}",
+        f"{{%- assign zv_woning_applies_by_product = '{'|'.join(','.join(p['appliesTo']) for p in woning['products'])}' -%}}",
         f"{{%- assign zv_woning_applies_handles = '{'|'.join(woning['appliesTo'])}' -%}}",
+        f"{{%- assign zv_woning_applies_fks = '{'|'.join(woning['appliesToFinderKeys'])}' -%}}",
     ]
     for o in woning["options"]:
         lines += [
@@ -540,7 +586,7 @@ def build():
             f"{{%- assign zv_{pid}_icv_cents = {p['indicativeContractValue']['cents']} -%}}",
         ]
         # What each Woning option adds to this package's ICV (Overzicht adds it to zv_<pid>_icv_cents).
-        # NAMI packages only: Climax packages have an empty woningContractValue, so no assign.
+        # A package without Woning has an empty woningContractValue, so no assign.
         for wcv in p["woningContractValue"]:
             lines.append(f"{{%- assign zv_{pid}_woning_{wcv['floors']}_icv_cents = {wcv['cents']} -%}}")
         for opt_id, opt in p["dueToday"].items():
@@ -564,9 +610,18 @@ def build():
         if p.get("koop") and p["koop"].get("productHandle")) + "' -%}")
     lines.append("{%- assign zv_koop_addon_cents_by_handle = '" + "|".join(
         f"{a['productHandle']}:{a['eenmaligCents']}" for a in koop_addons) + "' -%}")
+    # Hardware add-ons' Koop products (2026-10-27): huur handle -> koop handle, for the Oplossingen
+    # Uitbreidingen rows. The theme resolves both by handle and reads the Kopen price live from the
+    # koop product; there is no Koop theme setting (the Afstandsbediening one was retired).
+    lines.append("{%- assign zv_koop_addon_product_by_handle = '" + "|".join(
+        f"{a['productHandle']}:{a['koopProduct']['handle']}" for a in cfg.get("addonNames", [])
+        if a.get("koopProduct")) + "' -%}")
     # Ontzorgpakket per package (2026-10-27): finder_key -> product handle, for the Oplossingen cards.
     lines.append("{%- assign zv_ontzorg_handle_by_fk = '" + "|".join(
         f"{fk}:{h}" for fk, h in ontzorg_by_fk.items()) + "' -%}")
+    # Riders (2026-10-27): lead Koop product handle -> rider product handle (ADC-750 -> A102B).
+    lines.append("{%- assign zv_addon_rider_by_lead = '" + "|".join(
+        f"{r['ridesWith']['handle']}:{r['productHandle']}" for r in riders) + "' -%}")
     SNIPPET.parent.mkdir(parents=True, exist_ok=True)
     SNIPPET.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -620,7 +675,12 @@ def build():
     for ln in line_packages:
         ph += _ph_branch(ln["lineId"], "|".join(p["handle"] for p in ln["packages"]),
                          "|".join(p["sku"] for p in ln["packages"]), ln["name"])
-    ph += _ph_branch("woning", woning["shopify"].get("handle") or "", woning["shopify"].get("sku") or "", "Woning")
+    # Woning products, one per installGroup (N0008, E001), in config order.
+    ph += _ph_branch("woning", "|".join(p["handle"] for p in woning["products"]),
+                     "|".join(p["sku"] for p in woning["products"]), "Woning")
+    # Rider add-ons (A102B, 2026-10-27), for the header count and /cart (zv-hidden-cart-lines).
+    ph += _ph_branch("rider", "|".join(r["productHandle"] for r in riders),
+                     "|".join(r["sku"] for r in riders), "")
     # Ontzorgpakket products (2026-10-27), for /cart, Overzicht and the header count, which only
     # need to recognise their lines (zv-hidden-cart-lines can't include zv-pricing).
     ph += _ph_branch("ontzorg", "|".join(a["productHandle"] for a in ontzorg),
@@ -636,9 +696,10 @@ def build():
     print(f"  activation: {eur(activation_cents)} | promo: {promo_months}m @ {promo['ratePercent']}% | terms: {enabled_terms}")
     print("  nami install options: " + ", ".join(f"{o['label']} {o['display']}" for o in nami_install_options))
     print("  woning: " + ", ".join(f"{o['floors']}={o['monthlyDisplay']}/mnd" for o in woning_options)
-          + f" (unit {woning['unitDisplay']}, {woning['surchargeId']}, {woning['shopify'].get('sku')}"
-          + f" {woning['shopify'].get('handle')}, today {eur(woning_today_per_floor_cents)} per floor,"
-          + f" applies to {', '.join(woning['appliesTo'])})")
+          + f" (unit {woning['unitDisplay']}, today {eur(woning_today_per_floor_cents)} per floor)")
+    for wp in woning["products"]:
+        print(f"      {wp['installGroup']}: {wp['surchargeId']} {wp['sku']} {wp['handle']}"
+              f" applies to {', '.join(wp['appliesTo'])}")
     for p in priced:
         due_today_breakdown = ", ".join(f"{oid}={opt['display']}" for oid, opt in p["dueToday"].items())
         woning_icv = ", ".join(f"{w['floors']}=+{w['display']}" for w in p["woningContractValue"]) or "n/a"
@@ -650,6 +711,7 @@ def build():
             print(f"      koop: {p['koop']['eenmaligDisplay']} eenmalig + {p['koop']['maandelijksDisplay']}/mnd (no promo)")
     print("  koop add-ons: " + (", ".join(f"{a['name']} {a['eenmaligDisplay']}" for a in koop_addons) or "none"))
     print("  ontzorgpakket: " + (", ".join(f"{fk}={h}" for fk, h in ontzorg_by_fk.items()) or "none"))
+    print("  riders: " + (", ".join(f"{r['sku']} with {r['ridesWith']['sku']} x{r['cartQuantity']}" for r in riders) or "none"))
 
 
 if __name__ == "__main__":

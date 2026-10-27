@@ -1,7 +1,8 @@
 {%- comment -%}
   Zo Veilig — variant ids for cart lines that are not a product the customer chose from
-  a product page: the Woning surcharge line and the add-on lines (Videodeurbel,
-  Afstandsbediening, the per-package Ontzorgpakket products, and the Koop add-ons). Shared by zv-header.liquid, zv-cart.liquid
+  a product page: the Woning surcharge lines (NAMI and Climax) and the add-on lines (Videodeurbel,
+  Afstandsbediening, the per-package Ontzorgpakket products, the Koop add-ons and the camera
+  subscription rider). Shared by zv-header.liquid, zv-cart.liquid
   and the add-to-cart drawer in oplossingen.liquid, so every "N artikelen"/cart-count
   display agrees on what counts as a visible line.
 
@@ -26,15 +27,16 @@
   Include this (not render — callers need these as their own variables).
 {%- endcomment -%}
 {%- assign activation_variant_id = all_products['climax-instalatie'].selected_or_first_available_variant.id -%}
-{%- capture zv_hidden_woning_handle -%}{% render 'zv-package-handles', line: 'woning', what: 'handles' %}{%- endcapture -%}
-{%- assign zv_hidden_woning_handle = zv_hidden_woning_handle | strip -%}
-{%- capture zv_hidden_woning_sku -%}{% render 'zv-package-handles', line: 'woning', what: 'skus' %}{%- endcapture -%}
-{%- assign zv_hidden_woning_sku = zv_hidden_woning_sku | strip -%}
-{%- assign woning_variant_id = nil -%}
-{%- assign woning_product = all_products[zv_hidden_woning_handle] -%}
-{%- if zv_hidden_woning_handle != blank and woning_product != blank and woning_product.id != blank and woning_product.variants.first.sku == zv_hidden_woning_sku -%}
-  {%- assign woning_variant_id = woning_product.variants.first.id -%}
-{%- endif -%}
+{%- comment -%}
+  Woning lines (one product per platform since 2026-10-27, NAMI and Climax), resolved by
+  zv-woning-variants into woning_variant_ids (pipe string, 0 for an unresolved product, for data
+  attributes) and woning_variant_id_list (strings, for `contains item_vid` checks).
+{%- endcomment -%}
+{%- capture zv_hidden_woning_handles -%}{% render 'zv-package-handles', line: 'woning', what: 'handles' %}{%- endcapture -%}
+{%- capture zv_hidden_woning_skus -%}{% render 'zv-package-handles', line: 'woning', what: 'skus' %}{%- endcapture -%}
+{%- capture woning_variant_ids -%}{%- render 'zv-woning-variants', handles: zv_hidden_woning_handles, skus: zv_hidden_woning_skus -%}{%- endcapture -%}
+{%- assign woning_variant_ids = woning_variant_ids | strip -%}
+{%- assign woning_variant_id_list = woning_variant_ids | split: '|' -%}
 {%- assign zv_addon_videodeurbel_variant_id = all_products['huur-video-deurbel-750'].variants.first.id -%}
 {%- assign zv_addon_afstandsbediening_variant_id = all_products['huur-afstandsbediening'].variants.first.id -%}
 {%- comment -%}
@@ -53,10 +55,24 @@
 {%- assign zv_ontzorg_variant_ids = zv_ontzorg_variant_ids | remove_first: '|' -%}
 {%- assign zv_ontzorg_variant_id_list = zv_ontzorg_variant_ids | split: '|' -%}
 {%- comment -%}
-  Koop add-on lines (Huren/Kopen, 2026-10-24): Videodeurbel's Koop product ADC-750 by handle
-  (2026-10-27), Afstandsbediening's Koop variant from the theme setting (Zo Veilig ·
-  Huren/Kopen). syncAddonLines() on Oplossingen keeps them at quantity 1 and the drawer hides
-  them like the huur add-ons. 0 when unresolved or the setting is empty, so it never matches a line.
+  Koop add-on lines (Huren/Kopen, 2026-10-24): Videodeurbel's Koop product ADC-750 and
+  Afstandsbediening's CL004, both by handle (2026-10-27; there is no Koop setting for either any
+  more). syncAddonLines() on Oplossingen keeps them at quantity 1 and the drawer hides them like
+  the huur add-ons. 0 when unresolved, so it never matches a line.
 {%- endcomment -%}
 {%- assign zv_koop_addon_videodeurbel_variant_id = all_products['koop-video-deurbel-750'].variants.first.id | plus: 0 -%}
-{%- assign zv_koop_addon_afstandsbediening_variant_id = settings.zv_koop_variant_afstandsbediening | strip | plus: 0 -%}
+{%- assign zv_koop_addon_afstandsbediening_variant_id = all_products['koop-afstandsbediening'].variants.first.id | plus: 0 -%}
+{%- comment -%}
+  Rider lines (2026-10-27): the camera subscription that rides with a bought Videodeurbel,
+  by handle from the generated zv-package-handles (line: 'rider'). Hidden like the add-ons:
+  zv_rider_variant_ids (pipe string) and zv_rider_variant_id_list (strings, for `contains`).
+{%- endcomment -%}
+{%- capture zv_hidden_rider_handles -%}{% render 'zv-package-handles', line: 'rider', what: 'handles' %}{%- endcapture -%}
+{%- assign zv_rider_variant_ids = '' -%}
+{%- assign zv_hidden_rider_list = zv_hidden_rider_handles | strip | split: '|' -%}
+{%- for h in zv_hidden_rider_list -%}
+  {%- assign rv = all_products[h].variants.first.id -%}
+  {%- if rv != blank -%}{%- assign zv_rider_variant_ids = zv_rider_variant_ids | append: '|' | append: rv -%}{%- endif -%}
+{%- endfor -%}
+{%- assign zv_rider_variant_ids = zv_rider_variant_ids | remove_first: '|' -%}
+{%- assign zv_rider_variant_id_list = zv_rider_variant_ids | split: '|' -%}

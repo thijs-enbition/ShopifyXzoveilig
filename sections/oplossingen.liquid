@@ -34,19 +34,26 @@
 {%- include 'zv-pricing' -%}
 {%- assign activation_variant_id = all_products[zv_activation_handle].selected_or_first_available_variant.id -%}
 {%- comment -%}
-  Woning line (2026-09-25): the priced cart line for the Woning surcharge, NAMI packages only
-  (zv_woning_applies_handles). Resolved like the packages: all_products[zv_woning_handle], and
-  only if its first variant's SKU is zv_woning_sku. Unresolved, woning_variant_id stays nil and
-  the page falls back to the Woning property alone (no line), with one console.warn.
+  Woning lines (2026-09-25; per platform since 2026-10-27): the priced cart line for the Woning
+  surcharge, one product per installGroup: one for Inzicht/Zeker/Alert, one for
+  Beschermd/Protect (zv_woning_handles, parallel to zv_woning_applies_by_product). Resolved like
+  the packages, by handle and only if the first variant's SKU is the config's (zv-woning-variants).
+  woning_variant_ids is parallel to #zv-pricing-config's woning.products; an unresolved product is
+  0 and its packages fall back to the Woning property alone (no line), with one console.warn.
+  woning_applies_list is every package that offers Woning, on either platform.
 {%- endcomment -%}
-{%- liquid
-  assign woning_variant_id = nil
-  assign woning_product = all_products[zv_woning_handle]
-  if zv_woning_handle != blank and woning_product != blank and woning_product.id != blank and woning_product.variants.first.sku == zv_woning_sku
-    assign woning_variant_id = woning_product.variants.first.id
-  endif
-  assign woning_applies_list = zv_woning_applies_handles | split: '|'
--%}
+{%- capture woning_variant_ids -%}{%- render 'zv-woning-variants', handles: zv_woning_handles, skus: zv_woning_skus -%}{%- endcapture -%}
+{%- assign woning_variant_ids = woning_variant_ids | strip -%}
+{%- assign woning_applies_list = zv_woning_applies_handles | split: '|' -%}
+{%- comment -%}
+  Riders (2026-10-27): the camera subscription rides along with ADC-750, the bought
+  Videodeurbel (zv_addon_rider_by_lead). 'leadVariant:riderVariant:riderCents' pairs, resolved by
+  handle; syncAddonLines() keeps one rider line at quantity 1 while a lead line is in the cart, and
+  the Videodeurbel row's Kopen price names the rider's live monthly price.
+{%- endcomment -%}
+{%- capture zv_addon_riders -%}{%- render 'zv-addon-riders', map: zv_addon_rider_by_lead -%}{%- endcapture -%}
+{%- assign zv_addon_riders = zv_addon_riders | strip -%}
+{%- assign zv_addon_rider_list = zv_addon_riders | split: '|' -%}
 {%- comment -%}
   Videodeurbel + Afstandsbediening (2026-09-26): real Shopify products, resolved by handle
   only — never a hardcoded variant id or price. Since 2026-10-27 Videodeurbel's Huren row is
@@ -69,7 +76,9 @@
   the config notes need updating. Live price/availability like Videodeurbel above, never a
   hardcoded amount. zv_ontzorg_variant_ids (every Ontzorgpakket variant on this page) lets the
   script recognise their cart lines; each card carries its own variant (data-ontzorg-variant).
-  Four handles here keep the page at 17 unique all_products handles (limit 20).
+  Four handles here kept the page at 17 unique all_products handles (limit 20); the Climax Woning
+  product and the camera subscription (2026-10-27) made it 19, and koop-afstandsbediening (CL004)
+  makes it 20: none left.
 {%- endcomment -%}
 {%- assign zv_ontzorg_fk_list = zv_ontzorg_handle_by_fk | split: '|' -%}
 {%- assign zv_ontzorg_variant_ids = '' -%}
@@ -81,17 +90,19 @@
 {%- assign zv_ontzorg_variant_ids = zv_ontzorg_variant_ids | remove_first: '|' -%}
 {%- comment -%}
   Huren/Kopen (2026-10-23, draft, docs/huren-kopen-toggle-2026-10-23.md): the five package cards
-  and their hardware add-on rows get a Huren/Kopen choice. Kopen prices come from zv-pricing
-  (zv_<pakket>_koop_*_cents, zv_koop_addon_cents_by_handle), never from Shopify or this file. The
-  package and Afstandsbediening Koop variant ids come from the theme settings (Zo Veilig ·
-  Huren/Kopen): an empty setting shows "binnenkort" and adds nothing. Videodeurbel's Koop variant
-  is resolved by handle instead (koop-video-deurbel-750, ADC-750; 2026-10-27): it is a real product
-  already, so it needs no setting. The intro promo is Huren only, so a Koop variant never goes
-  through addToCart() (PKG_QTY) but through addKoopToCart() at quantity 1.
+  get a Huren/Kopen choice, and so do the hardware add-on rows on the Climax cards. A package's
+  Kopen prices come from zv-pricing (zv_<pakket>_koop_*_cents). The package Koop variant ids come
+  from the theme settings (Zo Veilig · Huren/Kopen): an empty setting shows "binnenkort" and adds
+  nothing. The hardware add-ons are resolved by handle instead (2026-10-27): Videodeurbel's Koop
+  variant is koop-video-deurbel-750 (ADC-750) and Afstandsbediening's koop-afstandsbediening
+  (CL004), mapped from their Huren handle by zv_koop_addon_product_by_handle. Both are real
+  products, so they need no setting, and their Kopen price on the cards is read live from them.
+  The intro promo is Huren only, so a Koop variant never goes through addToCart() (PKG_QTY) but
+  through addKoopToCart() at quantity 1.
 {%- endcomment -%}
 {%- assign zv_koop_variant_videodeurbel = all_products['koop-video-deurbel-750'].variants.first.id | append: '' -%}
-{%- assign zv_koop_variant_afstandsbediening = settings.zv_koop_variant_afstandsbediening | strip -%}
-{%- assign zv_koop_addon_list = zv_koop_addon_cents_by_handle | split: '|' -%}
+{%- assign zv_koop_addon_afstandsbediening_variant = all_products['koop-afstandsbediening'].variants.first.id | append: '' -%}
+{%- assign zv_koop_addon_product_list = zv_koop_addon_product_by_handle | split: '|' -%}
 {%- assign partners = shop.metaobjects.partner.values | where: 'active', true | sort: 'display_order' -%}
 {%- assign sols = section.blocks | where: 'type', 'solution' -%}
 {%- comment -%}
@@ -108,7 +119,7 @@
 <script src="{{ 'zv-vergelijk-pakketten.js' | asset_url }}" defer="defer"></script>
 
 {%- if sols.size > 0 -%}
-<div class="opl-page" id="oplossingen-page" data-zv-oplossingen data-activation-variant-id="{{ activation_variant_id }}" data-install-handles="{{ zv_activation_handle }}|{{ zv_nami_install_geen_handle }}|{{ zv_nami_install_telefonisch_handle }}|{{ zv_nami_install_huis_handle }}" data-woning-variant-id="{{ woning_variant_id }}" data-cart-url="{{ routes.cart_url }}" data-addon-videodeurbel-variant-id="{{ zv_addon_videodeurbel_variant_id }}" data-addon-afstandsbediening-variant-id="{{ zv_addon_afstandsbediening_variant_id }}" data-ontzorg-variant-ids="{{ zv_ontzorg_variant_ids }}" data-koop-addon-videodeurbel-variant-id="{{ zv_koop_variant_videodeurbel }}" data-koop-addon-afstandsbediening-variant-id="{{ zv_koop_variant_afstandsbediening }}">
+<div class="opl-page" id="oplossingen-page" data-zv-oplossingen data-activation-variant-id="{{ activation_variant_id }}" data-install-handles="{{ zv_activation_handle }}|{{ zv_nami_install_geen_handle }}|{{ zv_nami_install_telefonisch_handle }}|{{ zv_nami_install_huis_handle }}" data-woning-variant-ids="{{ woning_variant_ids }}" data-addon-riders="{{ zv_addon_riders }}" data-cart-url="{{ routes.cart_url }}" data-addon-videodeurbel-variant-id="{{ zv_addon_videodeurbel_variant_id }}" data-addon-afstandsbediening-variant-id="{{ zv_addon_afstandsbediening_variant_id }}" data-ontzorg-variant-ids="{{ zv_ontzorg_variant_ids }}" data-koop-addon-videodeurbel-variant-id="{{ zv_koop_variant_videodeurbel }}" data-koop-addon-afstandsbediening-variant-id="{{ zv_koop_addon_afstandsbediening_variant }}">
 
   <div class="catnav" role="tablist" aria-label="Onze oplossingen">
     <span class="catnav__lbl">Onze oplossingen</span>
@@ -230,19 +241,12 @@
               {%- endif -%}
               {%- assign fk = p.metafields.custom.finder_key.value -%}
               {%- assign tile = '' -%}{%- assign sub = '' -%}{%- assign popular = false -%}{%- assign term = '' -%}
-              {%- comment -%}
-                climax_pakket (2026-09-26): the /pages/camera-hardware?pakket=… slug for the
-                "Uitbreiding hardware" link inside the Climax accordion below, folded into this
-                existing case block rather than a separate one — same 6 branches. Stays blank
-                for the 3 NAMI packages and Vista/Veilig Onderweg.
-              {%- endcomment -%}
-              {%- assign climax_pakket = '' -%}
               {%- case fk -%}
                 {%- when 'aware' -%}{%- assign tile = 'opl-tile-01.jpg' -%}{%- assign sub = 'NAMI aiAware · 3 wifi-sensorstekkers + 1 deursensor · geen meldkamer' -%}{%- assign term = zv_inzicht_term -%}
                 {%- when 'aware_plus' -%}{%- assign tile = 'opl-tile-02.jpg' -%}{%- assign popular = true -%}{%- assign sub = 'NAMI aiCare · 3 wifi-sensorstekkers (~100 m²), deursensor per toegang en 2 bewegingsmelders voor slaapkamer en badkamer (uitbreidbaar) · geen meldkamer' -%}{%- assign term = zv_zeker_term -%}
-                {%- when 'care' -%}{%- assign tile = 'opl-tile-03.jpg' -%}{%- assign sub = 'Climax · 1 centrale, 2 deur-/raamsensoren, 2 bewegingsmelders, keuze uit 3 paniekknoppen en 2 rookmelders · incl. meldkamer' -%}{%- assign term = zv_beschermd_term -%}{%- assign climax_pakket = 'beschermd' -%}
+                {%- when 'care' -%}{%- assign tile = 'opl-tile-03.jpg' -%}{%- assign sub = 'Climax · 1 centrale, 2 deur-/raamsensoren, 2 bewegingsmelders, keuze uit 3 paniekknoppen en 2 rookmelders · incl. meldkamer' -%}{%- assign term = zv_beschermd_term -%}
                 {%- when 'secure' -%}{%- assign sub = 'NAMI Alarm15 · Alarm Pod, SensePlug, PIR, deursensor en codepaneel · geen meldkamer of camera' -%}{%- assign term = zv_alert_term -%}
-                {%- when 'guard' -%}{%- assign popular = true -%}{%- assign sub = 'Climax · hub, codepaneel, rookmelder, PIR en deurcontact · incl. meldkamer, camera optioneel' -%}{%- assign term = zv_protect_term -%}{%- assign climax_pakket = 'protect' -%}
+                {%- when 'guard' -%}{%- assign popular = true -%}{%- assign sub = 'Climax · hub, codepaneel, rookmelder, PIR en deurcontact · incl. meldkamer, camera optioneel' -%}{%- assign term = zv_protect_term -%}
                 {%- when 'secure_plus' -%}
                   {%- comment -%}
                     Vista, 2026-09-15: product-photo tile image removed (was
@@ -305,12 +309,17 @@
                 ltc_addons at all). Since 2026-10-13 the NAMI packages (aware/aware_plus/secure
                 — Inzicht/Zeker/Alert) no longer offer Afstandsbediening and keep only
                 Videodeurbel; Climax (care/guard — Beschermd/Protect) is unchanged and still
-                gets both.
+                gets both. Since 2026-10-27 an optional 4th field 'koop' makes an entry Koop-only:
+                the NAMI packages' Videodeurbel has no Huren side and no Huren/Kopen choice, it
+                renders as one single-price row (the bought doorbell's and its camera subscription's live prices) like Ontzorgpakket.
+                The Climax cards keep the Huren/Kopen choice for both hardware add-ons.
               {%- endcomment -%}
               {%- assign ltc_addons = 'Videodeurbel|' | append: zv_addon_videodeurbel_handle | append: '|/mnd' -%}
-              {%- unless fk == 'aware' or fk == 'aware_plus' or fk == 'secure' -%}
+              {%- if fk == 'aware' or fk == 'aware_plus' or fk == 'secure' -%}
+                {%- assign ltc_addons = ltc_addons | append: '|koop' -%}
+              {%- else -%}
                 {%- assign ltc_addons = ltc_addons | append: '§Afstandsbediening|' | append: zv_addon_afstandsbediening_handle | append: '|/mnd' -%}
-              {%- endunless -%}
+              {%- endif -%}
               {%- comment -%}
                 Ontzorgpakket per package (2026-10-27): this package's own product from
                 zv_ontzorg_handle_by_fk (see the top of this section), added to the shared "Veel
@@ -385,66 +394,94 @@
               {%- endcase -%}
               {%- assign offers_koop = false -%}{%- if use_ltc and koop_once_cents and koop_month_cents -%}{%- assign offers_koop = true -%}{%- endif -%}
               {%- comment -%}
-                Woning is NAMI only (Thijs, 2026-09-25): only a card whose product handle is in
-                zv_woning_applies_handles (Inzicht, Zeker, Alert) keeps the full Uitbreidingen
-                panel (Woning + the add-ons group, Ontzorgpakket included since 2026-10-27).
-                The Climax cards (Beschermd, Protect) still have no Woning: they get their OWN
-                single Uitbreidingen accordion instead — the real, live-priced add-ons
-                (Videodeurbel, Afstandsbediening and, since 2026-10-27, Ontzorgpakket OHC012) first,
-                then, as the panel's last row (2026-09-26, folded in from what was a separate
-                "Uitbreiding hardware" button, per Thijs's mockup feedback), the link to the
-                hardware page's #grotere-woning block. So the cart drawer now does find an
-                addons group to clone for a Climax card too, and readCardOptions() can write an
-                Uitbreidingen property there, just never Woning or Abonnement. This accordion
-                renders for Climax even with no add-ons resolved (unlike NAMI, whose panel has
-                nothing to show without at least Woning) — the hardware link alone is reason
-                enough for the panel to exist. The opening if and the elsif around the panel
-                below carry no whitespace control on purpose, and the closing endif does: that
-                keeps the NAMI cards' output byte-identical (a whitespace-only text token that a
-                whitespace-control tag empties gets its first byte back in Shopify's Liquid).
+                Woning on every card whose product handle is in zv_woning_applies_handles: the
+                NAMI packages since 2026-09-25 (Inzicht, Zeker, Alert) and the Climax
+                packages since 2026-10-27 (Beschermd, Protect), each platform with its own Woning product. They all get the same
+                Uitbreidingen panel: Woning + the add-ons group (Videodeurbel, Afstandsbediening
+                on Climax only, Ontzorgpakket). Which Woning product a card's choice is charged
+                through is the script's job (WONING_PRODUCTS, by the package's handle), never this
+                markup's. Climax used to get its own accordion instead, with the add-ons group and
+                an "Uitbreiding hardware" link to the hardware page's #grotere-woning block; that
+                block went in PR #152 (2026-10-27) and the Woning choice replaces it, so the link
+                and that accordion are gone. The opening if carries no whitespace control and the
+                closing endif follows </details> directly: that keeps the NAMI cards' output
+                byte-identical (a whitespace-only text token that a whitespace-control tag empties
+                gets its first byte back in Shopify's Liquid).
               {%- endcomment -%}
               {%- assign offers_woning = false -%}{%- if woning_applies_list contains p.handle -%}{%- assign offers_woning = true -%}{%- endif -%}
               {%- comment -%}
                 Real add-ons group (Videodeurbel, Afstandsbediening — 2026-09-26): built once
-                here and reused byte-for-byte in both the NAMI cards' full accordion and the
-                Climax cards' minimal one below, so the two never drift apart. Live price and
-                availability come from all_products, never a hardcoded amount; an unresolved
-                product falls back to "Prijs volgt", same convention as any other add-on here.
+                here and reused byte-for-byte in both the NAMI cards' and the Climax cards'
+                accordion, so the two never drift apart. Live price and availability come from
+                all_products, never a hardcoded amount; an unresolved product falls back to
+                "Prijs volgt", same convention as any other add-on here.
+                Layout (2026-10-27): one compact bordered list (.ltc__list), one row per add-on:
+                checkbox, name and, only where there is a real Huren/Kopen choice, the two-segment
+                control on its own full-width line right under the name (two equal columns, each
+                segment one line of text: "Huren <price>/mnd", "Kopen <price>"). The Kopen text is the
+                compact a_koop_seg (no spaces, no "/mnd" after a rider: the full "<doorbell> +
+                <subscription>/mnd" needs ~145px and a column is ~130px; the full price stays in data-koop-pr, the
+                drawer and the radio's aria-label). A row with one
+                option (Ontzorgpakket; NAMI's Koop-only Videodeurbel) has no control, just its
+                price at the right. The segments are radios inside .ltc__mode, so the change handler
+                below and the drawer clone (which drops .ltc__mode and shows the chosen mode's price
+                in .pcard__plus-pr, hidden on the card while the control is there) work unchanged.
               {%- endcomment -%}
               {%- capture ltc_addons_group_html -%}
                 {%- if ltc_addon_list.size > 0 -%}
                   <div class="ltc__optgroup" data-group="addons">
-                    <p class="ltc__optgroup-h">Veel gekozen uitbreidingen</p>
+                    <p class="ltc__optgroup-h">Uitbreidingen</p>
+                    <div class="ltc__list">
                     {%- for a in ltc_addon_list -%}
                       {%- assign aparts = a | split: '|' -%}
                       {%- assign a_name = aparts[0] -%}
+                      {%- assign a_koop_only = false -%}{%- if aparts[3] == 'koop' -%}{%- assign a_koop_only = true -%}{%- endif -%}
                       {%- assign a_product = all_products[aparts[1]] -%}
-                      {%- assign a_price_display = 'Prijs volgt' -%}{%- assign a_huur_pill = 'Huren' -%}
+                      {%- assign a_price_display = 'Prijs volgt' -%}{%- assign a_huur_price = 'Prijs volgt' -%}
                       {%- if a_product.price > 0 -%}
                         {%- assign a_price_display = a_product.price | money | prepend: '+' | append: aparts[2] -%}
-                        {%- assign a_huur_pill = a_product.price | money | prepend: 'Huren ' | append: aparts[2] -%}
+                        {%- assign a_huur_price = a_product.price | money | append: aparts[2] -%}
                       {%- endif -%}
                       {%- comment -%}
-                        Huren/Kopen (2026-10-23): a hardware add-on with a koop price in zv-pricing
-                        (zv_koop_addon_cents_by_handle) gets its own Huren/Kopen choice under the row.
-                        The Huren price stays the live product price above; the row's first span stays
-                        the plain name (optName() in the script adds the koop suffix). Without a Koop
-                        variant id, Kopen unchecks and disables the checkbox. Since 2026-10-27 each pill
-                        carries its own price ("Huren <live price>/mnd", "Kopen <koop price>"), not a bare label.
+                        Huren/Kopen (2026-10-23): a hardware add-on with a Koop product in zv-pricing
+                        (zv_koop_addon_product_by_handle: ADC-750, CL004) is offered in Kopen; where
+                        it is not Koop-only it also has its Huren/Kopen choice. The Koop product, its
+                        variant and its price are resolved by handle and read live (2026-10-27, no
+                        theme setting). The Huren price is the live Huren product price. The row's
+                        first span stays the plain name (optName() in the script adds the koop
+                        suffix). Without a Koop variant, Kopen unchecks and disables the checkbox.
+                        A rider (2026-10-27): buying this add-on also adds the product that rides
+                        with its Koop variant (the bought Videodeurbel brings the camera subscription), so
+                        its Kopen price is both live prices: "<doorbell> + <subscription>/mnd".
                       {%- endcomment -%}
-                      {%- assign a_koop_cents = nil -%}
-                      {%- for kv in zv_koop_addon_list -%}{%- assign kvp = kv | split: ':' -%}{%- if kvp[0] == aparts[1] -%}{%- assign a_koop_cents = kvp[1] | plus: 0 -%}{%- endif -%}{%- endfor -%}
-                      {%- if a_name != blank and a_koop_cents -%}
-                        {%- assign a_koop_variant = '' -%}
-                        {%- case a_name -%}
-                          {%- when 'Videodeurbel' -%}{%- assign a_koop_variant = zv_koop_variant_videodeurbel -%}
-                          {%- when 'Afstandsbediening' -%}{%- assign a_koop_variant = zv_koop_variant_afstandsbediening -%}
-                        {%- endcase -%}
-                        {%- capture a_koop_pr -%}+{{ a_koop_cents | money }} eenmalig{% if a_koop_variant == blank %} · binnenkort{% endif %}{%- endcapture -%}
-                        {%- capture a_koop_pill -%}Kopen {% if a_koop_variant == blank %}· binnenkort{% else %}{{ a_koop_cents | money }}{% endif %}{%- endcapture -%}
-                        <div class="pcard__plus-item"><label class="pcard__plus-opt" data-huur-pr="{{ a_price_display | escape }}" data-koop-pr="{{ a_koop_pr | escape }}" data-koop-variant="{{ a_koop_variant | escape }}"><input type="checkbox"><span>{{ a_name }}</span><span class="pcard__plus-pr">{{ a_price_display }}</span></label><div class="ltc__mode ltc__mode--sm" role="radiogroup" aria-label="Huren of kopen: {{ a_name | escape }}"><label><input type="radio" name="zv-mode-{{ p.id }}-{{ forloop.index }}" value="huur" data-zv-mode="addon" checked><span>{{ a_huur_pill }}</span></label><label><input type="radio" name="zv-mode-{{ p.id }}-{{ forloop.index }}" value="koop" data-zv-mode="addon"><span>{{ a_koop_pill }}</span></label></div></div>
+                      {%- assign a_koop_handle = '' -%}
+                      {%- for kv in zv_koop_addon_product_list -%}{%- assign kvp = kv | split: ':' -%}{%- if kvp[0] == aparts[1] -%}{%- assign a_koop_handle = kvp[1] -%}{%- endif -%}{%- endfor -%}
+                      {%- if a_name != blank and a_koop_handle != blank -%}
+                        {%- assign a_kp = all_products[a_koop_handle] -%}
+                        {%- assign a_koop_variant = a_kp.variants.first.id | append: '' -%}
+                        {%- assign a_rider_cents = nil -%}
+                        {%- for rp in zv_addon_rider_list -%}{%- assign rpp = rp | split: ':' -%}{%- if a_koop_variant != blank and rpp[0] == a_koop_variant -%}{%- assign a_rider_cents = rpp[2] | plus: 0 -%}{%- endif -%}{%- endfor -%}
+                        {%- capture a_koop_price -%}
+                          {%- if a_koop_variant == blank -%}binnenkort
+                          {%- elsif a_rider_cents -%}{{ a_kp.price | money_without_trailing_zeros }} + {{ a_rider_cents | money_without_trailing_zeros }}/mnd
+                          {%- else -%}{{ a_kp.price | money }}
+                          {%- endif -%}
+                        {%- endcapture -%}
+                        {%- assign a_koop_price = a_koop_price | strip -%}
+                        {%- capture a_koop_seg -%}
+                          {%- if a_rider_cents -%}{{ a_kp.price | money_without_trailing_zeros }}+{{ a_rider_cents | money_without_trailing_zeros }}
+                          {%- else -%}{{ a_koop_price }}
+                          {%- endif -%}
+                        {%- endcapture -%}
+                        {%- assign a_koop_seg = a_koop_seg | strip -%}
+                        {%- if a_koop_only -%}
+                          <label class="pcard__plus-opt is-koop{% if a_koop_variant == blank %} is-soon{% endif %}"><input type="checkbox"{% if a_koop_variant == blank %} disabled{% endif %}><span>{{ a_name }}</span><span class="pcard__plus-pr">{{ a_koop_price }}</span></label>
+                        {%- else -%}
+                          <div class="pcard__plus-item"><label class="pcard__plus-opt" data-huur-pr="{{ a_price_display | escape }}" data-koop-pr="{{ a_koop_price | escape }}" data-koop-variant="{{ a_koop_variant | escape }}"><input type="checkbox"><span>{{ a_name }}</span><span class="pcard__plus-pr">{{ a_price_display }}</span></label><div class="ltc__mode ltc__mode--seg" role="radiogroup" aria-label="Huren of kopen: {{ a_name | escape }}"><label><input type="radio" name="zv-mode-{{ p.id }}-{{ forloop.index }}" value="huur" data-zv-mode="addon" checked><span>Huren {{ a_huur_price }}</span></label><label><input type="radio" name="zv-mode-{{ p.id }}-{{ forloop.index }}" value="koop" data-zv-mode="addon" aria-label="Kopen {{ a_koop_price | escape }}"><span>Kopen {{ a_koop_seg }}</span></label></div></div>
+                        {%- endif -%}
                       {%- elsif a_name != blank -%}<label class="pcard__plus-opt"><input type="checkbox"><span>{{ a_name }}</span><span class="pcard__plus-pr">{{ a_price_display }}</span></label>{%- endif -%}
                     {%- endfor -%}
+                    </div>
                   </div>
                 {%- endif -%}
               {%- endcapture -%}
@@ -577,27 +614,7 @@
                               priced row in ltc_addons_group_html above now.
                             {%- endcomment -%}
                           </div>
-                        </details>{% elsif climax_pakket != blank %}<details class="ltc__uitbreidingen">
-                          <summary>Uitbreidingen<svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
-                          <div class="ltc__panel">
-                            {{ ltc_addons_group_html }}
-                            {%- comment -%}
-                              "Uitbreiding hardware" (2026-09-26): folded into this panel as its
-                              last row, below the checkboxes — a plain .ltc__optgroup wrapper
-                              (no data-group, it holds no checkbox) gets it the same automatic
-                              top-border divider every other group in this panel already has via
-                              CSS (.ltc__optgroup + .ltc__optgroup), so no separate divider
-                              markup is needed. This <details> must still render for a Climax
-                              card even when ltc_addons_group_html is blank (unlike the NAMI
-                              branch above): the hardware link needs the panel to exist either
-                              way, and it's the only thing Beschermd/Protect show here now — no
-                              separate "Extra uitbreidingen" button any more (removed 2026-09-26,
-                              Thijs: redundant with this link, and never fit NAMI at all).
-                            {%- endcomment -%}
-                            <div class="ltc__optgroup"><a class="ltc__hwlink" href="/pages/camera-hardware?pakket={{ climax_pakket }}#grotere-woning" data-zv-event="climax_hardware_link" data-cta-name="uitbreiding_hardware" data-solution-type="{{ anchor }}" data-package-sku="{{ v.sku }}">Uitbreiding hardware<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div>
-                          </div>
-                        </details>
-                        {%- endif -%}
+                        </details>{%- endif -%}
                       {%- endif -%}
                       {%- comment -%} Kept as its own separate, untouched feature alongside "Wat zit erin?" — see functional mapping doc's "Meer informatie" decision. {%- endcomment -%}
                       <button type="button" class="ltc__more" data-zv-detail data-finder-key="{{ fk }}" data-product-url="{{ p.url }}" data-zv-event="package_detail_open" data-solution-type="{{ anchor }}" data-package-sku="{{ v.sku }}" data-cta-name="meer_informatie" data-cta-position="{{ anchor }}_paks" aria-haspopup="dialog">Meer informatie</button>
@@ -685,19 +702,22 @@
             {%- endfor -%}
           </div>
           {%- comment -%}
-            Footnote under the Langer Thuis and Mijn Thuis grids. Since 2026-09-25 (Thijs) the Woning
-            surcharge applies to the NAMI packages only (Inzicht, Zeker, Alert); Beschermd and
-            Protect are extended with extra sensors via the hardware page. Package names come from
-            pricing.config.json via zv-package-name, the amount from zv_woning_unit_cents; the rest
-            of the line (lease/koop, bedenktijd) is unchanged.
+            Footnote under the Langer Thuis and Mijn Thuis grids. The Woning surcharge applies to
+            every package in zv_woning_applies_fks: the NAMI packages since 2026-09-25 and Beschermd
+            and Protect since 2026-10-27 (their own Woning product; they were extended with extra sensors via the
+            hardware page before). The names come from pricing.config.json via zv-package-name, in
+            that list's order, the amount from zv_woning_unit_cents; the rest of the line
+            (lease/koop, bedenktijd) is unchanged.
           {%- endcomment -%}
           {%- if anchor == 'langer-thuis' or anchor == 'mijn-thuis' -%}
-            {%- capture fn_inzicht -%}{%- render 'zv-package-name', finder_key: 'aware', names: zv_package_names_by_fk -%}{%- endcapture -%}
-            {%- capture fn_zeker -%}{%- render 'zv-package-name', finder_key: 'aware_plus', names: zv_package_names_by_fk -%}{%- endcapture -%}
-            {%- capture fn_alert -%}{%- render 'zv-package-name', finder_key: 'secure', names: zv_package_names_by_fk -%}{%- endcapture -%}
-            {%- capture fn_beschermd -%}{%- render 'zv-package-name', finder_key: 'care', names: zv_package_names_by_fk -%}{%- endcapture -%}
-            {%- capture fn_protect -%}{%- render 'zv-package-name', finder_key: 'guard', names: zv_package_names_by_fk -%}{%- endcapture -%}
-            <p class="ltc__footnote">Alleen bij {{ fn_inzicht | strip }}, {{ fn_zeker | strip }} en {{ fn_alert | strip }}: +{{ zv_woning_unit_cents | money_without_trailing_zeros }}/mnd per extra verdieping of per 100 m² extra woonoppervlak. {{ fn_beschermd | strip }} en {{ fn_protect | strip }} breidt u uit met extra sensoren. Apparatuur zit in uw maandbedrag (lease) of koopt u los. U hebt 14 dagen bedenktijd na levering.</p>
+            {%- assign fn_fks = zv_woning_applies_fks | split: '|' -%}
+            {%- capture fn_names -%}
+              {%- for fn_fk in fn_fks -%}
+                {%- unless forloop.first -%}{%- if forloop.last %} en {% else %}, {% endif -%}{%- endunless -%}
+                {%- render 'zv-package-name', finder_key: fn_fk, names: zv_package_names_by_fk -%}
+              {%- endfor -%}
+            {%- endcapture -%}
+            <p class="ltc__footnote">Bij {{ fn_names | strip }}: +{{ zv_woning_unit_cents | money_without_trailing_zeros }}/mnd per extra verdieping of per 100 m² extra woonoppervlak. Apparatuur zit in uw maandbedrag (lease) of koopt u los. U hebt 14 dagen bedenktijd na levering.</p>
           {%- endif -%}
         {%- elsif request.design_mode -%}
           <p class="ph-sub" style="text-align:center;">Koppel de collectie "{{ b.settings.collection }}".</p>
@@ -896,12 +916,13 @@
     "Ideaal voor / Typische opstelling" and de >100 m²-optie. Canonieke ontwerp-data
     (breakout.jsx), gesleuteld op finder_key. Prijs/voorraad/variant komen live van de
     Shopify-productkaart; deze data levert alleen de beschrijvende inhoud.
-    plus.items (2026-09-24): what each extra verdieping adds, shown under the modal's Woning
-    options. The options and their prices come from pricing.config.json (#zv-pricing-config),
-    not from here; the five buyable packages carry no plus.price any more. Since 2026-09-25
-    only the NAMI packages (aware, aware_plus, secure) have plus: care and guard (Beschermd,
-    Protect) have no Woning, their extra sensors per verdieping moved to the hardware page
-    (sections/camera-hardware.liquid, #grotere-woning).
+    plus.items (2026-09-24): what each extra verdieping adds. Nothing renders them: the modal's
+    Woning box shows only the options and prices from pricing.config.json (#zv-pricing-config),
+    and whether a package offers Woning is woning.appliesTo there, never this data (since
+    2026-10-27, when Beschermd and Protect got Woning without a plus entry here). The five buyable
+    packages carry no plus.price any more; care and guard have no plus.items, since what an extra
+    Climax verdieping adds in hardware is not confirmed (their old per-verdieping sets lived on the
+    hardware page's #grotere-woning block, removed in PR #152).
   {%- endcomment -%}
   <script type="application/json" id="opl-modal-data">
   {
@@ -1100,16 +1121,6 @@
 .ltc__watzit summary::-webkit-details-marker, .ltc__uitbreidingen summary::-webkit-details-marker { display: none; }
 .ltc__watzit summary svg, .ltc__uitbreidingen summary svg { width: 14px; height: 14px; transition: transform 0.2s; }
 .ltc__watzit[open] summary svg, .ltc__uitbreidingen[open] summary svg { transform: rotate(180deg); }
-/* "Uitbreiding hardware" (2025-09-25, moved inside the Climax Uitbreidingen panel 2026-09-26):
-   it keeps its own button look (white fill, 1.5px var(--line-2) border, 6px radius, 46px,
-   14.5px/800 indigo, cream/indigo hover) even nested in .ltc__panel, since this selector only
-   requires it be somewhere inside .ltc__cta, with a right arrow instead of the chevron because
-   it opens another page. The hint under it is the existing .pcard__plus-hint text style,
-   centred like the buttons. */
-.pcard .ltc__cta .ltc__hwlink { box-sizing: border-box; min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 18px; background: #fff; border: 1.5px solid var(--line-2); border-radius: 6px; font-size: 14.5px; font-weight: 800; line-height: 1; color: var(--indigo); text-decoration: none; transition: background 0.15s, border-color 0.15s; }
-.pcard .ltc__cta .ltc__hwlink:hover { background: var(--cream); border-color: var(--indigo); color: var(--indigo); }
-.pcard .ltc__cta .ltc__hwlink svg { width: 14px; height: 14px; }
-.pcard .ltc__cta .ltc__hwhint { text-align: center; line-height: 1.45; }
 .ltc__panel { text-align: left; padding-top: 6px; display: flex; flex-direction: column; gap: 4px; }
 .ltc__optgroup { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; }
 .ltc__optgroup:first-child { border-top: none; padding-top: 0; margin-top: 0; }
@@ -1139,8 +1150,30 @@
 .ltc__mode span { display: block; padding: 6px 16px; border-radius: 999px; font-size: 13px; font-weight: 800; line-height: 1.2; color: var(--muted); }
 .ltc__mode input:checked + span { background: var(--indigo); color: #fff; }
 .ltc__mode input:focus-visible + span { outline: 2px solid var(--indigo); outline-offset: 2px; }
-.ltc__mode--sm { margin: -6px 0 12px 28px; padding: 2px; }
-.ltc__mode--sm span { padding: 3px 11px; font-size: 11.5px; white-space: nowrap; }
+/* Uitbreidingen list (2026-10-27): one bordered list, a row per add-on. A row is the checkbox and the
+   name and, where there is a real Huren/Kopen choice, the two-segment control (.ltc__mode--seg) on its own
+   line right under the name: a grid, two equal columns across the full row, each segment a single line
+   ("Huren <price>/mnd", "Kopen <price>"). A single-option row (Ontzorgpakket, NAMI's Koop-only Videodeurbel) has just its
+   price at the right. Row padding and the name-to-control gap were halved 2026-10-27 so a toggleable row
+   reads as a plain row plus one compact line. The price inside the label (.pcard__plus-pr) is only for
+   the cart drawer, which drops the control: the card hides it while the row has one. */
+.ltc__list { border: 1.5px solid var(--line-2); border-radius: 10px; background: #fff; overflow: hidden; }
+.ltc__list > * { border-top: 1px solid var(--line); }
+.ltc__list > *:first-child { border-top: none; }
+.ltc__list > .pcard__plus-opt, .ltc__list > .pcard__plus-item { padding: 5px 12px; }
+.ltc__list .pcard__plus-item .pcard__plus-opt { padding: 0; }
+.ltc__list .pcard__plus-pr { white-space: nowrap; }
+.pcard__plus-item { display: grid; gap: 4px; }
+.pcard__plus-item:has(.ltc__mode) .pcard__plus-pr { display: none; }
+.ltc__mode--seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; padding: 2px; gap: 2px; border-radius: 9px; }
+.ltc__mode--seg label { display: block; min-width: 0; }
+.ltc__mode--seg span { padding: 4px 2px; border-radius: 7px; font-size: 11px; font-weight: 700; line-height: 1.25; text-align: center; white-space: nowrap; }
+/* The list is the container: its width is 175px (tablet, 3 columns) to ~316px (large phone), not a
+   fixed ~300. 12px text needs a list of ~264px, 11px ~248px; below that the two segments stack, still
+   one line each. Measured with the widest pair, Videodeurbel's Huren and compact Kopen text. */
+.ltc__list { container-type: inline-size; }
+@container (min-width: 262px) { .ltc__mode--seg span { font-size: 12px; } }
+@container (max-width: 244px) { .ltc__mode--seg { grid-template-columns: minmax(0, 1fr); } }
 .pcard--ltc:not(.is-koop) .ltc__koop-only { display: none; }
 .pcard--ltc.is-koop > .pcard__price, .pcard--ltc.is-koop > .ltc__term, .pcard--ltc.is-koop .ltc__buy[data-zv-add] { display: none; }
 .ltc__koopprice { display: flex; align-items: baseline; gap: 7px; }
@@ -1297,13 +1330,6 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
 .pbd-plus-t { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .pbd-plus-t span:first-child { font-size: 13px; font-weight: 700; color: #4a4458; }
 .pbd-plus-pr { font-size: 13px; font-weight: 900; color: var(--belt); white-space: nowrap; }
-/* Climax packages (2026-09-25): the modal shows the card's "Uitbreiding hardware" link and hint
-   instead of a Woning box, in the same sand block. */
-.pbd-hw { margin-top: 12px; padding: 13px 14px; border-radius: 12px; background: var(--sand); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
-.pbd-hw .ltc__hwlink { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 800; color: var(--indigo); text-decoration: none; }
-.pbd-hw .ltc__hwlink:hover { color: var(--belt); }
-.pbd-hw .ltc__hwlink svg { width: 15px; height: 15px; }
-.pbd-hw .ltc__hwhint { margin: 0; font-size: 12px; font-weight: 600; color: var(--muted); line-height: 1.4; }
 .pbd-soon { display: flex; gap: 10px; margin-top: 16px; background: var(--indigo-soft); border: 1px solid #e2ddf1; border-radius: 8px; padding: 13px 14px; color: var(--indigo); }
 .pbd-soon svg { width: 20px; height: 20px; flex: none; margin-top: 1px; }
 .pbd-soon span { font-size: 12.5px; font-weight: 600; color: #4a4458; line-height: 1.45; }
@@ -1642,9 +1668,10 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     return byFk;
   })();
 
-  /* Woning surcharge (spec §7, 2026-09-24): only ever the `Woning` line-item property on the
-     package line, never a priced cart line. Its heading, the two options (floors, the exact
-     property value, monthlyCents = floors x the extra-etage unit) and the legacy prefix come
+  /* Woning surcharge (spec §7, 2026-09-24): the `Woning` line-item property on the package line
+     (plus, since 2026-09-25, the priced Woning lines below). Its heading, the two options
+     (floors, the exact property value, monthlyCents = floors x the extra-etage unit) and the
+     legacy prefix come
      from pricing.config.json surcharges[extra-etage] via the same #zv-pricing-config island
      (woning), never hardcoded here. Values written before 2026-09-24 start with
      legacyValuePrefix and read as 1 floor. Without the island there are no options, so the
@@ -1672,58 +1699,77 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     return (WONING.legacyValuePrefix && v.indexOf(WONING.legacyValuePrefix) === 0) ? 1 : 0;
   }
 
-  /* Woning line (2026-09-25, Thijs): NAMI packages only. WONING.appliesTo (product handles) and
-     appliesToFinderKeys come from surcharges[extra-etage].appliesTo; nothing else ever carries
-     Woning. Besides the property on the package line, the cart holds ONE line of the Woning
-     product (resolved server-side by handle + SKU into data-woning-variant-id, never a hardcoded
-     id) at PKG_QTY x the floors over all NAMI package lines: 1 floor = 3, 2 floors = 6, none = no
-     line. Without a resolved variant the page keeps the property-only behaviour: no line. */
-  var WONING_VARIANT_ID = page.dataset.woningVariantId || null;
+  /* Woning lines (2026-09-25, Thijs; per platform since 2026-10-27). WONING.products holds one
+     Woning product per installGroup, each with the package handles (and finder_keys) whose floors
+     it carries: one for Inzicht/Zeker/Alert, one for Beschermd/Protect. WONING.appliesTo and
+     appliesToFinderKeys are all of them together; nothing else ever carries Woning. Besides the
+     property on the package line, the cart holds ONE line per Woning product (resolved server-side
+     by handle + SKU into data-woning-variant-ids, parallel to WONING.products, never a hardcoded id)
+     at PKG_QTY x the floors over that product's package lines only: 1 floor = 3, 2 floors = 6,
+     none = no line. A package's floors never count towards another platform's product. A product
+     without a resolved variant keeps the property-only behaviour for its packages: no line. */
   var WONING_APPLIES = WONING.appliesTo || [];
   var WONING_APPLIES_FK = WONING.appliesToFinderKeys || [];
-  if (!WONING_VARIANT_ID && WONING.options.length) {
-    try { console.warn('zv: Woning product not resolved (handle or SKU); Woning stays a line property only, without its priced line.'); } catch (e) {}
-  }
+  var WONING_PRODUCTS = (function () {
+    var ids = (page.dataset.woningVariantIds || '').split('|');
+    return (WONING.products || []).map(function (p, i) {
+      var id = ids[i] && ids[i] !== '0' ? ids[i] : null;
+      if (!id) { try { console.warn('zv: Woning product ' + (p.sku || i) + ' not resolved (handle or SKU); Woning stays a line property only for ' + (p.installGroup || 'its packages') + ', without its priced line.'); } catch (e) {} }
+      return { variantId: id, appliesTo: p.appliesTo || [], appliesToFk: p.appliesToFinderKeys || [] };
+    });
+  })();
   function woningAppliesHandle(handle) { return WONING_APPLIES.indexOf(handle) !== -1; }
   function woningAppliesFk(fk) { return WONING_APPLIES_FK.indexOf(fk) !== -1; }
-  function isWoningLine(it) { return !!WONING_VARIANT_ID && String(it.variant_id) === String(WONING_VARIANT_ID); }
-  // Target quantity of the Woning line: PKG_QTY x the floors over the NAMI package lines only.
-  function woningTargetQty(items) {
+  // The Woning product a package's floors are charged through (by finder_key), or null.
+  function woningProductForFk(fk) {
+    for (var i = 0; i < WONING_PRODUCTS.length; i++) { if (WONING_PRODUCTS[i].appliesToFk.indexOf(fk) !== -1) return WONING_PRODUCTS[i]; }
+    return null;
+  }
+  function isWoningLine(it) {
+    return WONING_PRODUCTS.some(function (wp) { return !!wp.variantId && String(it.variant_id) === String(wp.variantId); });
+  }
+  // Target quantity of one Woning product's line: PKG_QTY x the floors over its own package lines.
+  function woningTargetQty(items, wp) {
     var floors = 0;
-    (items || []).forEach(function (it) { if (woningAppliesHandle(it.handle)) floors += woningFloors((it.properties || {})['Woning']); });
+    (items || []).forEach(function (it) { if (wp.appliesTo.indexOf(it.handle) !== -1) floors += woningFloors((it.properties || {})['Woning']); });
     return PKG_QTY * floors;
   }
-  /* The one request that brings the Woning line to its target, or null when it's right:
-     several lines -> merged into one at the target (update.js by line key); none -> added;
-     wrong quantity -> set (0 removes it). */
-  function woningLinePlan(cart) {
-    if (!WONING_VARIANT_ID || !PKG_QTY) return null;
+  /* The one request that brings one Woning product's line to its target, or null when it's
+     right: several lines -> merged into one at the target (update.js by line key); none ->
+     added; wrong quantity -> set (0 removes it). */
+  function woningLinePlan(cart, wp) {
+    if (!wp.variantId || !PKG_QTY) return null;
     var items = (cart && cart.items) || [];
-    var target = woningTargetQty(items);
-    var lines = items.filter(isWoningLine);
+    var target = woningTargetQty(items, wp);
+    var lines = items.filter(function (it) { return String(it.variant_id) === String(wp.variantId); });
     if (lines.length > 1) {
       var merge = {};
       lines.forEach(function (it, i) { merge[it.key] = i === 0 ? target : 0; });
       return { url: '/cart/update.js', body: { updates: merge } };
     }
-    if (!lines.length) return target > 0 ? { url: '/cart/add.js', body: { items: [{ id: WONING_VARIANT_ID, quantity: target }] } } : null;
+    if (!lines.length) return target > 0 ? { url: '/cart/add.js', body: { items: [{ id: wp.variantId, quantity: target }] } } : null;
     if (lines[0].quantity !== target) return { url: '/cart/change.js', body: { id: lines[0].key, quantity: target } };
     return null;
   }
   /* Shared by the card add, the modal add/buy, the drawer's Woning choice and the drawer's
-     remove: apply woningLinePlan(cart) and resolve with the fresh cart. A failed write resolves
-     with the cart as it was; the cart guard on /cart and Overzicht corrects it, and Overzicht
-     blocks checkout until the line is right. */
+     remove: apply woningLinePlan() for each Woning product in turn, threading the fresh cart
+     through (so two products never race in one request), and resolve with the last cart. A
+     failed write keeps the cart as it was and still lets the next product's plan run; the cart
+     guard on /cart and Overzicht corrects it, and Overzicht blocks checkout until it's right. */
   function syncWoningLine(cart) {
-    var plan = woningLinePlan(cart);
-    if (!plan) return Promise.resolve(cart);
-    return window.fetch(plan.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(plan.body) })
-      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(function (res) {
-        // add.js answers with the added items, change.js and update.js with the whole cart.
-        return plan.url === '/cart/add.js' ? window.fetch('/cart.js').then(function (r) { return r.json(); }) : res;
-      })
-      .catch(function () { return cart; });
+    return WONING_PRODUCTS.reduce(function (prev, wp) {
+      return prev.then(function (cart) {
+        var plan = woningLinePlan(cart, wp);
+        if (!plan) return cart;
+        return window.fetch(plan.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(plan.body) })
+          .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+          .then(function (res) {
+            // add.js answers with the added items, change.js and update.js with the whole cart.
+            return plan.url === '/cart/add.js' ? window.fetch('/cart.js').then(function (r) { return r.json(); }) : res;
+          })
+          .catch(function () { return cart; });
+      });
+    }, Promise.resolve(cart));
   }
 
   /* Huren/Kopen (2026-10-23, draft; see the Liquid comment at the top of this section).
@@ -1785,10 +1831,18 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
      is every one of them on this page, so their lines are recognised and removed when unwanted. */
   var ONTZORG_NAME = 'Ontzorgpakket';
   var ONTZORG_VARIANT_IDS = (page.dataset.ontzorgVariantIds || '').split('|').filter(Boolean);
+  /* Riders (2026-10-27): a product nobody picks on its own, kept in step with another add-on's
+     Koop line: the camera subscription rides with ADC-750 (the bought Videodeurbel). One
+     rider line at quantity 1 while the cart holds a lead line, none otherwise; flat, never
+     PKG_QTY (the promo is Huren only and the subscription is outside the discount; see its addonNames note
+     in pricing.config.json). From data-addon-riders, 'lead:rider:cents' pairs resolved by handle. */
+  var ADDON_RIDERS = (page.dataset.addonRiders || '').split('|').map(function (s) { return s.split(':'); })
+    .filter(function (p) { return p[0] && p[1]; }).map(function (p) { return { lead: p[0], rider: p[1] }; });
   function isAddonLine(it) {
     for (var name in ADDON_VARIANT_IDS) {
       if (ADDON_VARIANT_IDS[name] && String(it.variant_id) === String(ADDON_VARIANT_IDS[name])) return true;
     }
+    if (ADDON_RIDERS.some(function (r) { return String(it.variant_id) === r.rider; })) return true;
     return ONTZORG_VARIANT_IDS.indexOf(String(it.variant_id)) !== -1;
   }
   // variant id -> wanted quantity, from the add-on names recorded on the package lines'
@@ -1823,15 +1877,21 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
      line. Several lines for the same variant merge into one, same shape as woningLinePlan().
      Threads the (possibly updated) cart through each step, same convention used by the cart
      guard elsewhere in this theme. A failed write for one add-on keeps the cart as it was and
-     still lets the next add-on's plan run. */
+     still lets the next add-on's plan run. Riders come last, so each one's target is read from
+     the cart its lead line was just synced into (a lead line that failed to add takes no rider). */
   function syncAddonLines(cart) {
-    var variantIds = [];
+    var variantIds = [], riderLead = {};
+    ADDON_RIDERS.forEach(function (r) { riderLead[r.rider] = r.lead; });
     Object.keys(ADDON_VARIANT_IDS).map(function (n) { return ADDON_VARIANT_IDS[n]; }).concat(ONTZORG_VARIANT_IDS)
+      .concat(ADDON_RIDERS.map(function (r) { return r.rider; }))
       .forEach(function (id) { if (id && variantIds.indexOf(String(id)) === -1) variantIds.push(String(id)); });
     return variantIds.reduce(function (prev, variantId) {
       return prev.then(function (cart) {
         var items = (cart && cart.items) || [];
-        var target = addonTargets(items)[variantId] || 0;
+        var lead = riderLead[variantId];
+        var target = lead
+          ? (items.some(function (it) { return String(it.variant_id) === lead; }) ? 1 : 0)
+          : (addonTargets(items)[variantId] || 0);
         var lines = items.filter(function (it) { return String(it.variant_id) === String(variantId); });
         var plan = null;
         if (lines.length > 1) {
@@ -1858,11 +1918,11 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
      NAMI package never does, its installation is chosen on Overzicht. A package that is
      already in the cart is not added again (that would make it 6 months) — only a missing
      installation line is. No PKG_QTY (pricing config missing) fails closed: nothing is
-     added. A NAMI package with a Woning choice brings the Woning line along in the same
-     /cart/add.js items array, right after it (PKG_QTY x its floors); syncWoningLine() then
-     corrects the line against the whole cart. Woning is never written for any other
-     package: this is the one place both the card and the modal add through. See CLAUDE.md
-     Pricing pipeline. */
+     added. A package with a Woning choice brings its own platform's Woning line along in the
+     same /cart/add.js items array, right after it (PKG_QTY x its floors, NAMI and Climax each
+     their own); syncWoningLine() then corrects every Woning line against the whole cart.
+     Woning is never written for a package outside WONING.appliesTo: this is the one place
+     both the card and the modal add through. See CLAUDE.md Pricing pipeline. */
   function addToCart(variantId, properties, mode, btn, finderKey) {
     if (!variantId || !PKG_QTY || (btn && btn.dataset.busy === '1')) return;
     var label = '';
@@ -1871,12 +1931,13 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     var isClimax = (PKG_BY_FK[finderKey] || {}).installGroup === 'climax';
     if (properties && !woningAppliesFk(finderKey)) delete properties['Woning'];
     var addFloors = properties ? woningFloors(properties['Woning']) : 0;
+    var addWoning = woningProductForFk(finderKey);
     return window.fetch('/cart.js').then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (cart) {
       var inCart = function (id) { return (cart.items || []).some(function (it) { return String(it.variant_id) === String(id); }); };
       var items = [];
       if (!inCart(variantId)) {
         items.push({ id: variantId, quantity: PKG_QTY, properties: properties || {} });
-        if (WONING_VARIANT_ID && addFloors > 0) items.push({ id: WONING_VARIANT_ID, quantity: PKG_QTY * addFloors });
+        if (addWoning && addWoning.variantId && addFloors > 0) items.push({ id: addWoning.variantId, quantity: PKG_QTY * addFloors });
       }
       if (isClimax && activationVariantId && !inCart(activationVariantId)) items.push({ id: activationVariantId, quantity: 1 });
       if (!items.length) return { ok: true, json: function () { return { items: [] }; } };
@@ -1990,9 +2051,9 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     // charge like an installation line: its real line price with "eenmalig", never "/mnd", and
     // no Woning control. It keeps its add-on options (found through the SKU property).
     var isKoop = p['Afname'] === 'Kopen';
-    // Woning only on a NAMI package line (WONING.appliesTo) whose card offers it, never on a
-    // Climax package (its card has no Woning group since 2026-09-25), an installation line or
-    // anything else: no reader counts Woning there. A legacy value reads as 1 floor.
+    // Woning only on a package line in WONING.appliesTo (NAMI since 2026-09-25, Climax since
+    // 2026-10-27) whose card offers it, never on an installation line or anything else: no
+    // reader counts Woning there. A legacy value reads as 1 floor.
     var offersWoning = !isActivation && !isKoop && woningAppliesHandle(it.handle) && !!(card && card.querySelector('[data-group="woning"]')) && WONING.options.length > 0;
     var woningLevel = offersWoning ? woningFloors(p['Woning']) : 0;
     // A package line holds the 3 prepaid months (quantity 3); its "/mnd" figure is the
@@ -2074,7 +2135,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     if (preserveScroll) { var old = cartEl.querySelector('.addcart__scroll'); if (old) prev = old.scrollTop; }
     cartState = cart;
     // The Woning line is never a row of its own here (no quantity, no remove, no Woning control,
-    // no "/mnd"): the NAMI package row already shows its monthly price plus the surcharge and
+    // no "/mnd"): the package row already shows its monthly price plus the surcharge and
     // carries the Woning choice, and syncWoningLine() keeps the line in step with it. An add-on
     // line (Videodeurbel/Afstandsbediening) is left out here for a different reason: every
     // package line's own cloned addons group (hydrateLineOptions below) already shows its live
@@ -2142,7 +2203,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
       cartWriting = true; rm.disabled = true;
       window.fetch('/cart/change.js', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: rm.getAttribute('data-cart-remove'), quantity: 0 }) })
         .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-        // A removed NAMI package takes its floors off the Woning line (none left: the line goes).
+        // A removed package takes its floors off its Woning line (none left: the line goes).
         .then(syncWoningLine)
         // Same for a removed package's checked add-ons: if no remaining line still wants one,
         // syncAddonLines takes its line to 0 too.
@@ -2168,7 +2229,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
       var wboxes = wgroup ? [].slice.call(wgroup.querySelectorAll('[data-zv-line-woning]')) : [woning];
       var line = null, its = (cartState && cartState.items) || [];
       for (var i = 0; i < its.length; i++) { if (its[i].key === key) { line = its[i]; break; } }
-      // Only a NAMI package line ever takes Woning (the control is only rendered there).
+      // Only a package line in WONING.appliesTo ever takes Woning (the control is only rendered there).
       if (!line || !woningAppliesHandle(line.handle)) { woning.checked = !on; return; }
       var props = {}, lp = line.properties || {};
       for (var k in lp) { if (lp.hasOwnProperty(k)) props[k] = lp[k]; }
@@ -2235,8 +2296,8 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
         var opt = inp.closest('.pcard__plus-opt');
         var name = optName(opt);
         if (!name) return;
-        // Woning: the exact property value for the checked option's level, NAMI cards only
-        // (WONING.appliesTo). The tile copy's single checkbox (no data-woning-floors) means 1 floor.
+        // Woning: the exact property value for the checked option's level, cards in
+        // WONING.appliesTo only. The tile copy's single checkbox (no data-woning-floors) means 1 floor.
         if (group === 'woning') { if (woningAppliesHandle(card.getAttribute('data-product-handle'))) out.woning = woningValue(parseInt(inp.getAttribute('data-woning-floors'), 10) || 1); }
         else if (group === 'terms') out.terms.push(name);
         else out.addons.push(name);
@@ -2285,9 +2346,10 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
      Only rendered once the package's Koop variant setting is filled in. Never through addToCart():
      that adds at PKG_QTY for the intro promo, which is Huren only. The Koop variant goes in once
      (quantity 1) with the same properties as a huur add plus Afname: Kopen, which is how /cart,
-     Overzicht and zv-cart-guard recognise it. A bought NAMI package keeps its Woning choice as the
-     property only: no Woning line, nothing charged for it today (Thijs, 2026-10-24; Odoo bills it
-     with the service fee), so syncWoningLine() is not called. Installation is the same as for a
+     Overzicht and zv-cart-guard recognise it. A bought package keeps its Woning choice as the
+     property only: no Woning line, nothing charged for it today (Thijs, 2026-10-24, for NAMI;
+     Climax mirrors it since 2026-10-27; Odoo bills it with the service fee), so syncWoningLine()
+     is not called. Installation is the same as for a
      huur add: a Climax package brings the Climax installation line (once), a NAMI package's
      installation is chosen on Overzicht. Checked add-ons get their lines through
      syncAddonLines(), as for a huur add. */
@@ -2433,15 +2495,13 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     }
 
     var items = (pk.tier || []).map(itemHtml).join('');
-    // Woning (NAMI packages only): the question, one checkbox per option (value and price from
-    // the config island, one choice, see the change handler below) and what each extra
-    // verdieping adds. A Climax package (Beschermd, Protect) has no Woning: it shows its card's
-    // "Uitbreiding hardware" link and hint instead (same href and data-* hooks).
+    // Woning (every package in WONING.appliesTo, Climax too since 2026-10-27): the question and
+    // one checkbox per option (value and price from the config island, one choice, see the change
+    // handler below). Whether a package offers it is the config's woningAppliesFk(), not the modal
+    // data's `plus` (which Beschermd and Protect don't have). The Climax "Uitbreiding hardware" link
+    // that stood here instead went with the hardware page's #grotere-woning block (PR #152).
     var plusHtml = '';
-    var hwLink = card.querySelector('.ltc__hwlink'), hwHint = card.querySelector('.ltc__hwhint');
-    if (buyable && !woningAppliesFk(fk) && hwLink) {
-      plusHtml = '<div class="pbd-hw">' + hwLink.outerHTML + (hwHint ? hwHint.outerHTML : '') + '</div>';
-    } else if (pk.plus && buyable && WONING.options.length && woningAppliesFk(fk)) {
+    if (buyable && WONING.options.length && woningAppliesFk(fk)) {
       plusHtml = '<div class="pbd-plus" role="group" aria-labelledby="pbd-woning-h"><div class="pbd-plus-h" id="pbd-woning-h">' + esc(WONING.heading) + '</div>' +
         WONING.options.map(function (o) {
           return '<label class="pbd-plus-row"><input type="checkbox" data-pb-woning="' + esc(o.floors) + '">' +

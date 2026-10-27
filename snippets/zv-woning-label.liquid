@@ -1,0 +1,46 @@
+{%- comment -%}
+  zv-woning-label (2026-10-27): the label of one Woning line's row on /cart and Overzicht, from
+  the `Woning` property values of the package lines whose floors THAT line carries ("1 extra
+  verdieping of 100 m²", joined with " + " when two packages have one). Per Woning product, since
+  a cart can hold both the NAMI and the Climax Woning product: each row names only its
+  own packages' choices, never the other platform's. A legacy "Groter dan 100 m²…" value reads as
+  option 1 (zv-woning-floors). Prints nothing for an orphan line (the guard removes it).
+
+  Params (render scope can't see the caller's variables, so pass them in; `cart` is global):
+    variant_id         - the Woning line's variant id, as a string (item.variant_id | append: '')
+    variant_ids        - zv-woning-variants' output, parallel to applies_by_product
+    applies_by_product - zv_woning_applies_by_product
+    v1, v2, legacy     - zv_woning_1_value, zv_woning_2_value, zv_woning_legacy_prefix
+{%- endcomment -%}
+{%- liquid
+  assign wl_ids = variant_ids | split: '|'
+  assign wl_applies_all = applies_by_product | split: '|'
+  assign wl_applies = ''
+  for wid in wl_ids
+    if wid == variant_id
+      assign wl_applies = wl_applies_all[forloop.index0] | split: ','
+    endif
+  endfor
+  assign wl_out = ''
+  for item in cart.items
+    if wl_applies contains item.product.handle
+      capture wl_f
+        render 'zv-woning-floors', value: item.properties['Woning'], v1: v1, v2: v2, legacy: legacy
+      endcapture
+      assign wl_f = wl_f | strip | plus: 0
+      assign wl_v = ''
+      if wl_f == 2
+        assign wl_v = v2
+      elsif wl_f == 1
+        assign wl_v = v1
+      endif
+      if wl_v != ''
+        if wl_out != ''
+          assign wl_out = wl_out | append: ' + '
+        endif
+        assign wl_out = wl_out | append: wl_v
+      endif
+    endif
+  endfor
+  echo wl_out
+-%}

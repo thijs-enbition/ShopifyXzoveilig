@@ -1,0 +1,34 @@
+{%- comment -%}
+  zv-woning-variants (2026-10-27): prints the variant id of each Woning product (one for the
+  NAMI packages, one for the Climax packages; surcharges[] in pricing.config.json), pipe-separated
+  and in the same order as `handles`, so entry i is the product whose packages are entry i of
+  zv_woning_applies_by_product (and woning.products[i] in #zv-pricing-config).
+
+  A product resolves only if it exists and its first variant's SKU is the config's, the same check
+  as for the packages by handle. One that doesn't prints 0: that keeps the list parallel (a blank
+  entry at the end would be dropped by split) and never matches a cart line. Its packages then fall
+  back to the Woning property alone, without a priced line.
+
+  Params (render scope can't see the caller's zv_* variables, so pass them in):
+    handles - zv_woning_handles, or the output of zv-package-handles, line: 'woning'
+    skus    - zv_woning_skus, or zv-package-handles, line: 'woning', what: 'skus'
+  Usage: capture it, then `| strip`, and `| split: '|'` for a list of strings.
+{%- endcomment -%}
+{%- liquid
+  assign wv_handles = handles | split: '|'
+  assign wv_skus = skus | split: '|'
+  assign wv_out = ''
+  for h in wv_handles
+    assign wv_id = 0
+    assign wv_p = all_products[h]
+    if h != blank and wv_p != blank and wv_p.id != blank and wv_p.variants.first.sku == wv_skus[forloop.index0]
+      assign wv_id = wv_p.variants.first.id
+    endif
+    if forloop.first
+      assign wv_out = wv_id | append: ''
+    else
+      assign wv_out = wv_out | append: '|' | append: wv_id
+    endif
+  endfor
+  echo wv_out
+-%}

@@ -384,9 +384,10 @@
     {
       "id": "extra-etage",
       "name": "Per extra etage",
-      "description": "Alleen Inzicht, Zeker en Alert: +€4 p/m per extra etage.",
+      "description": "Inzicht, Zeker en Alert (NAMI): +€4 p/m per extra etage.",
       "billing": "monthly",
       "purchasable": true,
+      "installGroup": "nami",
       "price": {
         "amountCents": 400,
         "display": "+€4",
@@ -401,7 +402,7 @@
         "nami-langer-thuis-zeker",
         "nami-mijn-thuis-alert"
       ],
-      "collectedVia": "NAMI packages only (appliesTo: Inzicht, Zeker, Alert; Thijs, 2026-09-25). Two records per choice. (1) The `Woning` line-item property on the NAMI package line, unchanged from 2026-09-24 (same values, same legacy prefix, same writers): the per-package record for Odoo. (2) ONE priced cart line for the Shopify product shopify.handle / shopify.sku (N0008, 'Extra etage of >100m2'), at quantity promo.months x the sum of floors over the NAMI package lines (1 floor = 3, 2 floors = 6, no Woning = no line). N0008 is in the 'Eerste 3 maanden' automatic discount (set in Shopify Admin, never from this repo), so each floor costs promo.months x half_up(price.amountCents x promo.ratePercent) today (600 cents at 400 / 50%); Odoo bills price.amountCents per floor per month from month 4. Climax packages (Beschermd, Protect) never get a Woning choice, a Woning property or an N0008 line: a larger Climax home is extended with extra sensors via the hardware page (/pages/camera-hardware#grotere-woning). Supersedes 'property only, never a priced line' (2026-09-24).",
+      "collectedVia": "NAMI packages (appliesTo: Inzicht, Zeker, Alert; Thijs, 2026-09-25). Two records per choice. (1) The `Woning` line-item property on the NAMI package line, unchanged from 2026-09-24 (same values, same legacy prefix, same writers): the per-package record for Odoo. (2) ONE priced cart line for the Shopify product shopify.handle / shopify.sku (N0008, 'Extra etage of >100m2'), at quantity promo.months x the sum of floors over the NAMI package lines (1 floor = 3, 2 floors = 6, no Woning = no line). N0008 is in the 'Eerste 3 maanden' automatic discount (set in Shopify Admin, never from this repo), so each floor costs promo.months x half_up(price.amountCents x promo.ratePercent) today (600 cents at 400 / 50%); Odoo bills price.amountCents per floor per month from month 4. Since 2026-10-27 the Climax packages (Beschermd, Protect) have the same mechanism with their own product: surcharges[extra-etage-climax] (E001). Every surcharge entry with a `shopify` product is one Woning product for the packages of its installGroup; a package's Woning line is the entry whose appliesTo lists it, never another platform's. Supersedes 'property only, never a priced line' (2026-09-24).",
       "woning": {
         "heading": "Woning groter dan 100 m² en/of meer dan 1 verdieping?",
         "options": [
@@ -415,8 +416,30 @@
           }
         ],
         "legacyValuePrefix": "Groter dan 100 m²",
-        "note": "Woning surcharge (docs/pakket-wijzigingen-2026-09-23.md §7; decisions by Thijs 2026-09-24 and 2026-09-25, see docs/woning-surcharge-research-2026-09-23.md and docs/woning-n0008-line-2026-09-25.md). NAMI packages only (appliesTo): Beschermd and Protect never offer it. The choice is written as the `Woning` line-item property on the NAMI package line, exactly as since 2026-09-24 (the per-package record for Odoo), AND collected as one priced N0008 cart line (see collectedVia above), so Shopify charges its first 3 months today with the promo discount and Odoo bills it from month 4. options[].value is written verbatim as that property value (no price in it) and is what Odoo must recognise. Option N costs N x price.amountCents per month from month 4 and adds N x (promo.months x half_up(price.amountCents x promo.ratePercent) + price.amountCents x (termMonths - promo.months)) to the indicative contract value; build_pricing.py derives both. A stored value that starts with legacyValuePrefix (written before 2026-09-24) reads as 1 floor. heading is the question above the options on the NAMI package cards, in the Oplossingen cart drawer and in the Meer informatie modal."
+        "note": "Woning surcharge (docs/pakket-wijzigingen-2026-09-23.md §7; decisions by Thijs 2026-09-24 and 2026-09-25, see docs/woning-surcharge-research-2026-09-23.md and docs/woning-n0008-line-2026-09-25.md; Climax since 2026-10-27, docs/a102b-e001-climax-woning-2026-10-27.md). This is THE Woning choice for every platform: surcharges[extra-etage-climax] has no woning block of its own and uses this one, so the heading, the option values Odoo recognises and the legacy prefix can never differ between NAMI and Climax. The choice is written as the `Woning` line-item property on the package line, exactly as since 2026-09-24 (the per-package record for Odoo), AND collected as one priced cart line per Woning product (N0008 for NAMI, E001 for Climax; see collectedVia above), so Shopify charges its first 3 months today with the promo discount and Odoo bills it from month 4. options[].value is written verbatim as that property value (no price in it) and is what Odoo must recognise. Option N costs N x price.amountCents per month from month 4 and adds N x (promo.months x half_up(price.amountCents x promo.ratePercent) + price.amountCents x (termMonths - promo.months)) to the indicative contract value; build_pricing.py derives both. A stored value that starts with legacyValuePrefix (written before 2026-09-24) reads as 1 floor. heading is the question above the options on the package cards, in the Oplossingen cart drawer and in the Meer informatie modal."
       }
+    },
+    {
+      "id": "extra-etage-climax",
+      "name": "Per extra etage (Climax)",
+      "description": "Beschermd en Protect (Climax): +€4 p/m per extra etage.",
+      "billing": "monthly",
+      "purchasable": true,
+      "installGroup": "climax",
+      "price": {
+        "amountCents": 400,
+        "display": "+€4",
+        "per": "/mnd"
+      },
+      "shopify": {
+        "handle": "extra-etage-of-100m2-climax",
+        "sku": "E001"
+      },
+      "appliesTo": [
+        "langer-thuis-beschermd",
+        "mijn-thuis-protect"
+      ],
+      "collectedVia": "Climax packages (appliesTo: Beschermd, Protect; 2026-10-27). Mirrors surcharges[extra-etage] exactly, with its own Shopify product: the `Woning` property on the Climax package line (same values, from extra-etage.woning) plus ONE priced cart line for shopify.handle / shopify.sku (E001, 'Extra etage of >100m2 Climax'; Admin API 2026-10-27: ACTIVE, EUR 4,00, published to the Online Store, type NAMI_abonnementen) at quantity promo.months x the sum of floors over the Climax package lines. It is meant to be in the 'Eerste 3 maanden' discount like N0008, so each floor costs 600 cents today and Odoo bills price.amountCents per floor per month from month 4. On 2026-10-27 E001 is NOT in that discount yet: Overzicht blocks every Climax Woning checkout (cart_woning_bad) until it is added in Shopify Admin. Replaces the hardware page's removed #grotere-woning block (PR #152) as how a bigger Climax home is handled. price.amountCents must equal extra-etage's (build_pricing.py refuses otherwise): the cards, drawer and modal show one price per Woning option."
     }
   ],
   "addons": [
@@ -530,18 +553,33 @@
         "display": "€299"
       },
       "koopSource": "koop-video-deurbel-750 / ADC-750, EUR 299,00 (Admin API, 2026-10-27). Huren is huur-video-deurbel-750 / H750, EUR 9,55/mnd, read live from the product.",
-      "note": "Real Shopify products (Huren/Kopen, 2026-10-27): Huren = huur-video-deurbel-750 / H750 (EUR 9,55/mnd), Kopen = koop-video-deurbel-750 / ADC-750 (EUR 299,00 eenmalig), both resolved by handle in the theme, never a hardcoded variant id (the Koop variant used to come from the zv_koop_variant_videodeurbel theme setting, removed). Rendered as a checkbox with a Huren/Kopen choice in the Uitbreidingen accordion on every Langer Thuis/Mijn Thuis package card except Vista. The Huren price is read live from the product; the Kopen figure is koopEenmalig here (check_pricing.py section 15), equal to the live ADC-750 price on 2026-10-27. Both sync to quantity 1, like Afstandsbediening. Name-only otherwise: /cart, Overzicht and the cart drawer show this name instead of the raw Shopify admin titles."
+      "note": "Real Shopify products (Huren/Kopen, 2026-10-27): Huren = huur-video-deurbel-750 / H750 (EUR 9,55/mnd), Kopen = koop-video-deurbel-750 / ADC-750 (EUR 299,00 eenmalig), both resolved by handle in the theme, never a hardcoded variant id (the Koop variant used to come from the zv_koop_variant_videodeurbel theme setting, removed). Rendered in the Uitbreidingen accordion of the five buyable packages (never Vista). Climax (Beschermd, Protect): a checkbox with a Huren/Kopen choice, each side showing its own price (Huren the live H750 price, Kopen the live ADC-750 price plus the live A102B price). NAMI (Inzicht, Zeker, Alert), since 2026-10-27: Kopen only, no Huren and no choice, one single-price row like Ontzorgpakket; ADC-750 brings A102B there too. Both prices are read live from the products; koopEenmalig here is a reference figure (check_pricing.py section 15), equal to the live ADC-750 price on 2026-10-27. Both sync to quantity 1, like Afstandsbediening. Name-only otherwise: /cart, Overzicht and the cart drawer show this name instead of the raw Shopify admin titles."
+    },
+    {
+      "productHandle": "camera-abonnement-videodeurbel-1200-clips",
+      "sku": "A102B",
+      "name": "Camera-abonnement videodeurbel",
+      "ridesWith": {
+        "handle": "koop-video-deurbel-750",
+        "sku": "ADC-750"
+      },
+      "cartQuantity": 1,
+      "note": "Camera subscription for a bought Videodeurbel (2026-10-27): A102B, 'Camera abonnement Videodeurbel 1200 clips', EUR 3,50/mnd (Admin API 2026-10-27: ACTIVE, published to the Online Store, type 'ADC Camera ABO', not in the 'Eerste 3 maanden' discount). It is never a checkbox of its own: one A102B line rides along whenever the cart holds a line of ridesWith (ADC-750, the Videodeurbel's Koop product), and goes when that line goes. Resolved by handle in the theme, never a hardcoded variant id; its price is read live from the product, never config data. DECISION: it syncs FLAT at cartQuantity 1, full price, like Videodeurbel/Afstandsbediening, NOT the N0008 treatment (quantity promo.months in the promo discount). Reasons: (1) the intro promo is Huren only (koop.promoApplies is false) and A102B is only ever triggered by a Koop purchase; (2) A102B is not in the 'Eerste 3 maanden' discount, so quantity promo.months would charge 3 full months today; (3) a bought package prepays nothing either (its service fee is Odoo's). So it joins the same open Odoo-billing question as the Huren rentals H750/H0010: a monthly product at quantity 1, not in Overzicht's 'Daarna', billed monthly by Odoo from a start date nobody has confirmed yet (unresolved.ODOO_ADDON_BILLING)."
     },
     {
       "productHandle": "huur-afstandsbediening",
       "sku": "H0010",
       "name": "Afstandsbediening",
+      "koopProduct": {
+        "handle": "koop-afstandsbediening",
+        "sku": "CL004"
+      },
       "koopEenmalig": {
         "amountCents": 4000,
         "display": "€40"
       },
-      "koopSource": "koop-afstandsbediening / CL004, EUR 40,00 (also the koop price on /pages/camera-hardware)",
-      "note": "Real Shopify product (2026-09-26), same treatment as Videodeurbel above: name-only, no price here — live price and the qty-3/discount cart mechanic read straight from all_products['huur-afstandsbediening']."
+      "koopSource": "koop-afstandsbediening / CL004, EUR 40,00 (also the koop price on /pages/camera-hardware; Admin API, ACTIVE, inventoryPolicy CONTINUE since 2026-10-27). Reference only: the Kopen price on the cards is read live from the product.",
+      "note": "Real Shopify products, same treatment as Videodeurbel above. Huren = huur-afstandsbediening / H0010 (read live, quantity 1), Kopen = koop-afstandsbediening / CL004 (since 2026-10-27, quantity 1), both resolved by handle in the theme, never a hardcoded variant id. The Kopen variant used to come from a theme setting that was never filled in, so the Kopen side always read 'binnenkort'; the setting is retired, so an empty field can't block it again. Climax packages only (Beschermd, Protect): never on a NAMI card. Name-only otherwise."
     },
     {
       "productHandle": "maandelijks-ontzorg-inzicht-oh",
@@ -748,6 +786,12 @@
       "severity": "medium",
       "summary": "installationOptions.nami option prices: Geen installatie (€0,00) and Telefonische ondersteuning (€35,00) remain Thijs's working default as of 2026-09-21, not confirmed by Odoo — expect adjustment before commercial launch. Installatie aan huis (€99,00) is no longer provisional in that sense: Thijs repriced the Shopify product directly and confirmed it correct on 2026-09-22 — still not necessarily Odoo-confirmed, but no longer a placeholder guess.",
       "owner": "Operator"
+    },
+    {
+      "id": "ODOO_ADDON_BILLING",
+      "severity": "medium",
+      "summary": "DOCUMENTATION ONLY, like ODOO_PROMO_DISCOUNT. The monthly add-on products that sync at quantity 1 (the Huren rentals H750 and H0010, and since 2026-10-27 the A102B camera subscription that rides with a bought Videodeurbel) charge one month's price today and are not in Overzicht's 'Daarna'. How Odoo bills them afterwards (from month 1 or 2, at what quantity) is not confirmed, so the theme does not claim a monthly figure for them.",
+      "owner": "Odoo administrator (outside this repo)"
     }
   ]
 }
