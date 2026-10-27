@@ -539,12 +539,37 @@ check(not set(koop_handles) & set(gen["woning"]["appliesTo"]),
 exp_map = "|".join(f"{EXPECTED_KOOP_PRODUCTS[p['id']][0]}:{p['finderKey']}" for p in gen["packages"] if p["id"] in EXPECTED_KOOP_PRODUCTS)
 check(snippet_str("zv_koop_fk_by_handle") == exp_map, "zv_koop_fk_by_handle maps each Koop product to its package",
       f"got {snippet_str('zv_koop_fk_by_handle')!r}")
-EXPECTED_KOOP_ADDON_CENTS = {"koop-video-deurbel-750": 29900, "huur-afstandsbediening": 4000}
+EXPECTED_KOOP_ADDON_CENTS = {"huur-video-deurbel-750": 29900, "huur-afstandsbediening": 4000}
 got_addons = {a["productHandle"]: a["eenmaligCents"] for a in gen.get("koop", {}).get("addons", [])}
 check(got_addons == EXPECTED_KOOP_ADDON_CENTS, "koop add-ons are Videodeurbel 29900 and Afstandsbediening 4000",
       f"got {got_addons}")
 check(snippet_str("zv_koop_addon_cents_by_handle") == "|".join(f"{h}:{c}" for h, c in got_addons.items()),
       "zv_koop_addon_cents_by_handle matches the generated add-ons")
+# Videodeurbel (2026-10-27): Huren = H750 (huur-video-deurbel-750), Kopen = ADC-750 (koop-video-deurbel-750),
+# both resolved by handle in the theme (Admin API, 2026-10-27: EUR 9,55/mnd and EUR 299,00).
+vd = next((a for a in cfg.get("addonNames", []) if a.get("name") == "Videodeurbel"), {})
+check((vd.get("productHandle"), vd.get("sku")) == ("huur-video-deurbel-750", "H750"), "Videodeurbel Huren is huur-video-deurbel-750 / H750",
+      f"got {(vd.get('productHandle'), vd.get('sku'))}")
+check((vd.get("koopProduct") or {}) == {"handle": "koop-video-deurbel-750", "sku": "ADC-750"}, "Videodeurbel Kopen is koop-video-deurbel-750 / ADC-750",
+      f"got {vd.get('koopProduct')}")
+
+print("\n16. Ontzorgpakket per package (Thijs, 2026-10-27)")
+# One Shopify product per package, picked by finder_key; Vista and Veilig Onderweg get none.
+EXPECTED_ONTZORG = {"aware": ("maandelijks-ontzorg-inzicht-oh", "MOIOH"),
+                    "aware_plus": ("maandelijks-ontzorg-zeker-oh", "MOZOH"),
+                    "care": ("maandelijks-onderhoud-alarmsysteem", "OHC012"),
+                    "secure": ("maandelijks-ontzorg-alert-oh", "MOAOH"),
+                    "guard": ("maandelijks-onderhoud-alarmsysteem", "OHC012")}
+got_onz = {fk: (a["productHandle"], a["sku"]) for a in gen.get("ontzorg", []) for fk in a["finderKeys"]}
+check(got_onz == EXPECTED_ONTZORG, "Ontzorgpakket: Inzicht MOIOH, Zeker MOZOH, Beschermd/Protect OHC012, Alert MOAOH", f"got {got_onz}")
+for fk in ("secure_plus", "liogo_solo", "liogo_guard"):
+    check(fk not in got_onz, f"{fk} has no Ontzorgpakket")
+check(snippet_str("zv_ontzorg_handle_by_fk") == "|".join(f"{fk}:{h}" for fk, (h, _) in got_onz.items()),
+      "zv_ontzorg_handle_by_fk matches the generated mapping", f"got {snippet_str('zv_ontzorg_handle_by_fk')!r}")
+# The archived duplicate (ontzorgpakket-inzicht, also SKU MOIOH, EUR 5,95) must never be looked up.
+stale = [f.relative_to(ROOT).as_posix() for d in ("sections", "snippets", "layout", "templates", "assets")
+         for f in (ROOT / d).rglob("*") if f.is_file() and "'ontzorgpakket-inzicht'" in f.read_text(encoding="utf-8", errors="ignore")]
+check(not stale, "no theme file looks up the archived ontzorgpakket-inzicht product", f"found in {stale}")
 
 print("\n" + "=" * 60)
 if failures:

@@ -114,6 +114,20 @@ def build():
          "eenmaligCents": a["koopEenmalig"]["amountCents"], "eenmaligDisplay": eur(a["koopEenmalig"]["amountCents"])}
         for a in cfg.get("addonNames", []) if is_priced(a.get("koopEenmalig"))
     ]
+    # Ontzorgpakket per package (2026-10-27, Thijs): the addonNames entries with finderKeys, one
+    # Shopify product per package (Beschermd and Protect share OHC012). finder_key -> handle for the
+    # Oplossingen cards; a package without an entry (Vista, Veilig Onderweg) offers none.
+    ontzorg = [{"productHandle": a["productHandle"], "sku": a["sku"], "finderKeys": a["finderKeys"]}
+               for a in cfg.get("addonNames", []) if a.get("finderKeys")]
+    pkg_fks = {pkg.get("finderKey") for line in cfg["lines"] for pkg in line["packages"]}
+    ontzorg_by_fk = {}
+    for a in ontzorg:
+        for fk in a["finderKeys"]:
+            if fk not in pkg_fks:
+                raise SystemExit(f"addonNames {a['productHandle']}: unknown finderKey {fk!r}")
+            if fk in ontzorg_by_fk:
+                raise SystemExit(f"finderKey {fk!r} has two Ontzorgpakket products")
+            ontzorg_by_fk[fk] = a["productHandle"]
 
     # NAMI installation choice (Inzicht/Zeker/Alert only; Climax keeps the fixed `activation`
     # fee above, untouched). display is recomputed via eur(), same as activation's, rather
@@ -143,6 +157,9 @@ def build():
     # products use, so /cart, Overzicht and the cart drawer show it instead of the raw admin title.
     for a in cfg.get("addonNames", []):
         install_names[a["productHandle"]] = a["name"]
+        # A hardware add-on's Koop product (Videodeurbel ADC-750) shows the same name.
+        if (a.get("koopProduct") or {}).get("handle"):
+            install_names[a["koopProduct"]["handle"]] = a["name"]
 
     # The single source of truth for package DISPLAY ORDER: each package's custom.finder_key,
     # in the order `lines[].packages[]` lists them in pricing.config.json. Any theme surface
@@ -256,6 +273,8 @@ def build():
         "contract": {"defaultTermMonths": default_term, "enabledTerms": enabled_terms},
         # Huren/Kopen: the per-package figures sit on each package row ("koop"); never promo.
         "koop": {"status": koop_cfg.get("status"), "promoApplies": False, "addons": koop_addons},
+        # Ontzorgpakket per package: handle, SKU and the finder_keys it serves.
+        "ontzorg": ontzorg,
         "labels": cfg["labels"],
         # Display order for package cards (see package_order_fks above): the finder_key
         # values in pricing.config.json order. Theme surfaces must render in this order,
@@ -545,6 +564,9 @@ def build():
         if p.get("koop") and p["koop"].get("productHandle")) + "' -%}")
     lines.append("{%- assign zv_koop_addon_cents_by_handle = '" + "|".join(
         f"{a['productHandle']}:{a['eenmaligCents']}" for a in koop_addons) + "' -%}")
+    # Ontzorgpakket per package (2026-10-27): finder_key -> product handle, for the Oplossingen cards.
+    lines.append("{%- assign zv_ontzorg_handle_by_fk = '" + "|".join(
+        f"{fk}:{h}" for fk, h in ontzorg_by_fk.items()) + "' -%}")
     SNIPPET.parent.mkdir(parents=True, exist_ok=True)
     SNIPPET.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -599,6 +621,10 @@ def build():
         ph += _ph_branch(ln["lineId"], "|".join(p["handle"] for p in ln["packages"]),
                          "|".join(p["sku"] for p in ln["packages"]), ln["name"])
     ph += _ph_branch("woning", woning["shopify"].get("handle") or "", woning["shopify"].get("sku") or "", "Woning")
+    # Ontzorgpakket products (2026-10-27), for /cart, Overzicht and the header count, which only
+    # need to recognise their lines (zv-hidden-cart-lines can't include zv-pricing).
+    ph += _ph_branch("ontzorg", "|".join(a["productHandle"] for a in ontzorg),
+                     "|".join(a["sku"] for a in ontzorg), "Ontzorgpakket")
     ph += _ph_branch("all", "|".join(p["handle"] for ln in line_packages for p in ln["packages"]),
                      "|".join(p["sku"] for ln in line_packages for p in ln["packages"]), "")
     ph += ["  endcase", "-%}"]
@@ -623,6 +649,7 @@ def build():
         if p.get("koop"):
             print(f"      koop: {p['koop']['eenmaligDisplay']} eenmalig + {p['koop']['maandelijksDisplay']}/mnd (no promo)")
     print("  koop add-ons: " + (", ".join(f"{a['name']} {a['eenmaligDisplay']}" for a in koop_addons) or "none"))
+    print("  ontzorgpakket: " + (", ".join(f"{fk}={h}" for fk, h in ontzorg_by_fk.items()) or "none"))
 
 
 if __name__ == "__main__":

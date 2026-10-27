@@ -513,20 +513,24 @@
         "status": "PRICE_PENDING",
         "display": "Prijs volgt"
       },
-      "note": "Price not confirmed. Must NOT enter the cart with any amount. The EUR 4,95 on the confirmation mockup is not authorised. Superseded for Inzicht (fk 'aware') by the real, confirmed addonNames entry 'maandelijks-ontzorg-inzicht-oh' below (EUR 4,95/mnd since 2026-10-23) — this placeholder still applies to Zeker/Beschermd."
+      "note": "Price not confirmed. Must NOT enter the cart with any amount. The EUR 4,95 on the confirmation mockup is not authorised. Superseded since 2026-10-27 for every package that offers an Ontzorgpakket (Inzicht, Zeker, Beschermd, Alert, Protect) by the per-package addonNames entries below; the theme no longer renders this placeholder."
     }
   ],
   "addonNames": [
     {
-      "productHandle": "koop-video-deurbel-750",
-      "sku": "ADC-750",
+      "productHandle": "huur-video-deurbel-750",
+      "sku": "H750",
       "name": "Videodeurbel",
+      "koopProduct": {
+        "handle": "koop-video-deurbel-750",
+        "sku": "ADC-750"
+      },
       "koopEenmalig": {
         "amountCents": 29900,
         "display": "€299"
       },
-      "koopSource": "koop-video-deurbel-750 / ADC-750, EUR 299,00 (the same product the Huren row resolves live today: it is a one-time product, so both rows show EUR 299 until Alex's rental conversion lands)",
-      "note": "Real Shopify product (2026-09-26), rendered as a checkbox in the Uitbreidingen accordion on every Langer Thuis/Mijn Thuis package card except Vista. Name-only entry, deliberately separate from `addons` above: that array's price is a static config literal (amountCents/display), which is exactly what this add-on must NOT use — it's currently a one-time purchase and Alex is converting it to a rental shortly, so its price and purchase type are read live from all_products['koop-video-deurbel-750'] in the theme, never duplicated here. This entry exists only so /cart, Overzicht and the cart drawer can show the clean name instead of the raw Shopify admin title (which currently still carries a '***' placeholder) — see sections/oplossingen.liquid, zv-cart.liquid, zv-checkout-overview.liquid."
+      "koopSource": "koop-video-deurbel-750 / ADC-750, EUR 299,00 (Admin API, 2026-10-27). Huren is huur-video-deurbel-750 / H750, EUR 9,55/mnd, read live from the product.",
+      "note": "Real Shopify products (Huren/Kopen, 2026-10-27): Huren = huur-video-deurbel-750 / H750 (EUR 9,55/mnd), Kopen = koop-video-deurbel-750 / ADC-750 (EUR 299,00 eenmalig), both resolved by handle in the theme, never a hardcoded variant id (the Koop variant used to come from the zv_koop_variant_videodeurbel theme setting, removed). Rendered as a checkbox with a Huren/Kopen choice in the Uitbreidingen accordion on every Langer Thuis/Mijn Thuis package card except Vista. The Huren price is read live from the product; the Kopen figure is koopEenmalig here (check_pricing.py section 15), equal to the live ADC-750 price on 2026-10-27. Both sync to quantity 1, like Afstandsbediening. Name-only otherwise: /cart, Overzicht and the cart drawer show this name instead of the raw Shopify admin titles."
     },
     {
       "productHandle": "huur-afstandsbediening",
@@ -543,7 +547,38 @@
       "productHandle": "maandelijks-ontzorg-inzicht-oh",
       "sku": "MOIOH",
       "name": "Ontzorgpakket",
-      "note": "Real Shopify product (2026-10-13; handle maandelijks-ontzorg-inzicht-oh since the 2026-10-23 catalog reimport, was ontzorgpakket-inzicht, same SKU), price EUR 4,95/mnd (Thijs, 2026-10-23; was EUR 5,95), published to Online Store. Inzicht (fk 'aware') only for now — Zeker/Beschermd keep the 'Prijs volgt' placeholder in sections/oplossingen.liquid until their own Ontzorgpakket variants are live. SHIPPED DELIBERATELY WITHOUT THE PROMO DISCOUNT (Thijs, 2026-10-13): this product is not in the 'Eerste 3 maanden' automatic discount's product list, and that stays so. Since 2026-10-26 syncAddonLines() adds its line at quantity 3 (PKG_QTY, the prepaid months, like a package line, because it is a recurring monthly service; Videodeurbel/Afstandsbediening stay at quantity 1), at full price: 3 × EUR 4,95 = EUR 14,85 today, no discount. Intended, not a gap. Same treatment as Videodeurbel/Afstandsbediening otherwise: name-only, no price here — live price and the cart line read straight from all_products['maandelijks-ontzorg-inzicht-oh']. Supersedes the generic 'ontzorgpakket' entry in `addons` above for Inzicht specifically; that entry still stands for Zeker/Beschermd. Reported on Inzicht's package line via the Uitbreidingen property (not Abonnement, where the Zeker/Beschermd placeholder still reports it) — flag to whoever owns the Odoo mapping if anything there reads Abonnement for services."
+      "finderKeys": [
+        "aware"
+      ],
+      "note": "Ontzorgpakket per package (Thijs, 2026-10-27): one real Shopify product per package, picked by the package's finder_key (finderKeys), never one generic checkbox. Vista and Veilig Onderweg have none. Rendered in the Uitbreidingen accordion's 'Veel gekozen uitbreidingen' group with its live price + '/mnd'. SHIPPED WITHOUT THE PROMO DISCOUNT (Thijs, 2026-10-13): not in the 'Eerste 3 maanden' discount, so syncAddonLines() adds it at quantity 3 (PKG_QTY, the prepaid months, like a package line, because it is a recurring monthly service) at full price. Reported on the package line via the Uitbreidingen property. MOIOH, EUR 4,95/mnd, published to Online Store (Admin API, 2026-10-27). Not the archived 'ontzorgpakket-inzicht' product (same SKU MOIOH, EUR 5,95), which the theme never reads."
+    },
+    {
+      "productHandle": "maandelijks-ontzorg-zeker-oh",
+      "sku": "MOZOH",
+      "name": "Ontzorgpakket",
+      "finderKeys": [
+        "aware_plus"
+      ],
+      "note": "Ontzorgpakket per package (Thijs, 2026-10-27): one real Shopify product per package, picked by the package's finder_key (finderKeys), never one generic checkbox. Vista and Veilig Onderweg have none. Rendered in the Uitbreidingen accordion's 'Veel gekozen uitbreidingen' group with its live price + '/mnd'. SHIPPED WITHOUT THE PROMO DISCOUNT (Thijs, 2026-10-13): not in the 'Eerste 3 maanden' discount, so syncAddonLines() adds it at quantity 3 (PKG_QTY, the prepaid months, like a package line, because it is a recurring monthly service) at full price. Reported on the package line via the Uitbreidingen property. MOZOH, EUR 5,95/mnd, published to Online Store (Admin API, 2026-10-27)."
+    },
+    {
+      "productHandle": "maandelijks-onderhoud-alarmsysteem",
+      "sku": "OHC012",
+      "name": "Ontzorgpakket",
+      "finderKeys": [
+        "care",
+        "guard"
+      ],
+      "note": "Ontzorgpakket per package (Thijs, 2026-10-27): one real Shopify product per package, picked by the package's finder_key (finderKeys), never one generic checkbox. Vista and Veilig Onderweg have none. Rendered in the Uitbreidingen accordion's 'Veel gekozen uitbreidingen' group with its live price + '/mnd'. SHIPPED WITHOUT THE PROMO DISCOUNT (Thijs, 2026-10-13): not in the 'Eerste 3 maanden' discount, so syncAddonLines() adds it at quantity 3 (PKG_QTY, the prepaid months, like a package line, because it is a recurring monthly service) at full price. Reported on the package line via the Uitbreidingen property. OHC012, EUR 10,50/mnd, published to Online Store (Admin API, 2026-10-27). Shared by Beschermd and Protect (Climax), one cart line for both."
+    },
+    {
+      "productHandle": "maandelijks-ontzorg-alert-oh",
+      "sku": "MOAOH",
+      "name": "Ontzorgpakket",
+      "finderKeys": [
+        "secure"
+      ],
+      "note": "Ontzorgpakket per package (Thijs, 2026-10-27): one real Shopify product per package, picked by the package's finder_key (finderKeys), never one generic checkbox. Vista and Veilig Onderweg have none. Rendered in the Uitbreidingen accordion's 'Veel gekozen uitbreidingen' group with its live price + '/mnd'. SHIPPED WITHOUT THE PROMO DISCOUNT (Thijs, 2026-10-13): not in the 'Eerste 3 maanden' discount, so syncAddonLines() adds it at quantity 3 (PKG_QTY, the prepaid months, like a package line, because it is a recurring monthly service) at full price. Reported on the package line via the Uitbreidingen property. MOAOH, EUR 5,95/mnd, published to Online Store (Admin API, 2026-10-27)."
     }
   ],
   "bundles": [

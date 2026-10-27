@@ -301,8 +301,8 @@ the two option values, the legacy prefix).
 2026-09-25). Their Oplossingen cards show "Uitbreiding hardware" (link to
 `/pages/camera-hardware?pakket=beschermd|protect#grotere-woning`) plus a hint in `.ltc__links`
 instead, and so does their Meer informatie modal. The hardware page's `#grotere-woning` block
-lists the extra sensors per verdieping, mapped to its HW rows. So Beschermd and Protect no longer
-offer the Ontzorgpakket either. The NAMI cards keep the panel, byte-identical.
+lists the extra sensors per verdieping, mapped to its HW rows. Since 2026-10-27 Beschermd and
+Protect offer an Ontzorgpakket again (OHC012, see below). The NAMI cards keep the Woning panel.
 
 **Activation fee** (`activation` in the config) is the **Climax** installation product:
 `climax-instalatie`, CL003, €99, since 2026-09-23 (it replaced `activatie-en-installatie` /
@@ -310,21 +310,35 @@ ACT-INSTALL, which no longer exists). It is resolved by handle (`all_products[zv
 never a hardcoded variant id, for Beschermd/Protect only. NAMI packages use
 `installationOptions.nami` instead, chosen by the customer on Overzicht.
 
-**Videodeurbel (ADC-750, `koop-video-deurbel-750`) and Afstandsbediening (H0010,
-`huur-afstandsbediening`)** are real Shopify products with a live-priced checkbox in the
-Uitbreidingen accordion. Climax (Beschermd/Protect) shows both; since 2026-10-13 the NAMI cards
+**Videodeurbel and Afstandsbediening (H0010, `huur-afstandsbediening`)** are real Shopify
+products with a live-priced checkbox in the Uitbreidingen accordion. **Videodeurbel since
+2026-10-27:** Huren = `huur-video-deurbel-750` (H750, €9,55/mnd), Kopen = `koop-video-deurbel-750`
+(ADC-750, €299 eenmalig), both resolved by handle (the `zv_koop_variant_videodeurbel` theme
+setting is gone). Each pill shows its own price ("Huren <prijs>/mnd", "Kopen <prijs>"); the
+mode decides which variant `syncAddonLines()` keeps (`Videodeurbel` vs `Videodeurbel (koop)` in
+the Uitbreidingen property). Before this, Huren pointed at ADC-750 and Kopen at an empty setting. Climax (Beschermd/Protect) shows both; since 2026-10-13 the NAMI cards
 (Inzicht/Zeker/Alert) show only Videodeurbel, and Vista shows neither. Climax has one
 accordion holding the two checkboxes plus, as its last row below a divider, the existing
 "Uitbreiding hardware" link (folded in 2026-09-26 — there is no separate hardware button or
 "Extra uitbreidingen" link any more, on any card); it renders even with no add-on resolved,
 since the hardware link alone still needs the panel. NAMI keeps its existing accordion (Woning +
 the Videodeurbel checkbox + Ontzorgpakket), no hardware link.
+**Ontzorgpakket is one product per package (Thijs, 2026-10-27)**, from `addonNames[].finderKeys`
+in pricing.config.json (`zv_ontzorg_handle_by_fk`; `zv-package-handles` line `ontzorg` for the
+cart pages): Inzicht MOIOH `maandelijks-ontzorg-inzicht-oh` €4,95, Zeker MOZOH €5,95, Alert MOAOH
+€5,95, Beschermd **and** Protect OHC012 `maandelijks-onderhoud-alarmsysteem` €10,50 (one shared
+line). Vista and Veilig Onderweg have none; the static "Ontzorgpakket · Prijs volgt" rows are
+gone. Each card carries `data-ontzorg-variant`; `syncAddonLines()` finds a package line's card
+by its SKU property. `check_pricing.py` section 16 pins the mapping. The archived
+`ontzorgpakket-inzicht` (also SKU MOIOH, €5,95) is never read. With these the Oplossingen page
+resolves 17 unique `all_products` handles (limit 20).
 Checking a box keeps one shared cart line per add-on in sync (`syncAddonLines()` on Oplossingen).
-**Videodeurbel/Afstandsbediening sync to flat quantity 1** (one-time purchases; quantity
-`zv_promo_package_qty` tripled them, fixed 2026-10-22). **Ontzorgpakket (Inzicht,
-`maandelijks-ontzorg-inzicht-oh`) syncs to `PKG_QTY` like a package line** (2026-10-26): it is a
-recurring monthly service, so it prepays the 3 months, at full price — it stays outside the
-"Eerste 3 maanden" discount (3 × €4,95 = €14,85 today). Videodeurbel and Afstandsbediening
+**Videodeurbel/Afstandsbediening sync to flat quantity 1** in both modes (quantity
+`zv_promo_package_qty` tripled them, fixed 2026-10-22). The Huren variants (H750, H0010) are
+monthly rentals, yet they sit at quantity 1 and are not in Overzicht's "Daarna": an open
+question (how Odoo bills them), not decided in the theme. **Ontzorgpakket syncs to `PKG_QTY`
+like a package line** (2026-10-26): it is a recurring monthly service, so it prepays the 3
+months, at full price, outside the "Eerste 3 maanden" discount, and counts in "Daarna". Videodeurbel and Afstandsbediening
 were both confirmed "sold out" (inventory tracked, DENY, stock <= 0) on 2026-09-26 —
 the checkbox and its live price still work, but no line can be added until that's fixed in
 Shopify Admin. Clean names come from a name-only `addonNames` array in pricing.config.json

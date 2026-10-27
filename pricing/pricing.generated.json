@@ -68,7 +68,7 @@
     "promoApplies": false,
     "addons": [
       {
-        "productHandle": "koop-video-deurbel-750",
+        "productHandle": "huur-video-deurbel-750",
         "name": "Videodeurbel",
         "eenmaligCents": 29900,
         "eenmaligDisplay": "€ 299,00"
@@ -81,6 +81,37 @@
       }
     ]
   },
+  "ontzorg": [
+    {
+      "productHandle": "maandelijks-ontzorg-inzicht-oh",
+      "sku": "MOIOH",
+      "finderKeys": [
+        "aware"
+      ]
+    },
+    {
+      "productHandle": "maandelijks-ontzorg-zeker-oh",
+      "sku": "MOZOH",
+      "finderKeys": [
+        "aware_plus"
+      ]
+    },
+    {
+      "productHandle": "maandelijks-onderhoud-alarmsysteem",
+      "sku": "OHC012",
+      "finderKeys": [
+        "care",
+        "guard"
+      ]
+    },
+    {
+      "productHandle": "maandelijks-ontzorg-alert-oh",
+      "sku": "MOAOH",
+      "finderKeys": [
+        "secure"
+      ]
+    }
+  ],
   "labels": {
     "activation": "Eenmalige activatie en installatie",
     "commitment": "eerste 3 maanden (50% korting)",

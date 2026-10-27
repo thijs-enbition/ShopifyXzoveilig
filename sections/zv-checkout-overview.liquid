@@ -71,23 +71,36 @@
     zv-install-name/zv_install_names_by_handle) — these two never take part in any checkout gate,
     unlike the package/installation/Woning lines above.
   endcomment
-  assign zv_addon_videodeurbel_variant_id = all_products['koop-video-deurbel-750'].variants.first.id
+  assign zv_addon_videodeurbel_variant_id = all_products['huur-video-deurbel-750'].variants.first.id
   assign zv_addon_afstandsbediening_variant_id = all_products['huur-afstandsbediening'].variants.first.id
 
   comment
-    Ontzorgpakket Inzicht (2026-10-13): same treatment as the two above for the breakdown row
-    label. It's a confirmed recurring monthly service (EUR 5,95/mnd), so it also counts toward
-    "Daarna" in the totals loop below — see the later note on whether Afstandsbediening is also
-    recurring and missing the same treatment.
+    Ontzorgpakket (Inzicht since 2026-10-13; one product per package since 2026-10-27: MOIOH,
+    MOZOH, MOAOH, OHC012 for Beschermd/Protect): same treatment as the two above for the
+    breakdown row label. A confirmed recurring monthly service, so it also counts toward
+    "Daarna" in the totals loop below. Handles from the generated zv-package-handles (line:
+    'ontzorg'); zv_ontzorg_variant_id_list holds strings, so compare item.variant_id | append: ''.
   endcomment
-  assign zv_addon_ontzorg_inzicht_variant_id = all_products['maandelijks-ontzorg-inzicht-oh'].variants.first.id
+  capture zv_ontzorg_handles
+    render 'zv-package-handles', line: 'ontzorg', what: 'handles'
+  endcapture
+  assign zv_ontzorg_variant_ids = ''
+  assign zv_ontzorg_handle_list = zv_ontzorg_handles | strip | split: '|'
+  for h in zv_ontzorg_handle_list
+    assign ov = all_products[h].variants.first.id
+    if ov != blank
+      assign zv_ontzorg_variant_ids = zv_ontzorg_variant_ids | append: '|' | append: ov
+    endif
+  endfor
+  assign zv_ontzorg_variant_id_list = zv_ontzorg_variant_ids | remove_first: '|' | split: '|'
 
   comment
-    Koop add-on lines (Huren/Kopen): the Koop variants from the theme settings, synced at
-    quantity 1 by syncAddonLines() on Oplossingen. Labelled "<naam> (kopen)" below; one-off,
-    never in "Daarna". 0 when the setting is empty, so it never matches a line.
+    Koop add-on lines (Huren/Kopen), synced at quantity 1 by syncAddonLines() on Oplossingen:
+    Videodeurbel's Koop product ADC-750 by handle (2026-10-27), Afstandsbediening's Koop variant
+    from the theme setting. Labelled "<naam> (kopen)" below; one-off, never in "Daarna". 0 when
+    unresolved or the setting is empty, so it never matches a line.
   endcomment
-  assign zv_koop_addon_videodeurbel_variant_id = settings.zv_koop_variant_videodeurbel | strip | plus: 0
+  assign zv_koop_addon_videodeurbel_variant_id = all_products['koop-video-deurbel-750'].variants.first.id | plus: 0
   assign zv_koop_addon_afstandsbediening_variant_id = settings.zv_koop_variant_afstandsbediening | strip | plus: 0
 
   comment
@@ -180,14 +193,15 @@
     endif
 
     comment
-      Ontzorgpakket Inzicht (2026-10-13): a confirmed recurring monthly service (EUR 5,95/mnd),
-      so its unit price counts toward "Daarna" too. Counted independently of the package-line
-      block below. NOTE: Afstandsbediening (huur-afstandsbediening, productType "Huur
-      Componenten") may also be a recurring monthly rental rather than a one-off — unconfirmed,
-      and if so it has the same "Daarna" gap this closes for Ontzorgpakket. Worth checking with
-      Alex; not addressed here since it predates this change.
+      Ontzorgpakket (per package since 2026-10-27): a confirmed recurring monthly service, so
+      its unit price counts toward "Daarna" too. Counted independently of the package-line
+      block below. NOTE: the Huren hardware add-ons (huur-afstandsbediening H0010,
+      huur-video-deurbel-750 H750, productType "Huur Componenten", EUR/mnd) are monthly rentals
+      too but sync at quantity 1 and are not in "Daarna" — an open question (how Odoo bills
+      them), not decided here.
     endcomment
-    if zv_addon_ontzorg_inzicht_variant_id != blank and item.variant_id == zv_addon_ontzorg_inzicht_variant_id
+    assign item_vid = item.variant_id | append: ''
+    if zv_ontzorg_variant_id_list contains item_vid
       assign true_month_cents = true_month_cents | plus: item.original_price
     endif
 
@@ -559,8 +573,8 @@
                       {%- comment -%} Installation lines (CL003 and the 3 NAMI options) always read "Installatie": Odoo sets their product type (e.g. "All"), which isn't customer copy. {%- endcomment -%}
                       {%- assign ovi_is_install = false -%}
                       {%- if item.variant_id == activation_variant_id or item.variant_id == nami_install_geen_variant_id or item.variant_id == nami_install_telefonisch_variant_id or item.variant_id == nami_install_huis_variant_id -%}{%- assign ovi_is_install = true -%}{%- endif -%}
-                      {%- assign ovi_is_addon = false -%}
-                      {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_addon_ontzorg_inzicht_variant_id or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}{%- assign ovi_is_addon = true -%}{%- endif -%}
+                      {%- assign ovi_is_addon = false -%}{%- assign item_vid = item.variant_id | append: '' -%}
+                      {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or zv_ontzorg_variant_id_list contains item_vid or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}{%- assign ovi_is_addon = true -%}{%- endif -%}
                       {%- if ovi_is_install -%}<span class="ovi-line">Installatie</span>{%- elsif ovi_is_koop -%}<span class="ovi-line">Kopen</span>{%- elsif ovi_is_addon -%}<span class="ovi-line">Uitbreiding</span>{%- elsif item.product.type != blank -%}<span class="ovi-line">{{ item.product.type | escape }}</span>{%- endif -%}
                       <div class="ovi-name">{{ item_name | escape }}</div>
                       {%- unless item.variant.title contains 'Default' -%}<div class="ovi-meta">{{ item.variant.title | escape }}</div>{%- endunless -%}
@@ -693,6 +707,7 @@
                         never discounted). Never the "× 3 — eerste 3 maanden (50% korting)" label.
                       endcomment
                       assign row_koop_name = blank
+                      assign row_vid = item.variant_id | append: ''
                       capture row_koop_fk
                         render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle
                       endcapture
@@ -730,7 +745,7 @@
                         assign row_label = 'Videodeurbel'
                       elsif zv_addon_afstandsbediening_variant_id != blank and item.variant_id == zv_addon_afstandsbediening_variant_id
                         assign row_label = 'Afstandsbediening'
-                      elsif zv_addon_ontzorg_inzicht_variant_id != blank and item.variant_id == zv_addon_ontzorg_inzicht_variant_id
+                      elsif zv_ontzorg_variant_id_list contains row_vid
                         comment
                           Same "× 3 — eerste 3 maanden" shape as a package row, so the
                           3-months-prepaid structure is explained the same way, but with
