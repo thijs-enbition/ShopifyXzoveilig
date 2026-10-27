@@ -443,6 +443,10 @@ added by `addKoopToCart()` and the guard). **Woning on a bought package is the p
 Woning line** (Thijs, 2026-10-24, for NAMI; Climax mirrors it since 2026-10-27); Odoo bills it. No
 monthly service-fee line ever.
 
+Ontzorgpakket is the exception to "no monthly service-fee line": on any bought package it
+still syncs to PKG_QTY at full price, exactly as on a rented one (Thijs, 2026-10-26) — this
+applies to all four Ontzorgpakket products (MOIOH/MOZOH/MOAOH/OHC012), not just Inzicht.
+
 ## Shopify store
 
 The test store is **`zoveiligdev.myshopify.com`** (admin: `admin.shopify.com/store/zoveiligdev`).
