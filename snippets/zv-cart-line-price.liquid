@@ -1,0 +1,34 @@
+{%- comment -%}
+  zv-cart-line-price: a /cart line's amount for today (2026-10-28, docs/cart-huur-koop-split-2026-10-28.md).
+  A line with a line-level discount allocation (the automatic "Eerste 3 maanden" discount) shows its
+  original_line_price struck through next to its final_line_price, plus one badge per allocation
+  carrying the discount's own title from Shopify (never a hardcoded percentage or name), and the
+  post-promo line "Loopt daarna door tegen <maandbedrag>/mnd (zonder korting), via SEPA-incasso."
+  Which lines get all this is decided only by the allocation, never by SKU, so it follows the
+  discount's scope in Shopify Admin. A line without an allocation shows just final_line_price.
+
+  The monthly amount is the line's own undiscounted unit price (item.original_price), read live like
+  every other price here. Exception: a Woning line is pkg_qty x its floors, so its monthly amount is
+  the unit price x floors (quantity / pkg_qty).
+
+  Params (render scope can't see the section's variables, so pass them in):
+    item    - the cart line item
+    woning  - true on a Woning row
+    pkg_qty - zv_promo_package_qty (only read when woning is true)
+{%- endcomment -%}
+{%- if item.line_level_discount_allocations.size > 0 -%}
+  {%- assign zv_monthly_cents = item.original_price -%}
+  {%- if woning -%}{%- assign zv_monthly_cents = item.original_price | times: item.quantity | divided_by: pkg_qty -%}{%- endif -%}
+  <div class="ci-price ci-price--deal">
+    <span class="visually-hidden">Oorspronkelijke prijs</span>
+    <s class="ci-was">{{ item.original_line_price | money }}</s>
+    <span class="visually-hidden">Prijs met korting</span>
+    <span>{{ item.final_line_price | money }}</span>
+  </div>
+  {%- for allocation in item.line_level_discount_allocations -%}
+    <span class="ci-deal">{{ allocation.discount_application.title | escape }}</span>
+  {%- endfor -%}
+  <span class="ci-note">Loopt daarna door tegen {{ zv_monthly_cents | money }}/mnd (zonder korting), via SEPA-incasso.</span>
+{%- else -%}
+  <div class="ci-price">{{ item.final_line_price | money }}</div>
+{%- endif -%}
