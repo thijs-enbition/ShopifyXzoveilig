@@ -120,6 +120,7 @@
   assign woning_variant_ids = woning_variant_ids | strip
   assign woning_variant_id_list = woning_variant_ids | split: '|'
   assign woning_applies_by_product_list = zv_woning_applies_by_product | split: '|'
+  assign woning_applies_fks_by_product_list = zv_woning_applies_fks_by_product | split: '|'
   assign woning_applies_list = zv_woning_applies_handles | split: '|'
   assign woning_applies_fk_list = zv_woning_applies_fks | split: '|'
   assign woning_line_log = ''
@@ -237,9 +238,10 @@
 
     comment
       A Koop package line (Huren/Kopen): quantity 1, no discount, one line per package. It needs
-      its installGroup's installation like a rented package and keeps Woning as its property only
-      (never a Woning line; NAMI since 2026-10-24, Climax since 2026-10-27). Woning on a Koop line
-      whose package doesn't offer it is something zv-cart-guard deletes, so checkout waits.
+      its installGroup's installation like a rented package. Its Woning choice counts towards its
+      platform's Woning line the same as a rented package's (2026-10-28, see below); Woning on a
+      Koop line whose package doesn't offer it is something zv-cart-guard deletes, so checkout
+      waits.
     endcomment
     capture item_koop_fk
       render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle
@@ -257,6 +259,27 @@
         unless woning_applies_fk_list contains item_koop_fk
           assign cart_needs_fix = true
         endunless
+      endif
+      comment
+        Woning on a bought package (2026-10-28): follows the same path as Ontzorgpakket now —
+        its floors feed woning_floor_log exactly like a rented package's, just matched by
+        finder_key (woning_applies_fks_by_product) since a Koop line's handle isn't in
+        woning_applies_by_product. Was property-only (Thijs, 2026-10-24 NAMI / 2026-10-27
+        Climax); nothing ever billed it because neither Shopify nor Odoo had a line to key off.
+      endcomment
+      if item.properties['Woning'] != blank and woning_applies_fk_list contains item_koop_fk
+        capture item_koop_woning_floors
+          render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix
+        endcapture
+        assign item_koop_woning_floors = item_koop_woning_floors | strip | plus: 0
+        if item_koop_woning_floors > 0
+          for wa_fk in woning_applies_fks_by_product_list
+            assign wa_fk_list = wa_fk | split: ','
+            if wa_fk_list contains item_koop_fk
+              assign woning_floor_log = woning_floor_log | append: forloop.index0 | append: ':' | append: item_koop_woning_floors | append: '|'
+            endif
+          endfor
+        endif
       endif
       if item.quantity != 1
         assign cart_needs_fix = true
@@ -442,7 +465,7 @@
     assign cart_checkout_blocked = true
   endif
 -%}
-{%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_ids: woning_variant_ids, woning_applies_by_product: zv_woning_applies_by_product, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles, woning_applies_fks: zv_woning_applies_fks, rider_pairs: zv_rider_pairs, koop_map: zv_koop_fk_by_handle -%}
+{%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_ids: woning_variant_ids, woning_applies_by_product: zv_woning_applies_by_product, woning_applies_fks_by_product: zv_woning_applies_fks_by_product, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles, woning_applies_fks: zv_woning_applies_fks, rider_pairs: zv_rider_pairs, koop_map: zv_koop_fk_by_handle -%}
 {%- liquid
 
   comment

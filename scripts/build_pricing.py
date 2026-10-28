@@ -544,9 +544,12 @@ def build():
         ]
     # Woning surcharge: the unit, the heading, the legacy prefix, the Woning products (N0008
     # nami, E001 climax: handles, the SKUs their first variants must have, and per product the
-    # package handles whose floors it carries, comma-separated; three parallel pipe lists), every
-    # package handle and finder_key that offers Woning and, per option, the exact property value
-    # and its monthly amount (zv_woning_<floors>_value / _cents).
+    # package handles AND finder_keys whose floors it carries, comma-separated; four parallel
+    # pipe lists — applies_by_product is Huren handles only, applies_fks_by_product is the
+    # finder_key equivalent, so a Koop line (a different handle) still matches by finder_key
+    # where a caller has no handle to go on, see zv-cart-guard.liquid rule 5), every package
+    # handle and finder_key that offers Woning and, per option, the exact property value and
+    # its monthly amount (zv_woning_<floors>_value / _cents).
     lines += [
         f"{{%- assign zv_woning_unit_cents = {woning['unitCents']} -%}}",
         f"{{%- assign zv_woning_heading = '{woning['heading']}' -%}}",
@@ -554,6 +557,7 @@ def build():
         f"{{%- assign zv_woning_handles = '{'|'.join(p['handle'] for p in woning['products'])}' -%}}",
         f"{{%- assign zv_woning_skus = '{'|'.join(p['sku'] for p in woning['products'])}' -%}}",
         f"{{%- assign zv_woning_applies_by_product = '{'|'.join(','.join(p['appliesTo']) for p in woning['products'])}' -%}}",
+        f"{{%- assign zv_woning_applies_fks_by_product = '{'|'.join(','.join(p['appliesToFinderKeys']) for p in woning['products'])}' -%}}",
         f"{{%- assign zv_woning_applies_handles = '{'|'.join(woning['appliesTo'])}' -%}}",
         f"{{%- assign zv_woning_applies_fks = '{'|'.join(woning['appliesToFinderKeys'])}' -%}}",
     ]

@@ -1728,10 +1728,23 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
   function isWoningLine(it) {
     return WONING_PRODUCTS.some(function (wp) { return !!wp.variantId && String(it.variant_id) === String(wp.variantId); });
   }
-  // Target quantity of one Woning product's line: PKG_QTY x the floors over its own package lines.
+  // Target quantity of one Woning product's line: PKG_QTY x the floors over its own package
+  // lines — a Huren line by its handle (wp.appliesTo), a Koop line (2026-10-28) by its
+  // finder_key (wp.appliesToFk) instead, since its handle is a different product; resolved via
+  // its SKU property through cardsBySku, the same lookup addonTargets() uses for Ontzorgpakket
+  // (defined further down, but already populated by the time any add/sync runs).
   function woningTargetQty(items, wp) {
     var floors = 0;
-    (items || []).forEach(function (it) { if (wp.appliesTo.indexOf(it.handle) !== -1) floors += woningFloors((it.properties || {})['Woning']); });
+    (items || []).forEach(function (it) {
+      var p = it.properties || {};
+      var inScope = wp.appliesTo.indexOf(it.handle) !== -1;
+      if (!inScope) {
+        var card = cardsBySku[p['SKU'] || ''];
+        var fk = card && card.getAttribute('data-finder-key');
+        inScope = !!fk && wp.appliesToFk.indexOf(fk) !== -1;
+      }
+      if (inScope) floors += woningFloors(p['Woning']);
+    });
     return PKG_QTY * floors;
   }
   /* The one request that brings one Woning product's line to its target, or null when it's
@@ -2362,10 +2375,11 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
      Only rendered once the package's Koop variant setting is filled in. Never through addToCart():
      that adds at PKG_QTY for the intro promo, which is Huren only. The Koop variant goes in once
      (quantity 1) with the same properties as a huur add plus Afname: Kopen, which is how /cart,
-     Overzicht and zv-cart-guard recognise it. A bought package keeps its Woning choice as the
-     property only: no Woning line, nothing charged for it today (Thijs, 2026-10-24, for NAMI;
-     Climax mirrors it since 2026-10-27; Odoo bills it with the service fee), so syncWoningLine()
-     is not called. Installation is the same as for a
+     Overzicht and zv-cart-guard recognise it. A bought package's Woning choice now follows the
+     same path as its Ontzorgpakket add-on (2026-10-28): syncWoningLine() runs right after the
+     add, same as a huur add, and woningTargetQty() recognises the Koop line by finder_key (was
+     property-only, nothing charged, from 2026-10-24 NAMI / 2026-10-27 Climax — see git history
+     if that ever needs reverting). Installation is the same as for a
      huur add: a Climax package brings the Climax installation line (once), a NAMI package's
      installation is chosen on Overzicht. Checked add-ons get their lines through
      syncAddonLines(), as for a huur add. */
@@ -2393,6 +2407,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
           return window.fetch('/cart.js').then(function (r) { return r.json(); });
         });
     })
+      .then(syncWoningLine)
       .then(syncAddonLines)
       .then(function (cart) { release(); updateCartCount(cart); openCart(cart); })
       .catch(function () {
