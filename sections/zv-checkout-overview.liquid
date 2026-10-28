@@ -131,9 +131,10 @@
   comment
     Riders (2026-10-27): the camera subscription rides with ADC-750, the bought
     Videodeurbel ('leadVariant:riderVariant:cents|…', zv-addon-riders). zv-cart-guard keeps one
-    rider line at quantity 1 while a lead line is in the cart and none otherwise; until it has,
-    checkout waits (cart_needs_fix, below the loop). One month today, not in "Daarna" (open, like
-    the Huren rentals: unresolved.ODOO_ADDON_BILLING).
+    rider line at quantity zv_promo_package_qty while a lead line is in the cart and none
+    otherwise; until it has, checkout waits (cart_needs_fix, below the loop). Since 2026-10-28
+    it prepays the months like Ontzorgpakket, at full price; not in "Daarna" (open, like the
+    Huren rentals: unresolved.ODOO_ADDON_BILLING).
   endcomment
   capture zv_rider_pairs
     render 'zv-addon-riders', map: zv_addon_rider_by_lead
@@ -406,9 +407,14 @@
   endif
 
   comment
-    Riders: a lead line needs exactly one rider line at quantity 1, and a rider line needs a
-    lead line. zv-cart-guard fixes either (rule 7); until then checkout waits.
+    Riders: a lead line needs exactly one rider line at quantity zv_promo_package_qty (2026-10-28:
+    the camera subscription prepays the months like Ontzorgpakket, was flat 1), and a rider line needs a lead
+    line. zv-cart-guard fixes either (rule 7); until then checkout waits.
   endcomment
+  assign r_rider_target = zv_promo_package_qty
+  if r_rider_target < 1
+    assign r_rider_target = 1
+  endif
   for rp in zv_rider_pair_list
     assign rpp = rp | split: ':'
     assign r_lead_lines = 0
@@ -424,7 +430,7 @@
       endif
     endfor
     if r_lead_lines > 0
-      if r_rider_lines != 1 or r_rider_qty != 1
+      if r_rider_lines != 1 or r_rider_qty != r_rider_target
         assign cart_needs_fix = true
       endif
     elsif r_rider_lines > 0

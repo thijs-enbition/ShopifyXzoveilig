@@ -1812,7 +1812,9 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
      Unlike the plain Uitbreidingen text property (which just records a name for Odoo), these
      two also keep ONE shared priced cart line per add-on in sync: an add-on is either wanted
      (recorded in some package line's Uitbreidingen property) or not, never a multiple
-     (quantity 1; only Ontzorgpakket, a monthly service, takes PKG_QTY — see syncAddonLines()).
+     (quantity 1). 2026-10-28: the exceptions are Ontzorgpakket and the Huren variants of
+     Videodeurbel/Afstandsbediening — monthly services that take PKG_QTY like a package line
+     (see addonTargets()); the Koop variants stay at quantity 1.
      Variant ids come from the page's own data attributes (resolved server-side by handle,
      never hardcoded here); an add-on whose product doesn't resolve is skipped — its name can
      still be recorded in the Uitbreidingen property, just no line is added for it. */
@@ -1833,9 +1835,11 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
   var ONTZORG_VARIANT_IDS = (page.dataset.ontzorgVariantIds || '').split('|').filter(Boolean);
   /* Riders (2026-10-27): a product nobody picks on its own, kept in step with another add-on's
      Koop line: the camera subscription rides with ADC-750 (the bought Videodeurbel). One
-     rider line at quantity 1 while the cart holds a lead line, none otherwise; flat, never
-     PKG_QTY (the promo is Huren only and the subscription is outside the discount; see its addonNames note
-     in pricing.config.json). From data-addon-riders, 'lead:rider:cents' pairs resolved by handle. */
+     rider line while the cart holds a lead line, none otherwise. 2026-10-28: the camera subscription now prepays
+     PKG_QTY months like Ontzorgpakket (still outside the discount, since it only ever rides a
+     Koop line; see its addonNames note in pricing.config.json). zv-cart-guard rule 7 and the
+     Overzicht gate use the same quantity. From data-addon-riders, 'lead:rider:cents' pairs
+     resolved by handle. */
   var ADDON_RIDERS = (page.dataset.addonRiders || '').split('|').map(function (s) { return s.split(':'); })
     .filter(function (p) { return p[0] && p[1]; }).map(function (p) { return { lead: p[0], rider: p[1] }; });
   function isAddonLine(it) {
@@ -1849,10 +1853,15 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
   // Uitbreidingen properties right now.
   // 2026-10-22 fix: one-time add-ons are never a multiple (see comment above) — they sync to
   // quantity 1, not PKG_QTY. PKG_QTY is the package's own "prepay 3 months" promo quantity (3);
-  // reusing it made a flat €299 one-time Videodeurbel charge ring up as €897 (3×).
+  // reusing it made a flat €299 one-time Videodeurbel charge ring up as €897 (3×). That still
+  // holds for the Koop variants (one-time purchases); the Huren variants are monthly rentals,
+  // see 2026-10-28 below.
   // 2026-10-26: Ontzorgpakket is the one exception. It's a recurring monthly service, not a
   // one-off, so like a package line it prepays PKG_QTY months — at full price, since it stays
   // outside the "Eerste 3 maanden" discount (see its addonNames notes in pricing.config.json).
+  // 2026-10-28: Huren Videodeurbel/Afstandsbediening are the same exception now (monthly
+  // rentals, in the discount scope since 2026-10-28, so they prepay PKG_QTY months at the
+  // discounted rate); Koop is not. The camera-subscription rider (syncAddonLines()) joins it at full price.
   // No PKG_QTY (pricing config missing) falls back to 1. Beschermd and Protect share OHC012:
   // one line, either or both wanting it.
   function addonTargets(items) {
@@ -1866,7 +1875,13 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
           var ov = card && card.getAttribute('data-ontzorg-variant');
           if (ov) targets[ov] = PKG_QTY || 1;
         } else if (n && ADDON_VARIANT_IDS[n]) {
-          targets[String(ADDON_VARIANT_IDS[n])] = 1;
+          // 2026-10-28: Huren Videodeurbel/Afstandsbediening now follow the Ontzorgpakket
+          // pattern — both were added to the "Eerste 3 maanden" discount scope in Shopify
+          // Admin on 2026-10-28, so like a package line they prepay PKG_QTY months at the
+          // discounted rate. Koop variants (name ends in KOOP_SUFFIX) are never discounted
+          // or prepaid (koop.promoApplies: false) and stay flat at quantity 1.
+          var isKoop = n.indexOf(KOOP_SUFFIX) !== -1;
+          targets[String(ADDON_VARIANT_IDS[n])] = isKoop ? 1 : (PKG_QTY || 1);
         }
       });
     });
@@ -1890,7 +1905,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
         var items = (cart && cart.items) || [];
         var lead = riderLead[variantId];
         var target = lead
-          ? (items.some(function (it) { return String(it.variant_id) === lead; }) ? 1 : 0)
+          ? (items.some(function (it) { return String(it.variant_id) === lead; }) ? (PKG_QTY || 1) : 0)
           : (addonTargets(items)[variantId] || 0);
         var lines = items.filter(function (it) { return String(it.variant_id) === String(variantId); });
         var plan = null;
