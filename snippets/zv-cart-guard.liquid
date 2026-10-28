@@ -41,9 +41,10 @@
      A legacy Abonnement/Uitbreidingen property on it is left alone.
   7. Riders (2026-10-27, rider_pairs 'leadVariant:riderVariant[:cents]|…', from zv-addon-riders):
      the camera subscription rides with ADC-750, the bought Videodeurbel. A cart with a
-     lead line keeps exactly one rider line at quantity 1 (added, set or merged); a cart without
-     one has its rider lines removed (the customer removed the doorbell on /cart). Flat quantity
-     1, never pkg_qty: see its addonNames note in pricing.config.json.
+     lead line keeps exactly one rider line at quantity pkg_qty (added, set or merged); a cart
+     without one has its rider lines removed (the customer removed the doorbell on /cart).
+     2026-10-28: pkg_qty, not flat 1 — the camera subscription prepays the months like Ontzorgpakket, still at
+     full price (outside the discount): see its addonNames note in pricing.config.json.
   The Woning and rider lines never match the package or installation rules above (their
   product types are not sub_type and their variants are none of the installation ids). A
   Woning product that doesn't resolve (0 in woning_variant_ids) is skipped by rule 5: the
@@ -253,12 +254,12 @@
       return { url: '/cart/change.js', body: { id: strayWoning.key, quantity: strayWoning.quantity, properties: keep } };
     }
 
-    // 7. Riders: one rider line at quantity 1 while a lead line is in the cart, none otherwise.
+    // 7. Riders: one rider line at quantity PKG_QTY while a lead line is in the cart, none otherwise.
     for (var r = 0; r < RIDERS.length; r++) {
       var rd = RIDERS[r];
       var hasLead = items.some(function (it) { return String(it.variant_id) === rd.lead; });
       var riderLines = items.filter(function (it) { return String(it.variant_id) === rd.rider; });
-      var riderTarget = hasLead ? 1 : 0;
+      var riderTarget = hasLead ? PKG_QTY : 0;
       if (riderLines.length > 1 || (riderLines.length === 1 && riderLines[0].quantity !== riderTarget)) {
         var setRider = {};
         riderLines.forEach(function (it, i) { setRider[it.key] = i === 0 ? riderTarget : 0; });
@@ -266,7 +267,7 @@
       }
       if (!riderLines.length && riderTarget > 0) {
         var addRider = {};
-        addRider[rd.rider] = 1;   // absolute, by variant id: two guard runs can't stack it (rule 3)
+        addRider[rd.rider] = riderTarget;   // absolute, by variant id: two guard runs can't stack it (rule 3)
         return { url: '/cart/update.js', body: { updates: addRider } };
       }
     }

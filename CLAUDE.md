@@ -60,8 +60,8 @@ after the fact or a package reaching the cart through an unexpected route:
   - a package line whose package doesn't offer Woning but carries a `Woning` property has it
     deleted via `/cart/change.js`, quantity kept (no package today; until 2026-10-27 this was
     every Climax line). A legacy `Abonnement` property is left alone;
-  - (2026-10-27) the **A102B** camera subscription is kept at one line at quantity 1 while the cart
-    holds an ADC-750 (bought Videodeurbel) line, and removed without one.
+  - (2026-10-27) the **A102B** camera subscription is kept at one line at quantity `pkg_qty` (flat 1
+    until 2026-10-28) while the cart holds an ADC-750 (bought Videodeurbel) line, and removed without one.
 
   It never picks one of the three **nami** install options on the customer's behalf; that's
   the customer's choice in the required radio group on Overzicht. The Woning line never
@@ -380,11 +380,14 @@ setting, and **every price on the rows is read live from the product** (2026-10-
 **A102B rides with a bought Videodeurbel (2026-10-27).** `camera-abonnement-videodeurbel-1200-clips`
 (A102B, €3,50/mnd) is no checkbox: `addonNames[].ridesWith` ADC-750, emitted as
 `zv_addon_rider_by_lead` and resolved by `snippets/zv-addon-riders.liquid`. `syncAddonLines()` keeps
-one A102B line at quantity 1 while an ADC-750 line is in the cart (riders sync last), the guard
-does the same on /cart and Overzicht (rule 7), and the Kopen price reads "€299 + €3,50/mnd" (both
-live prices, never a hardcoded string). **Decided flat at quantity 1, not the N0008 promo treatment**: the
-promo is Huren only, A102B is outside the discount, a bought package prepays nothing. It joins
-H750/H0010 in `unresolved.ODOO_ADDON_BILLING` (not in "Daarna"). /cart shows its row without a
+one A102B line at quantity `PKG_QTY` while an ADC-750 line is in the cart (riders sync last), the guard
+does the same on /cart and Overzicht (rule 7, and Overzicht's rider gate expects `pkg_qty` too), and the
+Kopen price reads "€299 + €3,50/mnd" (both live prices, never a hardcoded string). **Since 2026-10-28
+(Thijs) it prepays PKG_QTY months like Ontzorgpakket, at full price**: it was flat quantity 1 on
+2026-10-27. It is still outside "Eerste 3 maanden" (it only ever rides a Koop purchase and
+`koop.promoApplies` is false), so no discount badge. `addonNames[].cartQuantity: 1` is now a stale
+reference value (pinned by `build_pricing.py`/`check_pricing.py`, read by nothing in the theme). It
+shares `unresolved.ODOO_ADDON_BILLING` with Ontzorgpakket, H750 and H0010 (not in "Daarna"). /cart shows its row without a
 remove link (removing the doorbell removes it). `check_pricing.py` §17 pins it.
 Full write-up of the NAMI Koop-only Videodeurbel, the retired Afstandsbediening setting and the list
 layout: `docs/uitbreidingen-koop-only-nami-2026-10-27.md`.
@@ -399,10 +402,13 @@ by its SKU property. `check_pricing.py` section 16 pins the mapping. The archive
 resolved 17 unique `all_products` handles (limit 20); E001 and A102B (2026-10-27) made it 19 and
 CL004 makes it **20**: none left.
 Checking a box keeps one shared cart line per add-on in sync (`syncAddonLines()` on Oplossingen).
-**Videodeurbel/Afstandsbediening sync to flat quantity 1** in both modes (quantity
-`zv_promo_package_qty` tripled them, fixed 2026-10-22). The Huren variants (H750, H0010) are
-monthly rentals, yet they sit at quantity 1 and are not in Overzicht's "Daarna": an open
-question (how Odoo bills them), not decided in the theme. **Ontzorgpakket syncs to `PKG_QTY`
+**Koop Videodeurbel/Afstandsbediening (ADC-750, CL004) sync to flat quantity 1** (quantity
+`zv_promo_package_qty` tripled them, fixed 2026-10-22): one-time purchases, never discounted.
+**The Huren variants (H750, H0010) sync to `PKG_QTY` since 2026-10-28**, the Ontzorgpakket pattern:
+both were added to the "Eerste 3 maanden" discount scope in Admin that day (scope now 10 products),
+so they prepay 3 months at 50% off, with the discount badge (`addonTargets()` picks by the
+`(koop)` name suffix). They are not in Overzicht's "Daarna", and how Odoo bills them from month 4
+is the open `ODOO_ADDON_BILLING` question. **Ontzorgpakket syncs to `PKG_QTY`
 like a package line** (2026-10-26): it is a recurring monthly service, so it prepays the 3
 months, at full price, outside the "Eerste 3 maanden" discount, and counts in "Daarna". Clean names come from a name-only `addonNames` array in pricing.config.json
 (deliberately not the pre-existing

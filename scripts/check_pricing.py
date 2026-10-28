@@ -21,7 +21,7 @@ Covers:
  14 packages by handle
  15 Huren/Kopen: koop figures per package and hardware add-on, never a promo figure
  16 Ontzorgpakket per package
- 17 A102B camera subscription rides with ADC-750, flat at quantity 1
+ 17 A102B camera subscription rides with ADC-750, at PKG_QTY (was flat 1 until 2026-10-28)
 
 Run:  python3 scripts/check_pricing.py
 """
@@ -634,23 +634,32 @@ check(not stale, "no theme file looks up the archived ontzorgpakket-inzicht prod
 
 print("\n17. A102B camera subscription rides with a bought Videodeurbel (2026-10-27)")
 # camera-abonnement-videodeurbel-1200-clips / A102B (EUR 3,50/mnd, Admin API 2026-10-27): one line
-# whenever the cart holds a koop-video-deurbel-750 / ADC-750 line, none otherwise. Decided flat at
-# quantity 1, never the N0008 promo treatment: the promo is Huren only and A102B is not in the
-# "Eerste 3 maanden" discount (see its addonNames note).
+# whenever the cart holds a koop-video-deurbel-750 / ADC-750 line, none otherwise. Since 2026-10-28 it
+# syncs at PKG_QTY like Ontzorgpakket (was flat quantity 1), at full price: it stays outside the
+# "Eerste 3 maanden" discount (see its addonNames note). cartQuantity: 1 is a stale reference value.
 a102b = next((a for a in cfg.get("addonNames", []) if a.get("sku") == "A102B"), {})
 check(a102b.get("productHandle") == "camera-abonnement-videodeurbel-1200-clips",
       "A102B is camera-abonnement-videodeurbel-1200-clips", f"got {a102b.get('productHandle')!r}")
 check(a102b.get("ridesWith") == {"handle": "koop-video-deurbel-750", "sku": "ADC-750"}
       and a102b.get("ridesWith") == (vd.get("koopProduct") or {}),
       "A102B rides with the Videodeurbel's Koop product, ADC-750", f"got {a102b.get('ridesWith')}")
-check(a102b.get("cartQuantity") == 1, "A102B syncs flat at quantity 1", f"got {a102b.get('cartQuantity')}")
+check(a102b.get("cartQuantity") == 1, "A102B's cartQuantity stays the stale reference value 1 (the theme syncs PKG_QTY)", f"got {a102b.get('cartQuantity')}")
+# The theme side of the 2026-10-28 reversal: all three writers use the package quantity, never a flat 1.
+opl = (ROOT / "sections" / "oplossingen.liquid").read_text(encoding="utf-8")
+grd = (ROOT / "snippets" / "zv-cart-guard.liquid").read_text(encoding="utf-8")
+ovz = (ROOT / "sections" / "zv-checkout-overview.liquid").read_text(encoding="utf-8")
+check("=== lead; }) ? (PKG_QTY || 1) : 0)" in opl, "syncAddonLines() syncs the A102B rider at PKG_QTY")
+check("riderTarget = hasLead ? PKG_QTY : 0" in grd, "cart guard rule 7 keeps the A102B rider at pkg_qty")
+check("r_rider_qty != r_rider_target" in ovz and "assign r_rider_target = zv_promo_package_qty" in ovz,
+      "Overzicht's rider gate expects pkg_qty")
+check("isKoop ? 1 : (PKG_QTY || 1)" in opl, "Huren Videodeurbel/Afstandsbediening sync at PKG_QTY, Koop at 1")
 check(not {"koopEenmalig", "finderKeys", "koopProduct"} & set(a102b), "A102B is no checkbox, koop row or Ontzorgpakket",
       f"keys {sorted(a102b)}")
 check("ODOO_ADDON_BILLING" in (a102b.get("note") or "") and "ODOO_ADDON_BILLING" in {u["id"] for u in cfg["unresolved"]},
       "A102B's note names the open Odoo billing question, and the config tracks it")
 got_riders = [(r["productHandle"], r["sku"], r["ridesWith"]["handle"], r["cartQuantity"]) for r in gen.get("addonRiders", [])]
 check(got_riders == [("camera-abonnement-videodeurbel-1200-clips", "A102B", "koop-video-deurbel-750", 1)],
-      "generated addonRiders is exactly A102B with ADC-750 at 1", f"got {got_riders}")
+      "generated addonRiders is exactly A102B with ADC-750 (reference cartQuantity 1)", f"got {got_riders}")
 check(snippet_str("zv_addon_rider_by_lead") == "koop-video-deurbel-750:camera-abonnement-videodeurbel-1200-clips",
       "zv_addon_rider_by_lead maps ADC-750's handle to A102B's", f"got {snippet_str('zv_addon_rider_by_lead')!r}")
 rblk = ph_text.split("when 'rider'", 1)[1].split("when '", 1)[0] if "when 'rider'" in ph_text else ""

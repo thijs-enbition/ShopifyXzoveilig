@@ -130,9 +130,10 @@ def build():
             ontzorg_by_fk[fk] = a["productHandle"]
     # Riders (2026-10-27): an add-on product that is never chosen on its own but rides along with
     # another add-on's Koop product line (A102B, the camera subscription, with ADC-750, the bought
-    # Videodeurbel): one line at cartQuantity whenever the cart holds a ridesWith line, none
-    # otherwise. Only a Koop product may lead, and only flat quantity 1 is supported (see the
-    # A102B note in pricing.config.json for why it is not the N0008 promo treatment).
+    # Videodeurbel): one line whenever the cart holds a ridesWith line, none otherwise. Only a Koop
+    # product may lead. Since 2026-10-28 the theme syncs the line at PKG_QTY (promo.months) like
+    # Ontzorgpakket, full price; cartQuantity is a stale reference value still pinned to 1 (see the
+    # A102B note in pricing.config.json), emitted but not read by the theme.
     koop_products = {(a.get("koopProduct") or {}).get("handle"): (a.get("koopProduct") or {}).get("sku")
                      for a in cfg.get("addonNames", []) if a.get("koopProduct")}
     riders = []
@@ -143,7 +144,7 @@ def build():
         if koop_products.get(rw.get("handle")) != rw.get("sku"):
             raise SystemExit(f"addonNames {a['productHandle']}: ridesWith {rw} is not an add-on's koopProduct")
         if a.get("cartQuantity") != 1:
-            raise SystemExit(f"addonNames {a['productHandle']}: a rider syncs at cartQuantity 1 only")
+            raise SystemExit(f"addonNames {a['productHandle']}: a rider's cartQuantity is a reference value pinned to 1 (the theme syncs it at PKG_QTY)")
         riders.append({"productHandle": a["productHandle"], "sku": a["sku"], "name": a["name"],
                        "ridesWith": {"handle": rw["handle"], "sku": rw["sku"]}, "cartQuantity": 1})
 

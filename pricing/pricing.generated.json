@@ -862,7 +862,7 @@
     {
       "id": "ODOO_ADDON_BILLING",
       "severity": "medium",
-      "summary": "DOCUMENTATION ONLY, like ODOO_PROMO_DISCOUNT. The monthly add-on products that sync at quantity 1 (the Huren rentals H750 and H0010, and since 2026-10-27 the A102B camera subscription that rides with a bought Videodeurbel) charge one month's price today and are not in Overzicht's 'Daarna'. How Odoo bills them afterwards (from month 1 or 2, at what quantity) is not confirmed, so the theme does not claim a monthly figure for them.",
+      "summary": "DOCUMENTATION ONLY, like ODOO_PROMO_DISCOUNT. The monthly add-on products that prepay PKG_QTY months like a package line (Ontzorgpakket, the Huren rentals H750 and H0010 since 2026-10-28, and the A102B camera subscription that rides with a bought Videodeurbel since 2026-10-28; H750/H0010 at the discounted rate, Ontzorgpakket and A102B at full price) all share one open question: how and when Odoo starts billing them from month 4 onward (one contract at the plain monthly rate, SEPA from month 4, same as ODOO_PROMO_DISCOUNT for packages). None of them is flat quantity 1 any more, and none is in Overzicht's 'Daarna', so the theme does not claim a monthly figure for them.",
       "owner": "Odoo administrator (outside this repo)"
     }
   ]
