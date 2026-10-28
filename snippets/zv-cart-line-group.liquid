@@ -1,0 +1,38 @@
+{%- comment -%}
+  zv-cart-line-group: prints 'huren' or 'kopen' for a cart line (2026-10-28, extracted from
+  sections/zv-cart.liquid so /cart and Overzicht cannot decide it differently; see
+  docs/cart-huur-koop-split-2026-10-28.md). Capture it, then `| strip`.
+
+  The group is the line's OWN billing cadence, never the flow or toggle that added it (a bought
+  Videodeurbel pulls in a monthly camera subscription that is still Huren).
+  Huren = recurs monthly (prepaid for the first months today): a rented package (product type),
+  Woning, Ontzorgpakket, the camera rider, the two Huren add-ons. Each is recognised by its own
+  product (type / the variant-id lists), never by name, SKU text or a quantity guess (a Woning
+  line is pkg_qty x its floors, the others pkg_qty).
+  Kopen = one-off, quantity 1, never recurs: a bought package (Afname: Kopen, see zv-koop-fk), the
+  Koop hardware, the installation lines and, as the default, any plain purchase. The Afname test
+  comes first so a Koop product is never swept into Huren.
+
+  Params (render scope can't see the section's variables, so pass them in):
+    item                       - the cart line item
+    sub_type, sub_tag          - the package product type / tag fallback
+    woning_ids                 - woning_variant_id_list
+    ontzorg_ids                - zv_ontzorg_variant_id_list
+    rider_ids                  - zv_rider_variant_id_list
+    addon_videodeurbel_id      - zv_addon_videodeurbel_variant_id (Huren Videodeurbel)
+    addon_afstandsbediening_id - zv_addon_afstandsbediening_variant_id (Huren Afstandsbediening)
+{%- endcomment -%}
+{%- liquid
+  assign zg_vid = item.variant_id | append: ''
+  assign zg_group = 'kopen'
+  if item.properties['Afname'] == 'Kopen'
+    assign zg_group = 'kopen'
+  elsif woning_ids contains zg_vid or ontzorg_ids contains zg_vid or rider_ids contains zg_vid
+    assign zg_group = 'huren'
+  elsif item.variant_id == addon_videodeurbel_id or item.variant_id == addon_afstandsbediening_id
+    assign zg_group = 'huren'
+  elsif item.product.type == sub_type or item.product.tags contains sub_tag
+    assign zg_group = 'huren'
+  endif
+  echo zg_group
+-%}

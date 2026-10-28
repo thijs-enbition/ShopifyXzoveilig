@@ -64,3 +64,52 @@ The Koop SKUs are K001-K005 **plus** ADC-750 and CL004.
    if the discount were renamed.
 3. The Woning row keeps its own meta line "Eerste 3 maanden vandaag, daarna in het maandbedrag van uw
    pakket." next to the new post-promo line.
+
+## Overzicht mirrors /cart (fix/overzicht-huur-koop-mirror-2026-10-28)
+
+`/cart?view=overzicht` (`sections/zv-checkout-overview.liquid`) renders the same treatment. The group
+test, the group copy and the price/badge/post-promo markup are **shared snippets**, so the two pages
+cannot drift:
+
+| Snippet | What it owns |
+|---|---|
+| `snippets/zv-cart-line-group.liquid` | the grouping decision (`huren` / `kopen`), extracted from `zv-cart.liquid` (it was inline there, not shared) |
+| `snippets/zv-cart-group-label.liquid` | "Huren · per maand", "Kopen · eenmalig", "Subtotaal vandaag" |
+| `snippets/zv-cart-line-price.liquid` | struck original price, final price, badge (discount title), post-promo line, and the badge/strikethrough CSS (`.zv-line-was`, `.zv-line-deal`); a page passes its own `price_class` / `note_class` |
+
+Each page still has a short pre-pass that sums each group's subtotal (Liquid can't return values from a
+snippet), and its own heading/subtotal/row markup and CSS (`.cg-*` on /cart, `.ovg-*` on Overzicht).
+
+Where on Overzicht: the **left card's line list** (`.ovitems`, "Uw pakket en configuratie") gets the groups,
+badges, struck prices and post-promo lines, as /cart's line list did. The right "Uw kosten in het kort"
+card is unchanged (its flat rows, "Vandaag te betalen", the aggregate "Daarna"), as is every
+checkout-blocking condition (`cart_pkg_undiscounted`, `cart_koop_bad`, `cart_woning_bad`, ...).
+On a package line the "Eerste N maanden vooruit, 50% korting" meta line is gone (the right column now says
+"Vandaag, N maanden vooruit:" with the struck/final pair and the badge, like /cart).
+
+A bug fixed on the way: the shared price snippet wrapped the discounted price in a `<span>`, and both
+pages style `<price class> span` as the small muted "p/m" suffix, so on /cart (live since PR #160) the
+discounted amount would have rendered small and grey. It is a `<strong>` now.
+
+### "Daarna" does not equal the sum of the per-line post-promo amounts for every line
+
+The aggregate "Daarna" (`true_month_cents`, Overzicht; "Daarna ... per maand" on /cart) sums only a
+rented package's unit price, the Woning surcharge on rented packages, and Ontzorgpakket. It deliberately
+leaves out H750, H0010, the A102B camera subscription and the Woning line on a bought package (open:
+`unresolved.ODOO_ADDON_BILLING`, see the comments in both sections). The per-line post-promo line says
+"Loopt daarna door tegen €X/mnd" for **every** discounted line, so a cart with one of those lines shows a
+line amount that the aggregate omits.
+
+Measured on the preview theme (server-rendered `/cart?view=overzicht`, 2026-10-28), per-line post-promo
+sum vs the aggregate "Daarna":
+
+| Cart | Per-line sum | "Daarna" | |
+|---|---|---|---|
+| A huur-only (rented package + installation) | €39,95 | €39,95 | match |
+| B koop-only (bought package + installation) | none | none | match |
+| C mixed (rented package, Ontzorgpakket, bought Afstandsbediening, installation) | €50,45 | €50,45 | match |
+| E bought package + bought Videodeurbel + A102B | €3,50 | none | **mismatch**: A102B is in no "Daarna" |
+| F rented package + 2-floor Woning | €47,95 (39,95 + 8,00) | €47,95 | match |
+
+The same gap exists on /cart. Closing it means deciding how H750, H0010, A102B and Woning-on-a-bought-
+package are billed from month 4 (`ODOO_ADDON_BILLING`), so it is left as is.

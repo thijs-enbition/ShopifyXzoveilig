@@ -1,34 +1,47 @@
 {%- comment -%}
-  zv-cart-line-price: a /cart line's amount for today (2026-10-28, docs/cart-huur-koop-split-2026-10-28.md).
-  A line with a line-level discount allocation (the automatic "Eerste 3 maanden" discount) shows its
-  original_line_price struck through next to its final_line_price, plus one badge per allocation
-  carrying the discount's own title from Shopify (never a hardcoded percentage or name), and the
-  post-promo line "Loopt daarna door tegen <maandbedrag>/mnd (zonder korting), via SEPA-incasso."
-  Which lines get all this is decided only by the allocation, never by SKU, so it follows the
-  discount's scope in Shopify Admin. A line without an allocation shows just final_line_price.
+  zv-cart-line-price: a cart line's amount for today, shared by /cart and Overzicht (2026-10-28,
+  docs/cart-huur-koop-split-2026-10-28.md). A line with a line-level discount allocation (the
+  automatic "Eerste 3 maanden" discount) shows its original_line_price struck through next to its
+  final_line_price, plus one badge per allocation carrying the discount's own title from Shopify
+  (never a hardcoded percentage or name), and the post-promo line "Loopt daarna door tegen
+  <maandbedrag>/mnd (zonder korting), via SEPA-incasso." Which lines get all this is decided only by
+  the allocation, never by SKU, so it follows the discount's scope in Shopify Admin. A line without
+  an allocation shows just final_line_price.
 
   The monthly amount is the line's own undiscounted unit price (item.original_price), read live like
   every other price here. Exception: a Woning line is pkg_qty x its floors, so its monthly amount is
   the unit price x floors (quantity / pkg_qty).
 
+  The final price is a <strong>, not a <span>: both pages style `<price class> span` (the "p/m"
+  suffix), which would shrink and mute it.
+
   Params (render scope can't see the section's variables, so pass them in):
-    item    - the cart line item
-    woning  - true on a Woning row
-    pkg_qty - zv_promo_package_qty (only read when woning is true)
+    item        - the cart line item
+    woning      - true on a Woning row
+    pkg_qty     - zv_promo_package_qty (only read when woning is true)
+    price_class - the page's price class (default ci-price; Overzicht passes ovi-price)
+    note_class  - the page's small-text class (default ci-note; Overzicht passes ovi-meta)
 {%- endcomment -%}
+{%- assign zv_price_class = price_class | default: 'ci-price' -%}
+{%- assign zv_note_class = note_class | default: 'ci-note' -%}
 {%- if item.line_level_discount_allocations.size > 0 -%}
   {%- assign zv_monthly_cents = item.original_price -%}
   {%- if woning -%}{%- assign zv_monthly_cents = item.original_price | times: item.quantity | divided_by: pkg_qty -%}{%- endif -%}
-  <div class="ci-price ci-price--deal">
+  <div class="{{ zv_price_class }}">
     <span class="visually-hidden">Oorspronkelijke prijs</span>
-    <s class="ci-was">{{ item.original_line_price | money }}</s>
+    <s class="zv-line-was">{{ item.original_line_price | money }}</s>
     <span class="visually-hidden">Prijs met korting</span>
-    <span>{{ item.final_line_price | money }}</span>
+    <strong>{{ item.final_line_price | money }}</strong>
   </div>
   {%- for allocation in item.line_level_discount_allocations -%}
-    <span class="ci-deal">{{ allocation.discount_application.title | escape }}</span>
+    <span class="zv-line-deal">{{ allocation.discount_application.title | escape }}</span>
   {%- endfor -%}
-  <span class="ci-note">Loopt daarna door tegen {{ zv_monthly_cents | money }}/mnd (zonder korting), via SEPA-incasso.</span>
+  <div class="{{ zv_note_class }}">Loopt daarna door tegen {{ zv_monthly_cents | money }}/mnd (zonder korting), via SEPA-incasso.</div>
 {%- else -%}
-  <div class="ci-price">{{ item.final_line_price | money }}</div>
+  <div class="{{ zv_price_class }}">{{ item.final_line_price | money }}</div>
 {%- endif -%}
+
+{% stylesheet %}
+.zv-line-was { font-size:.8em; font-weight:700; color:var(--muted); text-decoration:line-through; margin-right:6px; }
+.zv-line-deal { display:inline-block; font-size:10.5px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; color:#3a2a06; background:var(--gold-lt); border-radius:6px; padding:3px 8px; }
+{% endstylesheet %}
