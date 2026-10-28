@@ -138,8 +138,9 @@ maanden". See `docs/woning-n0008-line-2026-09-25.md`.
 E001 and A102B (created in Shopify Admin, confirmed via Admin API 2026-10-27, not from this repo):
 one variant each, ACTIVE, inventory tracked with CONTINUE (buyable), published to the Online
 Store. E001 (€4,00) is the Climax Woning line, resolved by `surcharges[extra-etage-climax].shopify`;
-**it is not in "Eerste 3 maanden" yet**, so Overzicht blocks Climax Woning checkouts. A102B (€3,50)
-rides with ADC-750 (`addonNames[].ridesWith`) and is deliberately outside the discount. See
+**it was not in "Eerste 3 maanden" on 2026-10-27, so Overzicht blocked Climax Woning checkouts; the
+scope read live on 2026-10-28 includes it**. A102B (€3,50) rides with ADC-750 (`addonNames[].ridesWith`);
+it was outside the discount on 2026-10-27 and is in it since 2026-10-28 (15 products live). See
 `docs/a102b-e001-climax-woning-2026-10-27.md`.
 
 Installation products (2026-09-23): NAMI `geen-installatie-nami` N0006 €0,
@@ -383,9 +384,12 @@ setting, and **every price on the rows is read live from the product** (2026-10-
 one A102B line at quantity `PKG_QTY` while an ADC-750 line is in the cart (riders sync last), the guard
 does the same on /cart and Overzicht (rule 7, and Overzicht's rider gate expects `pkg_qty` too), and the
 Kopen price reads "€299 + €3,50/mnd" (both live prices, never a hardcoded string). **Since 2026-10-28
-(Thijs) it prepays PKG_QTY months like Ontzorgpakket, but still at full price**: it was flat quantity 1 on
-2026-10-27. It is still outside "Eerste 3 maanden" (it only ever rides a Koop purchase and
-`koop.promoApplies` is false), so no discount badge. `addonNames[].cartQuantity: 1` is now a stale
+(Thijs) it prepays PKG_QTY months like Ontzorgpakket**: it was flat quantity 1 on 2026-10-27. It was
+added to the "Eerste 3 maanden" discount in Admin that day (read live: 15 products), so /cart shows
+its discount badge and post-promo line like any other discounted line, in the Huren group although a
+Koop purchase triggers it (the cart groups by billing cadence, see
+`docs/cart-huur-koop-split-2026-10-28.md`); `koop.promoApplies` stays false because that is about the
+Koop products themselves. `addonNames[].cartQuantity: 1` is now a stale
 reference value (pinned by `build_pricing.py`/`check_pricing.py`, read by nothing in the theme). It
 shares `unresolved.ODOO_ADDON_BILLING` with Ontzorgpakket, H750 and H0010 (not in "Daarna"). /cart shows its row without a
 remove link (removing the doorbell removes it). `check_pricing.py` §17 pins it.
