@@ -1,0 +1,14 @@
+{%- comment -%}
+  zv-cart-group-label: the customer copy of the Huren/Kopen groups on /cart and Overzicht, in one
+  place (2026-10-28, see zv-cart-line-group and docs/cart-huur-koop-split-2026-10-28.md).
+  Params: group - 'huren' or 'kopen'; part - 'subtotal' for the subtotal row label, else the heading.
+{%- endcomment -%}
+{%- liquid
+  if part == 'subtotal'
+    echo 'Subtotaal vandaag'
+  elsif group == 'huren'
+    echo 'Huren · per maand'
+  else
+    echo 'Kopen · eenmalig'
+  endif
+-%}

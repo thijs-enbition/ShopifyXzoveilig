@@ -633,106 +633,149 @@
                 <h2>{{ section.settings.pkg_card_heading | default: 'Uw pakket en configuratie' | escape }}</h2>
                 <a class="ovedit" href="{{ routes.cart_url }}">{{ section.settings.pkg_card_link_label | default: 'Wijzig in winkelwagen' | escape }}</a>
               </div>
+              {%- comment -%}
+                Huren/Kopen groups (2026-10-28, docs/cart-huur-koop-split-2026-10-28.md), the same as /cart:
+                snippets/zv-cart-line-group.liquid decides each line's group (its own billing cadence, never
+                the flow that added it), snippets/zv-cart-group-label.liquid has the copy. A group's
+                subtotal is its lines' final_line_price. The cost card on the right is unchanged: its rows,
+                "Vandaag te betalen" and "Daarna" still come from today_cents / true_month_cents above.
+              {%- endcomment -%}
+              {%- liquid
+                assign cg_huren_keys = '|'
+                assign cg_kopen_keys = '|'
+                assign cg_huren_cents = 0
+                assign cg_kopen_cents = 0
+                for item in cart.items
+                  capture cg_group
+                    render 'zv-cart-line-group', item: item, sub_type: sub_type, sub_tag: sub_tag, woning_ids: woning_variant_id_list, ontzorg_ids: zv_ontzorg_variant_id_list, rider_ids: zv_rider_variant_id_list, addon_videodeurbel_id: zv_addon_videodeurbel_variant_id, addon_afstandsbediening_id: zv_addon_afstandsbediening_variant_id
+                  endcapture
+                  assign cg_group = cg_group | strip
+                  if cg_group == 'huren'
+                    assign cg_huren_keys = cg_huren_keys | append: item.key | append: '|'
+                    assign cg_huren_cents = cg_huren_cents | plus: item.final_line_price
+                  else
+                    assign cg_kopen_keys = cg_kopen_keys | append: item.key | append: '|'
+                    assign cg_kopen_cents = cg_kopen_cents | plus: item.final_line_price
+                  endif
+                endfor
+                assign cg_groups = 'huren,kopen' | split: ','
+              -%}
               <div class="ovitems">
-                {%- for item in cart.items -%}
-                  {%- assign item_vid = item.variant_id | append: '' -%}
-                  {%- if woning_variant_id_list contains item_vid -%}
-                    {%- comment -%} A Woning line: one non-editable row, "Woning: <option value>" from its own package lines' Woning values (zv-woning-label, never the product title), at its real final_line_price. {%- endcomment -%}
-                    {%- capture woning_label -%}{%- render 'zv-woning-label', variant_id: item_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
-                    {%- assign woning_label = woning_label | strip -%}
-                    <div class="ovitem ovitem--woning">
-                      <div class="ovi-thumb">
-                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11l9-7 9 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                      </div>
-                      <div>
-                        <div class="ovi-name">Woning{% if woning_label != '' %}: {{ woning_label | escape }}{% endif %}</div>
-                        <div class="ovi-meta">Eerste {{ zv_promo_months }} maanden vooruit, daarna in het maandbedrag van uw pakket</div>
-                      </div>
-                      <div class="ovi-right">
-                        <div class="ovi-price">{{ item.final_line_price | money }}</div>
-                      </div>
-                    </div>
-                    {%- continue -%}
-                  {%- endif -%}
-                  {%- capture ovi_koop_fk -%}{%- render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle -%}{%- endcapture -%}
-                  {%- assign ovi_koop_fk = ovi_koop_fk | strip -%}
-                  {%- assign ovi_is_koop = false -%}
-                  {%- if ovi_koop_fk != blank and ovi_koop_fk != 'invalid' -%}{%- assign ovi_is_koop = true -%}{%- endif -%}
-                  {%- assign is_sub = false -%}
-                  {%- if item.product.type == sub_type or item.product.tags contains sub_tag -%}{%- assign is_sub = true -%}{%- endif -%}
-                  {%- if ovi_is_koop -%}{%- assign is_sub = false -%}{%- endif -%}
-                  {%- comment -%} Package and installation lines show their pricing.config.json name (package via finder_key, installation via handle), never the Shopify product title. A Koop line shows its package's name. {%- endcomment -%}
-                  {%- assign item_name = item.product.title -%}
-                  {%- if is_sub -%}
-                    {%- capture cfg_name -%}{%- render 'zv-package-name', finder_key: item.product.metafields.custom.finder_key.value, names: zv_package_names_by_fk -%}{%- endcapture -%}
-                  {%- elsif ovi_is_koop -%}
-                    {%- capture cfg_name -%}{%- render 'zv-package-name', finder_key: ovi_koop_fk, names: zv_package_names_by_fk -%}{%- endcapture -%}
-                  {%- elsif item.variant_id == zv_koop_addon_videodeurbel_variant_id -%}
-                    {%- assign cfg_name = 'Videodeurbel (kopen)' -%}
-                  {%- elsif item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}
-                    {%- assign cfg_name = 'Afstandsbediening (kopen)' -%}
+                {%- for cg in cg_groups -%}
+                  {%- if cg == 'huren' -%}
+                    {%- assign cg_keys = cg_huren_keys -%}{%- assign cg_cents = cg_huren_cents -%}
                   {%- else -%}
-                    {%- capture cfg_name -%}{%- render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle -%}{%- endcapture -%}
+                    {%- assign cg_keys = cg_kopen_keys -%}{%- assign cg_cents = cg_kopen_cents -%}
                   {%- endif -%}
-                  {%- assign cfg_name = cfg_name | strip -%}
-                  {%- if cfg_name != blank -%}{%- assign item_name = cfg_name -%}{%- endif -%}
-                  <div class="ovitem">
-                    <div class="ovi-thumb">
-                      {%- if item.image -%}
-                        <img src="{{ item.image | image_url: width: 176 }}" alt="{{ item_name | escape }}" width="88" height="88" loading="lazy">
-                      {%- else -%}
-                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8l9-4 9 4-9 4-9-4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 8v8l9 4 9-4V8M12 12v8" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                  {%- if cg_keys == '|' -%}{%- continue -%}{%- endif -%}
+                  <div class="ovgroup ovgroup--{{ cg }}">
+                    <h3 class="ovg-head">{% render 'zv-cart-group-label', group: cg %}</h3>
+                    {%- for item in cart.items -%}
+                      {%- assign cg_key = '|' | append: item.key | append: '|' -%}
+                      {%- unless cg_keys contains cg_key -%}{%- continue -%}{%- endunless -%}
+                      {%- assign item_vid = item.variant_id | append: '' -%}
+                      {%- if woning_variant_id_list contains item_vid -%}
+                        {%- comment -%} A Woning line: one non-editable row, "Woning: <option value>" from its own package lines' Woning values (zv-woning-label, never the product title), at its real final_line_price. {%- endcomment -%}
+                        {%- capture woning_label -%}{%- render 'zv-woning-label', variant_id: item_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
+                        {%- assign woning_label = woning_label | strip -%}
+                        <div class="ovitem ovitem--woning">
+                          <div class="ovi-thumb">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11l9-7 9 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                          </div>
+                          <div>
+                            <div class="ovi-name">Woning{% if woning_label != '' %}: {{ woning_label | escape }}{% endif %}</div>
+                            <div class="ovi-meta">Eerste {{ zv_promo_months }} maanden vooruit, daarna in het maandbedrag van uw pakket</div>
+                          </div>
+                          <div class="ovi-right">
+                            {%- render 'zv-cart-line-price', item: item, woning: true, pkg_qty: zv_promo_package_qty, price_class: 'ovi-price', note_class: 'ovi-meta' -%}
+                          </div>
+                        </div>
+                        {%- continue -%}
                       {%- endif -%}
-                    </div>
-                    <div>
-                      {%- comment -%} Installation lines (CL003 and the 3 NAMI options) always read "Installatie": Odoo sets their product type (e.g. "All"), which isn't customer copy. {%- endcomment -%}
-                      {%- assign ovi_is_install = false -%}
-                      {%- if item.variant_id == activation_variant_id or item.variant_id == nami_install_geen_variant_id or item.variant_id == nami_install_telefonisch_variant_id or item.variant_id == nami_install_huis_variant_id -%}{%- assign ovi_is_install = true -%}{%- endif -%}
-                      {%- assign ovi_is_addon = false -%}{%- if zv_rider_variant_id_list contains item_vid -%}{%- assign ovi_is_addon = true -%}{%- endif -%}
-                      {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or zv_ontzorg_variant_id_list contains item_vid or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}{%- assign ovi_is_addon = true -%}{%- endif -%}
-                      {%- if ovi_is_install -%}<span class="ovi-line">Installatie</span>{%- elsif ovi_is_koop -%}<span class="ovi-line">Kopen</span>{%- elsif ovi_is_addon -%}<span class="ovi-line">Uitbreiding</span>{%- elsif item.product.type != blank -%}<span class="ovi-line">{{ item.product.type | escape }}</span>{%- endif -%}
-                      <div class="ovi-name">{{ item_name | escape }}</div>
-                      {%- unless item.variant.title contains 'Default' -%}<div class="ovi-meta">{{ item.variant.title | escape }}</div>{%- endunless -%}
+                      {%- capture ovi_koop_fk -%}{%- render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle -%}{%- endcapture -%}
+                      {%- assign ovi_koop_fk = ovi_koop_fk | strip -%}
+                      {%- assign ovi_is_koop = false -%}
+                      {%- if ovi_koop_fk != blank and ovi_koop_fk != 'invalid' -%}{%- assign ovi_is_koop = true -%}{%- endif -%}
+                      {%- assign is_sub = false -%}
+                      {%- if item.product.type == sub_type or item.product.tags contains sub_tag -%}{%- assign is_sub = true -%}{%- endif -%}
+                      {%- if ovi_is_koop -%}{%- assign is_sub = false -%}{%- endif -%}
+                      {%- comment -%} Package and installation lines show their pricing.config.json name (package via finder_key, installation via handle), never the Shopify product title. A Koop line shows its package's name. {%- endcomment -%}
+                      {%- assign item_name = item.product.title -%}
                       {%- if is_sub -%}
-                        <div class="ovi-meta">Eerste {{ item.quantity }} maanden vooruit, {{ zv_promo_badge }}</div>
-                        {%- comment -%} Woning meta on package lines whose package offers Woning (zv_woning_applies_handles). {%- endcomment -%}
-                        {%- assign ovi_wf = 0 -%}
-                        {%- if woning_applies_list contains item.product.handle -%}
-                          {%- capture ovi_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
-                        {%- endif -%}
-                        {%- assign ovi_wf = ovi_wf | strip | plus: 0 -%}
-                        {%- if ovi_wf > 0 -%}
-                          {%- if ovi_wf == 2 -%}{%- assign ovi_wl = zv_woning_2_value -%}{%- else -%}{%- assign ovi_wl = zv_woning_1_value -%}{%- endif -%}
-                          {%- assign ovi_wc = zv_woning_unit_cents | times: ovi_wf -%}
-                          <div class="ovi-meta">Woning: {{ ovi_wl | escape }} (+{{ ovi_wc | money_without_trailing_zeros }}/mnd)</div>
-                        {%- endif -%}
+                        {%- capture cfg_name -%}{%- render 'zv-package-name', finder_key: item.product.metafields.custom.finder_key.value, names: zv_package_names_by_fk -%}{%- endcapture -%}
                       {%- elsif ovi_is_koop -%}
-                        {%- comment -%} A bought package: the apparatuur once, no looptijd. Woning on a bought package is its property only, billed by Odoo with the service fee, never a line here. {%- endcomment -%}
-                        <div class="ovi-meta">Apparatuur, eenmalig</div>
-                        {%- assign ovi_wf = 0 -%}
-                        {%- if woning_applies_fk_list contains ovi_koop_fk -%}
-                          {%- capture ovi_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
-                        {%- endif -%}
-                        {%- assign ovi_wf = ovi_wf | strip | plus: 0 -%}
-                        {%- if ovi_wf > 0 -%}
-                          {%- if ovi_wf == 2 -%}{%- assign ovi_wl = zv_woning_2_value -%}{%- else -%}{%- assign ovi_wl = zv_woning_1_value -%}{%- endif -%}
-                          {%- assign ovi_wc = zv_woning_unit_cents | times: ovi_wf -%}
-                          <div class="ovi-meta">Woning: {{ ovi_wl | escape }} (+{{ ovi_wc | money_without_trailing_zeros }}/mnd)</div>
-                        {%- endif -%}
-                      {%- elsif zv_rider_variant_id_list contains item_vid -%}
-                        <div class="ovi-meta">Hoort bij uw gekochte videodeurbel</div>
+                        {%- capture cfg_name -%}{%- render 'zv-package-name', finder_key: ovi_koop_fk, names: zv_package_names_by_fk -%}{%- endcapture -%}
+                      {%- elsif item.variant_id == zv_koop_addon_videodeurbel_variant_id -%}
+                        {%- assign cfg_name = 'Videodeurbel (kopen)' -%}
+                      {%- elsif item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}
+                        {%- assign cfg_name = 'Afstandsbediening (kopen)' -%}
                       {%- else -%}
-                        <div class="ovi-meta">Aantal: {{ item.quantity }}</div>
+                        {%- capture cfg_name -%}{%- render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle -%}{%- endcapture -%}
                       {%- endif -%}
-                    </div>
-                    <div class="ovi-right">
-                      {%- comment -%} A package line's monthly figure is its UNIT price before the discount, never unit x quantity. {%- endcomment -%}
-                      {%- if is_sub -%}
-                        <div class="ovi-price">{{ item.original_price | money }} <span>p/m</span></div>
-                      {%- else -%}
-                        <div class="ovi-price">{{ item.final_line_price | money }}</div>
-                      {%- endif -%}
-                    </div>
+                      {%- assign cfg_name = cfg_name | strip -%}
+                      {%- if cfg_name != blank -%}{%- assign item_name = cfg_name -%}{%- endif -%}
+                      <div class="ovitem">
+                        <div class="ovi-thumb">
+                          {%- if item.image -%}
+                            <img src="{{ item.image | image_url: width: 176 }}" alt="{{ item_name | escape }}" width="88" height="88" loading="lazy">
+                          {%- else -%}
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8l9-4 9 4-9 4-9-4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 8v8l9 4 9-4V8M12 12v8" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                          {%- endif -%}
+                        </div>
+                        <div>
+                          {%- comment -%} Installation lines (CL003 and the 3 NAMI options) always read "Installatie": Odoo sets their product type (e.g. "All"), which isn't customer copy. {%- endcomment -%}
+                          {%- assign ovi_is_install = false -%}
+                          {%- if item.variant_id == activation_variant_id or item.variant_id == nami_install_geen_variant_id or item.variant_id == nami_install_telefonisch_variant_id or item.variant_id == nami_install_huis_variant_id -%}{%- assign ovi_is_install = true -%}{%- endif -%}
+                          {%- assign ovi_is_addon = false -%}{%- if zv_rider_variant_id_list contains item_vid -%}{%- assign ovi_is_addon = true -%}{%- endif -%}
+                          {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or zv_ontzorg_variant_id_list contains item_vid or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}{%- assign ovi_is_addon = true -%}{%- endif -%}
+                          {%- if ovi_is_install -%}<span class="ovi-line">Installatie</span>{%- elsif ovi_is_koop -%}<span class="ovi-line">Kopen</span>{%- elsif ovi_is_addon -%}<span class="ovi-line">Uitbreiding</span>{%- elsif item.product.type != blank -%}<span class="ovi-line">{{ item.product.type | escape }}</span>{%- endif -%}
+                          <div class="ovi-name">{{ item_name | escape }}</div>
+                          {%- unless item.variant.title contains 'Default' -%}<div class="ovi-meta">{{ item.variant.title | escape }}</div>{%- endunless -%}
+                          {%- if is_sub -%}
+                              {%- comment -%} Woning meta on package lines whose package offers Woning (zv_woning_applies_handles). {%- endcomment -%}
+                            {%- assign ovi_wf = 0 -%}
+                            {%- if woning_applies_list contains item.product.handle -%}
+                              {%- capture ovi_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
+                            {%- endif -%}
+                            {%- assign ovi_wf = ovi_wf | strip | plus: 0 -%}
+                            {%- if ovi_wf > 0 -%}
+                              {%- if ovi_wf == 2 -%}{%- assign ovi_wl = zv_woning_2_value -%}{%- else -%}{%- assign ovi_wl = zv_woning_1_value -%}{%- endif -%}
+                              {%- assign ovi_wc = zv_woning_unit_cents | times: ovi_wf -%}
+                              <div class="ovi-meta">Woning: {{ ovi_wl | escape }} (+{{ ovi_wc | money_without_trailing_zeros }}/mnd)</div>
+                            {%- endif -%}
+                          {%- elsif ovi_is_koop -%}
+                            {%- comment -%} A bought package: the apparatuur once, no looptijd. Woning on a bought package is its property only, billed by Odoo with the service fee, never a line here. {%- endcomment -%}
+                            <div class="ovi-meta">Apparatuur, eenmalig</div>
+                            {%- assign ovi_wf = 0 -%}
+                            {%- if woning_applies_fk_list contains ovi_koop_fk -%}
+                              {%- capture ovi_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
+                            {%- endif -%}
+                            {%- assign ovi_wf = ovi_wf | strip | plus: 0 -%}
+                            {%- if ovi_wf > 0 -%}
+                              {%- if ovi_wf == 2 -%}{%- assign ovi_wl = zv_woning_2_value -%}{%- else -%}{%- assign ovi_wl = zv_woning_1_value -%}{%- endif -%}
+                              {%- assign ovi_wc = zv_woning_unit_cents | times: ovi_wf -%}
+                              <div class="ovi-meta">Woning: {{ ovi_wl | escape }} (+{{ ovi_wc | money_without_trailing_zeros }}/mnd)</div>
+                            {%- endif -%}
+                          {%- elsif zv_rider_variant_id_list contains item_vid -%}
+                            <div class="ovi-meta">Hoort bij uw gekochte videodeurbel</div>
+                          {%- else -%}
+                            <div class="ovi-meta">Aantal: {{ item.quantity }}</div>
+                          {%- endif -%}
+                        </div>
+                        <div class="ovi-right">
+                          {%- comment -%} A package line's monthly figure is its UNIT price before the discount, never unit x quantity. {%- endcomment -%}
+                          {%- if is_sub -%}
+                            <div class="ovi-price">{{ item.original_price | money }} <span>p/m</span></div>
+                            <div class="ovi-meta">Vandaag, {{ item.quantity }} maanden vooruit:</div>
+                            {%- render 'zv-cart-line-price', item: item, price_class: 'ovi-price', note_class: 'ovi-meta' -%}
+                            {%- if item.line_level_discount_allocations.size == 0 -%}<div class="ovi-meta">Loopt daarna door via SEPA-incasso.</div>{%- endif -%}
+                          {%- else -%}
+                            {%- render 'zv-cart-line-price', item: item, price_class: 'ovi-price', note_class: 'ovi-meta' -%}
+                          {%- endif -%}
+                        </div>
+                      </div>
+                    {%- endfor -%}
+                    <div class="ovg-sub"><span>{% render 'zv-cart-group-label', group: cg, part: 'subtotal' %}</span><b>{{ cg_cents | money }}</b></div>
                   </div>
                 {%- endfor -%}
               </div>
@@ -1165,6 +1208,11 @@
 .zv-overzicht .ovi-right { text-align:right; }
 .zv-overzicht .ovi-price { font-size:17px; font-weight:900; color:var(--ink); white-space:nowrap; }
 .zv-overzicht .ovi-price span { font-size:12px; font-weight:700; color:var(--muted); }
+.zv-overzicht .ovi-right .ovi-meta { max-width:230px; margin-left:auto; }
+.zv-overzicht .ovgroup + .ovgroup { margin-top:20px; }
+.zv-overzicht .ovg-head { margin:0 0 2px; font-size:12px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; color:var(--belt); }
+.zv-overzicht .ovg-sub { display:flex; justify-content:space-between; gap:12px; padding:12px 0 0; font-size:14px; font-weight:700; color:#5b5374; }
+.zv-overzicht .ovg-sub b { font-weight:800; color:var(--ink); }
 .zv-overzicht .ovdl { margin-top:12px; }
 .zv-overzicht .ovdl > div { display:flex; justify-content:space-between; gap:12px; font-size:14px; font-weight:600; color:#5b5374; padding:10px 0; border-bottom:1px solid var(--line); }
 .zv-overzicht .ovdl > div:last-child { border-bottom:none; }
