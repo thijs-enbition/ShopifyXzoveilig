@@ -383,7 +383,7 @@ setting, and **every price on the rows is read live from the product** (2026-10-
 one A102B line at quantity `PKG_QTY` while an ADC-750 line is in the cart (riders sync last), the guard
 does the same on /cart and Overzicht (rule 7, and Overzicht's rider gate expects `pkg_qty` too), and the
 Kopen price reads "€299 + €3,50/mnd" (both live prices, never a hardcoded string). **Since 2026-10-28
-(Thijs) it prepays PKG_QTY months like Ontzorgpakket, at full price**: it was flat quantity 1 on
+(Thijs) it prepays PKG_QTY months like Ontzorgpakket, but still at full price**: it was flat quantity 1 on
 2026-10-27. It is still outside "Eerste 3 maanden" (it only ever rides a Koop purchase and
 `koop.promoApplies` is false), so no discount badge. `addonNames[].cartQuantity: 1` is now a stale
 reference value (pinned by `build_pricing.py`/`check_pricing.py`, read by nothing in the theme). It
@@ -405,12 +405,13 @@ Checking a box keeps one shared cart line per add-on in sync (`syncAddonLines()`
 **Koop Videodeurbel/Afstandsbediening (ADC-750, CL004) sync to flat quantity 1** (quantity
 `zv_promo_package_qty` tripled them, fixed 2026-10-22): one-time purchases, never discounted.
 **The Huren variants (H750, H0010) sync to `PKG_QTY` since 2026-10-28**, the Ontzorgpakket pattern:
-both were added to the "Eerste 3 maanden" discount scope in Admin that day (scope now 10 products),
+both were added to the "Eerste 3 maanden" discount scope in Admin that day (10 products then; 14 once the four Ontzorgpakket products were added the same day, confirmed live),
 so they prepay 3 months at 50% off, with the discount badge (`addonTargets()` picks by the
 `(koop)` name suffix). They are not in Overzicht's "Daarna", and how Odoo bills them from month 4
 is the open `ODOO_ADDON_BILLING` question. **Ontzorgpakket syncs to `PKG_QTY`
 like a package line** (2026-10-26): it is a recurring monthly service, so it prepays the 3
-months, at full price, outside the "Eerste 3 maanden" discount, and counts in "Daarna". Clean names come from a name-only `addonNames` array in pricing.config.json
+months, at full price until 2026-10-28 and, since the four Ontzorgpakket products joined the "Eerste 3
+maanden" scope that day, at the discounted rate, and counts in "Daarna". Clean names come from a name-only `addonNames` array in pricing.config.json
 (deliberately not the pre-existing
 `addons[]` array, which hardcodes a price). See `docs/uitbreidingen-checkboxes-2026-09-26.md`.
 
@@ -450,7 +451,7 @@ Woning line** (Thijs, 2026-10-24, for NAMI; Climax mirrors it since 2026-10-27);
 monthly service-fee line ever.
 
 Ontzorgpakket is the exception to "no monthly service-fee line": on any bought package it
-still syncs to PKG_QTY at full price, exactly as on a rented one (Thijs, 2026-10-26) — this
+still syncs to PKG_QTY, exactly as on a rented one (Thijs, 2026-10-26) — this
 applies to all four Ontzorgpakket products (MOIOH/MOZOH/MOAOH/OHC012), not just Inzicht.
 
 ## Shopify store
