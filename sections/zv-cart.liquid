@@ -51,7 +51,9 @@
   listed in two groups, "Huren" above "Kopen · eenmalig", each with a subtotal of its
   lines' final_line_price; snippets/zv-cart-line-group.liquid decides a line's group (shared with Overzicht). A line
   with a line-level discount allocation shows original_line_price struck through, final_line_price
-  and a badge with the discount's own title (snippets/zv-cart-line-price.liquid).
+  and a badge with the discount's own title (snippets/zv-cart-line-price.liquid). Since 2026-10-29
+  the "Overzicht" summary lists its rows in the same groups and order, each under the line's bare
+  name (snippets/zv-cart-row-name.liquid, shared with Overzicht's cost card).
 {%- endcomment -%}
 
 {%- include 'zv-pricing' -%}
@@ -126,7 +128,7 @@
         exactly one of two groups, decided once here by snippets/zv-cart-line-group.liquid (the same
         decision Overzicht uses): the line's own billing cadence, never the flow that added it. Each
         group's subtotal is its lines' final_line_price, i.e. what Shopify charges today for them; the
-        summary below is unchanged.
+        summary on the right reuses these keys, subtotals and sorted_items for its own rows.
       {%- endcomment -%}
       {%- liquid
         assign sorted_items = cart.items | sort: 'final_line_price' | reverse
@@ -288,61 +290,53 @@
               {%- comment -%}
                 Ontzorgpakket (per package since 2026-10-27): a confirmed recurring monthly
                 service, so its unit price counts toward "Daarna" too — see the note on
-                Afstandsbediening's own billing nature further up this file. Added independently
-                of the row-classification chain below, so this true_month_cents addition doesn't
-                depend on which branch renders its row — it now has its own elsif branch there
-                (the "× 3 — eerste 3 maanden" row), not the generic zv-install-name fallback.
+                Afstandsbediening's own billing nature further up this file.
               {%- endcomment -%}
               {%- assign item_vid = item.variant_id | append: '' -%}
-              {%- assign li_ontzorg = false -%}{%- if zv_ontzorg_variant_id_list contains item_vid -%}{%- assign li_ontzorg = true -%}{%- endif -%}
-              {%- if li_ontzorg -%}
+              {%- if zv_ontzorg_variant_id_list contains item_vid -%}
                 {%- assign true_month_cents = true_month_cents | plus: item.original_price -%}
               {%- endif -%}
               {%- comment -%}
-                Every row is the line's real final_line_price, so the rows add up to
-                "Vandaag te betalen". A package row is labelled "<pakket> × 3 — eerste 3
-                maanden (50% korting)"; "Daarna" sums the package lines' unit prices.
+                "Daarna" sums the rented package lines' unit prices plus their Woning surcharge (from
+                the property; a Woning line itself never counts here, it isn't a package line). This
+                loop only adds up; the rows are rendered per group below.
               {%- endcomment -%}
-              {%- assign row_pkg_name = blank -%}
               {%- if li_sub -%}
                 {%- assign row_fk = item.product.metafields.custom.finder_key.value -%}
                 {%- if row_fk == 'aware' or row_fk == 'aware_plus' or row_fk == 'care' or row_fk == 'secure' or row_fk == 'guard' -%}
-                  {%- capture row_pkg_name -%}{%- render 'zv-package-name', finder_key: row_fk, names: zv_package_names_by_fk -%}{%- endcapture -%}
-                  {%- assign row_pkg_name = row_pkg_name | strip -%}
+                  {%- assign li_wc = 0 -%}
+                  {%- if woning_applies_list contains item.product.handle -%}
+                    {%- capture li_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
+                    {%- assign li_wc = li_wf | strip | plus: 0 | times: zv_woning_unit_cents -%}
+                  {%- endif -%}
+                  {%- assign true_month_cents = true_month_cents | plus: item.original_price | plus: li_wc -%}
                 {%- endif -%}
               {%- endif -%}
-              {%- if woning_variant_id_list contains item_vid -%}
-                {%- comment -%} A Woning line: its row counts in "Vandaag te betalen" (today_cents above), never in "Daarna" (the package line's Woning property already carries the surcharge there). {%- endcomment -%}
-                {%- capture woning_label -%}{%- render 'zv-woning-label', variant_id: item_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
-                {%- assign woning_label = woning_label | strip -%}
-                <div class="srow"><span>Woning{% if woning_label != '' %}: {{ woning_label | escape }}{% endif %}</span><b>{{ item.final_line_price | money }}</b></div>
-              {%- elsif row_pkg_name != blank -%}
-                {%- assign li_wc = 0 -%}
-                {%- if woning_applies_list contains item.product.handle -%}
-                  {%- capture li_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
-                  {%- assign li_wc = li_wf | strip | plus: 0 | times: zv_woning_unit_cents -%}
-                {%- endif -%}
-                {%- assign true_month_cents = true_month_cents | plus: item.original_price | plus: li_wc -%}
-                <div class="srow"><span>{{ row_pkg_name }} × {{ item.quantity }} — {{ zv_label_commitment }}</span><b>{{ item.final_line_price | money }}</b></div>
-              {%- elsif li_koop_fk != blank and li_koop_fk != 'invalid' -%}
-                {%- comment -%} A bought package: one-time, never "× 3 — eerste 3 maanden (50% korting)", never in "Daarna". {%- endcomment -%}
-                {%- capture li_koop_name -%}{%- render 'zv-package-name', finder_key: li_koop_fk, names: zv_package_names_by_fk -%}{%- endcapture -%}
-                <div class="srow"><span>{{ li_koop_name | strip | escape }} — kopen, eenmalig</span><b>{{ item.final_line_price | money }}</b></div>
-              {%- elsif item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}
-                <div class="srow"><span>{% if item.variant_id == zv_koop_addon_videodeurbel_variant_id %}Videodeurbel{% else %}Afstandsbediening{% endif %} (kopen)</span><b>{{ item.final_line_price | money }}</b></div>
-              {%- elsif li_ontzorg -%}
-                {%- comment -%}
-                  Ontzorgpakket (2026-10-13, every package's own product since 2026-10-27): same "× 3 — eerste 3 maanden" shape as a
-                  package row, so the 3-months-prepaid structure is explained the same way, but
-                  with zv_label_commitment_no_discount (no "(50% korting)") since this line isn't
-                  discounted — see pricing.config.json labels.forbidden.
-                {%- endcomment -%}
-                <div class="srow"><span>Ontzorgpakket × {{ item.quantity }} — {{ zv_label_commitment_no_discount }}</span><b>{{ item.final_line_price | money }}</b></div>
+            {%- endfor -%}
+            {%- comment -%}
+              Rows (2026-10-29): the same Huren/Kopen groups and order as the line list on the left (its
+              cg_* keys, subtotals and sorted_items, not recomputed), each row the line's bare name
+              (snippets/zv-cart-row-name.liquid, shared with Overzicht's cost card) and its real
+              final_line_price, each group closed by its "Subtotaal vandaag". The rows of both groups add up
+              to "Vandaag te betalen" before any cart-level discount below.
+            {%- endcomment -%}
+            {%- for cg in cg_groups -%}
+              {%- if cg == 'huren' -%}
+                {%- assign cg_keys = cg_huren_keys -%}{%- assign cg_cents = cg_huren_cents -%}
               {%- else -%}
-                {%- capture row_name -%}{%- render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle -%}{%- endcapture -%}
-                {%- assign row_name = row_name | strip | default: item.product.title -%}
-                <div class="srow"><span>{{ row_name | escape }}</span><b>{{ item.final_line_price | money }}</b></div>
+                {%- assign cg_keys = cg_kopen_keys -%}{%- assign cg_cents = cg_kopen_cents -%}
               {%- endif -%}
+              {%- if cg_keys == '|' -%}{%- continue -%}{%- endif -%}
+              <div class="sgroup sgroup--{{ cg }}">
+                <h3 class="sg-head">{% render 'zv-cart-group-label', group: cg %}</h3>
+                {%- for item in sorted_items -%}
+                  {%- assign cg_key = '|' | append: item.key | append: '|' -%}
+                  {%- unless cg_keys contains cg_key -%}{%- continue -%}{%- endunless -%}
+                  {%- capture row_name -%}{%- render 'zv-cart-row-name', item: item, sub_type: sub_type, sub_tag: sub_tag, zv_package_names_by_fk: zv_package_names_by_fk, zv_install_names_by_handle: zv_install_names_by_handle, zv_koop_fk_by_handle: zv_koop_fk_by_handle, zv_addon_videodeurbel_variant_id: zv_addon_videodeurbel_variant_id, zv_addon_afstandsbediening_variant_id: zv_addon_afstandsbediening_variant_id, zv_koop_addon_videodeurbel_variant_id: zv_koop_addon_videodeurbel_variant_id, zv_koop_addon_afstandsbediening_variant_id: zv_koop_addon_afstandsbediening_variant_id, zv_rider_variant_id_list: zv_rider_variant_id_list, zv_ontzorg_variant_id_list: zv_ontzorg_variant_id_list, woning_variant_id_list: woning_variant_id_list, woning_variant_ids: woning_variant_ids, zv_woning_applies_by_product: zv_woning_applies_by_product, zv_woning_1_value: zv_woning_1_value, zv_woning_2_value: zv_woning_2_value, zv_woning_legacy_prefix: zv_woning_legacy_prefix, activation_variant_id: activation_variant_id, nami_install_geen_variant_id: nami_install_geen_variant_id, nami_install_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_install_huis_variant_id: nami_install_huis_variant_id -%}{%- endcapture -%}
+                  <div class="srow"><span>{{ row_name | strip | escape }}</span><b>{{ item.final_line_price | money }}</b></div>
+                {%- endfor -%}
+                <div class="srow srow--sub"><span>{% render 'zv-cart-group-label', group: cg, part: 'subtotal' %}</span><b>{{ cg_cents | money }}</b></div>
+              </div>
             {%- endfor -%}
             {%- if cart.cart_level_discount_applications.size > 0 -%}
               {%- for d in cart.cart_level_discount_applications -%}
@@ -427,6 +421,9 @@
 .zv-cart .csummary h2 { font-size:18px; font-weight:900; color:var(--indigo); }
 .zv-cart .srow { display:flex; justify-content:space-between; gap:12px; font-size:14.5px; font-weight:600; color:#5b5374; padding:11px 0; border-bottom:1px solid var(--line); }
 .zv-cart .srow b { font-weight:800; color:var(--ink); }
+.zv-cart .sgroup { margin-top:14px; }
+.zv-cart .sg-head { margin:0; font-size:12px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; color:var(--belt); }
+.zv-cart .srow--sub span { font-weight:800; }
 .zv-cart .srow.total { font-size:17px; color:var(--ink); border-bottom:none; padding-top:15px; }
 .zv-cart .srow.total b { font-size:22px; color:var(--indigo); }
 .zv-cart .s-sub { font-size:12.5px; font-weight:600; color:var(--muted); margin:2px 0 16px; line-height:1.5; }

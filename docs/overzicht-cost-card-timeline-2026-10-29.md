@@ -14,15 +14,67 @@ guard and `/cart` are unchanged.
 - Nothing is recomputed: the card reuses the left list's pre-pass, i.e. `cg_huren_keys` / `cg_kopen_keys`
   (group membership, the same `'|' + item.key + '|'` test), `cg_huren_cents` / `cg_kopen_cents`
   (subtotals), `cg_groups` and `sorted_items`.
-- Every row keeps its existing label (`row_label`: package "× 3 — eerste 3 maanden (50% korting)",
-  installation name, "Woning: …", "Ontzorgpakket × 3 — eerste 3 maanden", "<pakket> — kopen, eenmalig",
-  "Videodeurbel / Afstandsbediening (kopen)", the rider's config name) and its `final_line_price`. The
-  label logic only moved inside the group loop.
+- Each row is its line's `final_line_price` under the line's **bare name** (since later on 2026-10-29,
+  see "Bare row names" below). In the first version of this branch the rows kept their old labels
+  (package "× 3 — eerste 3 maanden (50% korting)", "Ontzorgpakket × 3 — eerste 3 maanden", "<pakket> —
+  kopen, eenmalig", …), and the label logic only moved inside the group loop; the cart table under
+  "Verified 2026-10-29" shows those old labels.
 - Each group ends with **Subtotaal vandaag** (its subtotal). "Vandaag te betalen" (`today_cents`) and
   "Daarna" (`true_month_cents`, only when > 0) follow both groups, unchanged.
 - Markup: one `<div class="ovbreakdown-group">` per group with an `<h3 class="ovg-head">` (the left
   list's group-heading style) and its own `<dl class="ovdl ovbreakdown">`; the two totals are a last
   `<dl>`. A heading can't sit inside a `<dl>`, hence one list per group.
+
+## Bare row names (2026-10-29, later the same day)
+
+Decision: a breakdown row is the line's **bare name**, with no "× 3 — eerste 3 maanden (50% korting)",
+"Ontzorgpakket × 3 — eerste 3 maanden" or "— kopen, eenmalig" suffix. The row sits under its "Huren" /
+"Kopen · eenmalig" heading next to its own amount, and the line list on the left already explains the
+prepaid months (struck price, discount badge, "Vandaag, 3 maanden vooruit:"), so the suffix only repeated it.
+
+- The name comes from the new **`snippets/zv-cart-row-name.liquid`**, which both breakdown views render:
+  this card and /cart's "Overzicht" sidebar (see `docs/cart-huur-koop-split-2026-10-28.md`). It is the
+  old `row_label` chain with the suffixes taken out, in this order (first match wins):
+
+  | # | Line | Name |
+  |---|---|---|
+  | 1 | Woning line | "Woning: <option value>" (`zv-woning-label`), or "Woning" for an orphan line |
+  | 2 | Installation (CL003, N0004-N0006) | `zv-install-name` ("Installatie", "Telefonische ondersteuning", "Geen installatie") |
+  | 3 | Koop package (`Afname: Kopen`) | its package's name ("Inzicht", via `zv-koop-fk` + `zv-package-name`) |
+  | 4 | Koop Videodeurbel / Afstandsbediening | "Videodeurbel (kopen)" / "Afstandsbediening (kopen)" (as on the line list) |
+  | 5 | Rented package | `zv-package-name` by `custom.finder_key` |
+  | 6 | Rider, Ontzorgpakket, Huren Videodeurbel / Afstandsbediening | `zv-install-name` ("Camera-abonnement videodeurbel", "Ontzorgpakket", "Videodeurbel", "Afstandsbediening") |
+  | – | anything else, or a name that doesn't resolve | `zv-install-name`, then the product title |
+
+  The snippet prints the name unescaped; callers `capture` it and output `| strip | escape`.
+- Two small differences from the old chain, both only visible on carts the site doesn't build today: a
+  rented package whose `finder_key` is not one of the five priced packages (Vista, Veilig Onderweg) now
+  shows its config name ("Vista") like the line list does, instead of the Shopify product title (the
+  five-key restriction only existed for the commitment suffix); and the Huren add-on names come from
+  the config (`zv-install-name`) rather than the literals 'Videodeurbel' / 'Afstandsbediening' (same text).
+- `zv_label_commitment` and `zv_label_commitment_no_discount` (`labels.commitment` /
+  `labels.commitmentNoDiscount` in pricing.config.json) are now **read by no theme file**: `zv-pricing`
+  still emits them, and `pricing.labelCommitmentNote` / `labels.forbidden` in the config still describe the
+  old suffix. Left in place (not part of this change); remove them in a config cleanup if the decision holds.
+- Unchanged: the groups, their order and subtotals, "Vandaag te betalen", "Daarna", the timeline, every
+  gate, and the line list on the left.
+
+### Verified (bare row names), 2026-10-29
+
+Disposable theme `zz-validate-row-names` (deleted afterwards), real Chrome, the same cart rendered by
+it and by the live theme (server HTML, then compared):
+
+| Cart | Huren rows | Kopen rows | Vandaag / Daarna |
+|---|---|---|---|
+| **A** Zeker ×3 (Woning 1 verdieping), N0008 ×3, MOZOH ×3, ADC-750, A102B ×3, N0004 | Zeker €37,44, Ontzorgpakket €8,94, Woning: 1 extra verdieping of 100 m² €6,00, Camera-abonnement videodeurbel €5,25 → €57,63 | Videodeurbel (kopen) €299,00, Installatie €99,00 → €398,00 | €455,63 / €34,90/mnd |
+| **B** K005 (Afname: Kopen), CL003, OHC012 ×3, H750 ×3, CL004 | Ontzorgpakket €15,75, Videodeurbel €14,34 → €30,09 | Protect €799,00, Installatie €99,00, Afstandsbediening (kopen) €40,00 → €938,00 | €968,09 / €10,50/mnd |
+
+In both carts: each group's rows add up to its subtotal, the subtotals add up to "Vandaag te betalen"
+and to Shopify's `cart.total_price`; "Vandaag te betalen" and "Daarna" equal the live theme's; the rows
+are the same names, order and amounts as /cart's summary; the left item list (`.ovitems`) is
+byte-identical to live; and outside the breakdown the page differs from live only in per-request/theme
+ids and the known `zv-footer` sync lag on live (4bdf774). Before, live showed "Zeker × 3 — eerste 3
+maanden (50% korting)", "Ontzorgpakket × 3 — eerste 3 maanden" and "Protect — kopen, eenmalig" for those rows.
 
 ## Timeline ("Wanneer betaalt u wat?")
 

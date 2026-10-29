@@ -62,9 +62,54 @@ The Koop SKUs are K001-K005 **plus** ADC-750 and CL004.
   `sorted_items = cart.items | sort: 'final_line_price' | reverse` right before the Huren/Kopen
   classification pre-pass and iterate it in the pre-pass and in the group render loop. Group order (Huren
   above Kopen) is unchanged, and the group decision and subtotals do not depend on order. Every other
-  `cart.items` loop (the visible-item count, the totals/summary, the cart signature, Overzicht's gates)
-  still walks the cart's own order: they sum or test everything regardless of order. Lines with equal
-  `final_line_price` have no guaranteed relative order.
+  `cart.items` loop (the visible-item count, the summary's totals pass, the cart signature, Overzicht's
+  gates) still walks the cart's own order: they sum or test everything regardless of order. Lines with
+  equal `final_line_price` have no guaranteed relative order. The summary's **rows** follow
+  `sorted_items` too since later the same day, see "/cart's summary grouped too" below.
+
+## /cart's summary grouped too, bare row names (fix/cart-sort-heading-2026-10-29)
+
+The `<aside class="csummary">` "Overzicht" block on /cart used to loop `cart.items` flat, in the cart's own
+order, with its own labels ("Zeker × 3 — eerste 3 maanden (50% korting)", "Ontzorgpakket × 3 — eerste 3
+maanden", "Inzicht — kopen, eenmalig", …). It now matches the line list next to it and Overzicht's cost card:
+
+- **Same groups, same order.** It loops `cg_groups` over the line list's own pre-pass (`cg_huren_keys` /
+  `cg_kopen_keys`, `cg_huren_cents` / `cg_kopen_cents`, `sorted_items`; nothing recomputed): a
+  "Huren" / "Kopen · eenmalig" heading (`<h3 class="sg-head">`, `zv-cart-group-label`), one row per
+  line, and a "Subtotaal vandaag" row (`zv-cart-group-label`, `part: 'subtotal'`). An empty group is not shown.
+- **Bare names.** Every row's name comes from the new `snippets/zv-cart-row-name.liquid`, which Overzicht's
+  cost card renders too, so the two breakdown views can't name a line differently. No commitment or
+  "kopen, eenmalig" suffix: the group heading says it. The Woning row still reads "Woning: <option value>"
+  (that is the line's own name, not a suffix). Priority order and edge cases:
+  `docs/overzicht-cost-card-timeline-2026-10-29.md`, "Bare row names".
+- **Totals unchanged.** "Vandaag te betalen" (`today_cents`, every line's `final_line_price` minus the
+  cart-level discounts) and "Daarna … per maand" (`true_month_cents`: rented packages' unit price + their
+  Woning surcharge from the property, Ontzorgpakket) are now added up in a separate pass over `cart.items`
+  before the rows, with the same rules as before. Cart-level discount rows ("Korting · …") still sit
+  after both groups, above "Vandaag te betalen"; they are not allocated to a group (same caveat as the
+  line list).
+- The line cards on the left are untouched.
+
+| Snippet | What it owns |
+|---|---|
+| `snippets/zv-cart-row-name.liquid` | a line's bare name in the two breakdown views (/cart's summary, Overzicht's cost card) |
+
+Verified 2026-10-29 on the disposable theme `zz-validate-row-names` (deleted afterwards) against the live
+theme, same cart, server HTML. Cart A: Zeker ×3 with Woning (1 verdieping), N0008 ×3, MOZOH ×3, ADC-750,
+A102B ×3, N0004. Cart B: K005 (Afname: Kopen), CL003, OHC012 ×3, H750 ×3, CL004.
+
+| | Cart A | Cart B |
+|---|---|---|
+| Summary before (live, flat, cart order) | Installatie, Camera-abonnement videodeurbel, Videodeurbel (kopen), Ontzorgpakket × 3 — eerste 3 maanden, Woning: 1 extra verdieping of 100 m², Zeker × 3 — eerste 3 maanden (50% korting) | Afstandsbediening (kopen), Videodeurbel, Ontzorgpakket × 3 — eerste 3 maanden, Installatie, Protect — kopen, eenmalig |
+| Summary now: Huren | Zeker €37,44, Ontzorgpakket €8,94, Woning: 1 extra verdieping of 100 m² €6,00, Camera-abonnement videodeurbel €5,25; Subtotaal vandaag €57,63 | Ontzorgpakket €15,75, Videodeurbel €14,34; Subtotaal vandaag €30,09 |
+| Summary now: Kopen · eenmalig | Videodeurbel (kopen) €299,00, Installatie €99,00; Subtotaal vandaag €398,00 | Protect €799,00, Installatie €99,00, Afstandsbediening (kopen) €40,00; Subtotaal vandaag €938,00 |
+| Vandaag te betalen / Daarna | €455,63 / €34,90 per maand (same as live) | €968,09 / €10,50 per maand (same as live) |
+
+In both carts the subtotals reconcile with "Vandaag te betalen" and `cart.total_price`, the summary's groups
+and row order equal the line list's (and Overzicht's cost card's), the line list (`.citems`) is
+byte-identical to live, the cart guard left the cart unchanged, and the page logged no console errors.
+Narrow width (seen, not changed): at 390px /cart is 406px wide on live and on this branch alike; the
+cause is the package line card's price column (`.ci-right`), not the summary, which fits.
 
 ## Left to decide
 
