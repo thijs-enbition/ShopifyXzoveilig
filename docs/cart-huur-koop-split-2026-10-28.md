@@ -95,8 +95,10 @@ snippet), and its own heading/subtotal/row markup and CSS (`.cg-*` on /cart, `.o
 
 Where on Overzicht: the **left card's line list** (`.ovitems`, "Uw pakket en configuratie") gets the groups,
 badges, struck prices and post-promo lines, as /cart's line list did. The right "Uw kosten in het kort"
-card is unchanged (its flat rows, "Vandaag te betalen", the aggregate "Daarna"), as is every
-checkout-blocking condition (`cart_pkg_undiscounted`, `cart_koop_bad`, `cart_woning_bad`, ...).
+card was left unchanged here (its flat rows, "Vandaag te betalen", the aggregate "Daarna"); since
+2026-10-29 its rows use the same groups and it has a payment timeline, see
+`docs/overzicht-cost-card-timeline-2026-10-29.md`. Every checkout-blocking condition is unchanged
+(`cart_pkg_undiscounted`, `cart_koop_bad`, `cart_woning_bad`, ...).
 On a package line the "Eerste N maanden vooruit, 50% korting" meta line is gone (the right column now says
 "Vandaag, N maanden vooruit:" with the struck/final pair and the badge, like /cart).
 
