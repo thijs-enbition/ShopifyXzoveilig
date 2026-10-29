@@ -68,8 +68,8 @@
 
   comment
     Videodeurbel/Afstandsbediening add-on lines (2026-09-26): resolved by handle only, never a
-    hardcoded variant id or price. Used only for the itemized breakdown's row label below (the
-    "Uw pakket en configuratie" listing already gets the clean name generically via
+    hardcoded variant id or price. Used for the Huren/Kopen grouping and the itemized breakdown's
+    row name below (zv-cart-row-name; both listings get the clean name itself via
     zv-install-name/zv_install_names_by_handle) — these two never take part in any checkout gate,
     unlike the package/installation/Woning lines above.
   endcomment
@@ -79,7 +79,7 @@
   comment
     Ontzorgpakket (Inzicht since 2026-10-13; one product per package since 2026-10-27: MOIOH,
     MOZOH, MOAOH, OHC012 for Beschermd/Protect): same treatment as the two above for the
-    breakdown row label. A confirmed recurring monthly service, so it also counts toward
+    breakdown row name. A confirmed recurring monthly service, so it also counts toward
     "Daarna" in the totals loop below. Handles from the generated zv-package-handles (line:
     'ontzorg'); zv_ontzorg_variant_id_list holds strings, so compare item.variant_id | append: ''.
   endcomment
@@ -843,7 +843,9 @@
                 Huren/Kopen (2026-10-29, docs/overzicht-cost-card-timeline-2026-10-29.md): the rows come in
                 the same two groups and the same order as the item list on the left (its cg_* keys and
                 subtotals and sorted_items, not recomputed), each group closed by its "Subtotaal vandaag".
-                "Vandaag te betalen" and "Daarna" follow both groups, unchanged.
+                "Vandaag te betalen" and "Daarna" follow both groups, unchanged. Each row is labelled with
+                the line's bare name from snippets/zv-cart-row-name.liquid (shared with /cart's summary):
+                no "× 3 — eerste 3 maanden (…)" or "— kopen, eenmalig" suffix, the group heading says it.
               {%- endcomment -%}
               <div class="ovblock">
                 <span class="ovblock-eb">{{ zv_label_breakdown_intro }}</span>
@@ -867,87 +869,8 @@
                       {%- for item in sorted_items -%}
                         {%- assign cg_key = '|' | append: item.key | append: '|' -%}
                         {%- unless cg_keys contains cg_key -%}{%- continue -%}{%- endunless -%}
-                        {%- liquid
-                          assign row_label = item.product.title | escape
-                          assign row_pkg_name = blank
-                          if item.product.type == sub_type or item.product.tags contains sub_tag
-                            assign row_fk = item.product.metafields.custom.finder_key.value
-                            if row_fk == 'aware' or row_fk == 'aware_plus' or row_fk == 'care' or row_fk == 'secure' or row_fk == 'guard'
-                              capture row_pkg_name
-                                render 'zv-package-name', finder_key: row_fk, names: zv_package_names_by_fk
-                              endcapture
-                              assign row_pkg_name = row_pkg_name | strip
-                            endif
-                          endif
-                          comment
-                            A bought package: "<pakket> — kopen, eenmalig", its real final_line_price (quantity 1,
-                            never discounted). Never the "× 3 — eerste 3 maanden (50% korting)" label.
-                          endcomment
-                          assign row_koop_name = blank
-                          assign row_vid = item.variant_id | append: ''
-                          capture row_koop_fk
-                            render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle
-                          endcapture
-                          assign row_koop_fk = row_koop_fk | strip
-                          if row_koop_fk != blank and row_koop_fk != 'invalid'
-                            assign row_pkg_name = blank
-                            capture row_koop_name
-                              render 'zv-package-name', finder_key: row_koop_fk, names: zv_package_names_by_fk
-                            endcapture
-                            assign row_koop_name = row_koop_name | strip
-                          endif
-                          if woning_variant_id_list contains row_vid
-                            capture woning_label
-                              render 'zv-woning-label', variant_id: row_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix
-                            endcapture
-                            assign woning_label = woning_label | strip
-                            assign row_label = 'Woning'
-                            if woning_label != ''
-                              assign row_label = 'Woning: ' | append: woning_label | escape
-                            endif
-                          elsif item.variant_id == activation_variant_id or item.variant_id == nami_install_geen_variant_id or item.variant_id == nami_install_telefonisch_variant_id or item.variant_id == nami_install_huis_variant_id
-                            comment
-                              Installation rows use the same cart name as the line rows above and /cart
-                              (zv_install_names_by_handle: "Installatie" for CL003 and N0004, the
-                              option's own label for Telefonische ondersteuning / Geen installatie).
-                              The radio group and the "Installatie" detail row keep the choice labels.
-                            endcomment
-                            capture row_label
-                              render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle
-                            endcapture
-                            assign row_label = row_label | strip
-                          elsif row_koop_name != blank
-                            assign row_label = row_koop_name | append: ' — kopen, eenmalig' | escape
-                          elsif item.variant_id == zv_koop_addon_videodeurbel_variant_id
-                            assign row_label = 'Videodeurbel (kopen)'
-                          elsif item.variant_id == zv_koop_addon_afstandsbediening_variant_id
-                            assign row_label = 'Afstandsbediening (kopen)'
-                          elsif zv_addon_videodeurbel_variant_id != blank and item.variant_id == zv_addon_videodeurbel_variant_id
-                            assign row_label = 'Videodeurbel'
-                          elsif zv_addon_afstandsbediening_variant_id != blank and item.variant_id == zv_addon_afstandsbediening_variant_id
-                            assign row_label = 'Afstandsbediening'
-                          elsif zv_rider_variant_id_list contains row_vid
-                            comment
-                              The rider (camera subscription): its config name (zv_install_names_by_handle via
-                              addonNames), never the Shopify title.
-                            endcomment
-                            capture row_label
-                              render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle
-                            endcapture
-                            assign row_label = row_label | strip | escape
-                          elsif zv_ontzorg_variant_id_list contains row_vid
-                            comment
-                              Same "× 3 — eerste 3 maanden" shape as a package row, so the
-                              3-months-prepaid structure is explained the same way, but with
-                              zv_label_commitment_no_discount (no "(50% korting)") since this line
-                              isn't discounted — see pricing.config.json labels.forbidden.
-                            endcomment
-                            assign row_label = 'Ontzorgpakket × ' | append: item.quantity | append: ' — ' | append: zv_label_commitment_no_discount
-                          elsif row_pkg_name != blank
-                            assign row_label = row_pkg_name | append: ' × ' | append: item.quantity | append: ' — ' | append: zv_label_commitment
-                          endif
-                        -%}
-                        <div><dt>{{ row_label }}</dt><dd>{{ item.final_line_price | money }}</dd></div>
+                        {%- capture row_label -%}{%- render 'zv-cart-row-name', item: item, sub_type: sub_type, sub_tag: sub_tag, zv_package_names_by_fk: zv_package_names_by_fk, zv_install_names_by_handle: zv_install_names_by_handle, zv_koop_fk_by_handle: zv_koop_fk_by_handle, zv_addon_videodeurbel_variant_id: zv_addon_videodeurbel_variant_id, zv_addon_afstandsbediening_variant_id: zv_addon_afstandsbediening_variant_id, zv_koop_addon_videodeurbel_variant_id: zv_koop_addon_videodeurbel_variant_id, zv_koop_addon_afstandsbediening_variant_id: zv_koop_addon_afstandsbediening_variant_id, zv_rider_variant_id_list: zv_rider_variant_id_list, zv_ontzorg_variant_id_list: zv_ontzorg_variant_id_list, woning_variant_id_list: woning_variant_id_list, woning_variant_ids: woning_variant_ids, zv_woning_applies_by_product: zv_woning_applies_by_product, zv_woning_1_value: zv_woning_1_value, zv_woning_2_value: zv_woning_2_value, zv_woning_legacy_prefix: zv_woning_legacy_prefix, activation_variant_id: activation_variant_id, nami_install_geen_variant_id: nami_install_geen_variant_id, nami_install_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_install_huis_variant_id: nami_install_huis_variant_id -%}{%- endcapture -%}
+                        <div><dt>{{ row_label | strip | escape }}</dt><dd>{{ item.final_line_price | money }}</dd></div>
                       {%- endfor -%}
                       <div class="ovbreakdown-sub"><dt>{% render 'zv-cart-group-label', group: cg, part: 'subtotal' %}</dt><dd>{{ cg_cents | money }}</dd></div>
                     </dl>

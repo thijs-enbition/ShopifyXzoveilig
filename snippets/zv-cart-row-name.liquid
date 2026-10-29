@@ -1,0 +1,85 @@
+{%- comment -%}
+  zv-cart-row-name: the bare display name of a cart line for the two breakdown views, /cart's
+  "Overzicht" sidebar and Overzicht's "Uw kosten in het kort" card (2026-10-29, pulled out of
+  their row-label code; see docs/cart-huur-koop-split-2026-10-28.md). Just the name, never a
+  "× 3 — eerste 3 maanden (…)" or "— kopen, eenmalig" suffix: the row sits under its Huren /
+  Kopen heading (zv-cart-group-label) next to its own final_line_price. Names come from
+  pricing.config.json, never the Shopify product title, except as the last fallback. Prints the
+  name unescaped: capture it, then `| strip | escape`.
+
+  Each kind of line is recognised by its own product (variant id lists, Afname, type), in this
+  order, so the first match wins:
+    1. Woning line                  - "Woning: <option value>" (zv-woning-label), or "Woning"
+    2. installation (CL003, N0004-6) - zv-install-name
+    3. Koop package (Afname: Kopen) - its package's name (zv-koop-fk -> zv-package-name)
+    4. Koop Videodeurbel / Afstandsbediening - "Videodeurbel (kopen)" / "Afstandsbediening (kopen)"
+    5. rented package (sub_type / sub_tag) - zv-package-name by custom.finder_key
+    6. rider, Ontzorgpakket, Huren Videodeurbel / Afstandsbediening - zv-install-name
+  A line none of these recognise, or whose name doesn't resolve, falls back to zv-install-name,
+  then the product title.
+
+  Params (render scope can't see the section's variables, so pass them in):
+    item                                         - the cart line item
+    sub_type, sub_tag                            - the package product type / tag fallback
+    zv_package_names_by_fk                       - finder_key -> package name
+    zv_install_names_by_handle                   - handle -> installation / add-on name
+    zv_koop_fk_by_handle                         - Koop handle -> finder_key
+    zv_addon_videodeurbel_variant_id             - Huren Videodeurbel (H750)
+    zv_addon_afstandsbediening_variant_id        - Huren Afstandsbediening (H0010)
+    zv_koop_addon_videodeurbel_variant_id        - Koop Videodeurbel (ADC-750), 0 when unresolved
+    zv_koop_addon_afstandsbediening_variant_id   - Koop Afstandsbediening (CL004), 0 when unresolved
+    zv_rider_variant_id_list                     - rider variant ids, as strings
+    zv_ontzorg_variant_id_list                   - Ontzorgpakket variant ids, as strings
+    woning_variant_id_list                       - Woning variant ids, as strings
+    woning_variant_ids                           - zv-woning-variants' output, for zv-woning-label
+    zv_woning_applies_by_product                 - for zv-woning-label
+    zv_woning_1_value, zv_woning_2_value, zv_woning_legacy_prefix - for zv-woning-label
+    activation_variant_id                        - Climax installation (CL003)
+    nami_install_geen_variant_id, nami_install_telefonisch_variant_id, nami_install_huis_variant_id
+{%- endcomment -%}
+{%- liquid
+  assign rn_vid = item.variant_id | append: ''
+  assign rn_name = ''
+  capture rn_koop_fk
+    render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle
+  endcapture
+  assign rn_koop_fk = rn_koop_fk | strip
+  if woning_variant_id_list contains rn_vid
+    capture rn_woning
+      render 'zv-woning-label', variant_id: rn_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix
+    endcapture
+    assign rn_woning = rn_woning | strip
+    assign rn_name = 'Woning'
+    if rn_woning != ''
+      assign rn_name = 'Woning: ' | append: rn_woning
+    endif
+  elsif item.variant_id == activation_variant_id or item.variant_id == nami_install_geen_variant_id or item.variant_id == nami_install_telefonisch_variant_id or item.variant_id == nami_install_huis_variant_id
+    capture rn_name
+      render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle
+    endcapture
+  elsif rn_koop_fk != blank and rn_koop_fk != 'invalid'
+    capture rn_name
+      render 'zv-package-name', finder_key: rn_koop_fk, names: zv_package_names_by_fk
+    endcapture
+  elsif item.variant_id == zv_koop_addon_videodeurbel_variant_id
+    assign rn_name = 'Videodeurbel (kopen)'
+  elsif item.variant_id == zv_koop_addon_afstandsbediening_variant_id
+    assign rn_name = 'Afstandsbediening (kopen)'
+  elsif item.product.type == sub_type or item.product.tags contains sub_tag
+    capture rn_name
+      render 'zv-package-name', finder_key: item.product.metafields.custom.finder_key.value, names: zv_package_names_by_fk
+    endcapture
+  elsif zv_rider_variant_id_list contains rn_vid or zv_ontzorg_variant_id_list contains rn_vid or item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id
+    capture rn_name
+      render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle
+    endcapture
+  endif
+  assign rn_name = rn_name | strip
+  if rn_name == blank
+    capture rn_name
+      render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle
+    endcapture
+    assign rn_name = rn_name | strip | default: item.product.title
+  endif
+  echo rn_name
+-%}
