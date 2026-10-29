@@ -6,8 +6,8 @@ SEPA-incasso") and the cart guard are unchanged.
 
 ## What the customer sees
 
-- The lines are listed in two groups, **Huren · per maand** above **Kopen · eenmalig**. A group with no
-  lines is not shown. Each group ends with "Subtotaal vandaag": the sum of its lines'
+- The lines are listed in two groups, **Huren** above **Kopen · eenmalig** (the Huren heading was "Huren · per
+  maand" until 2026-10-29: it is now just "Huren"). A group with no lines is not shown. Each group ends with "Subtotaal vandaag": the sum of its lines'
   `final_line_price`, i.e. what Shopify charges today for them (a rented package is its 3 prepaid
   months). Cart-level discounts are not allocated to a group; the summary still lists them.
 - Quantity stepper and "Verwijderen" are per line, exactly as before (anchors on `item.key`).
@@ -53,10 +53,23 @@ only the guard's own rules pin the others). The K001-K005 products have product 
 so product type alone cannot tell a bought package from a rented one: `Afname: Kopen` is the signal.
 The Koop SKUs are K001-K005 **plus** ADC-750 and CL004.
 
+## Heading and line order (fix/cart-sort-heading-2026-10-29)
+
+- The Huren group heading is now just **"Huren"** (`snippets/zv-cart-group-label.liquid`); "Kopen · eenmalig"
+  and "Subtotaal vandaag" are unchanged.
+- Lines within each group are now **sorted by `final_line_price`, highest first**, so the package line
+  (3 prepaid months) leads Huren and the add-ons follow from most to least expensive. Both pages build
+  `sorted_items = cart.items | sort: 'final_line_price' | reverse` right before the Huren/Kopen
+  classification pre-pass and iterate it in the pre-pass and in the group render loop. Group order (Huren
+  above Kopen) is unchanged, and the group decision and subtotals do not depend on order. Every other
+  `cart.items` loop (the visible-item count, the totals/summary, the cart signature, Overzicht's gates)
+  still walks the cart's own order: they sum or test everything regardless of order. Lines with equal
+  `final_line_price` have no guaranteed relative order.
+
 ## Left to decide
 
 1. A Koop-only cart that carries Ontzorgpakket, Woning (for a bought package) or A102B shows a
-   "Huren · per maand" group holding just those lines (correct by cadence; it may read oddly next to a
+   "Huren" group holding just those lines (correct by cadence; it may read oddly next to a
    cart where the customer "bought" everything).
 2. The post-promo line appears for **any** line-level discount allocation, not only one titled
    "Eerste 3 maanden": if a second product discount were ever added in Admin (the current one combines
@@ -74,7 +87,7 @@ cannot drift:
 | Snippet | What it owns |
 |---|---|
 | `snippets/zv-cart-line-group.liquid` | the grouping decision (`huren` / `kopen`), extracted from `zv-cart.liquid` (it was inline there, not shared) |
-| `snippets/zv-cart-group-label.liquid` | "Huren · per maand", "Kopen · eenmalig", "Subtotaal vandaag" |
+| `snippets/zv-cart-group-label.liquid` | "Huren", "Kopen · eenmalig", "Subtotaal vandaag" |
 | `snippets/zv-cart-line-price.liquid` | struck original price, final price, badge (discount title), post-promo line, and the badge/strikethrough CSS (`.zv-line-was`, `.zv-line-deal`); a page passes its own `price_class` / `note_class` |
 
 Each page still has a short pre-pass that sums each group's subtotal (Liquid can't return values from a

@@ -641,11 +641,12 @@
                 "Vandaag te betalen" and "Daarna" still come from today_cents / true_month_cents above.
               {%- endcomment -%}
               {%- liquid
+                assign sorted_items = cart.items | sort: 'final_line_price' | reverse
                 assign cg_huren_keys = '|'
                 assign cg_kopen_keys = '|'
                 assign cg_huren_cents = 0
                 assign cg_kopen_cents = 0
-                for item in cart.items
+                for item in sorted_items
                   capture cg_group
                     render 'zv-cart-line-group', item: item, sub_type: sub_type, sub_tag: sub_tag, woning_ids: woning_variant_id_list, ontzorg_ids: zv_ontzorg_variant_id_list, rider_ids: zv_rider_variant_id_list, addon_videodeurbel_id: zv_addon_videodeurbel_variant_id, addon_afstandsbediening_id: zv_addon_afstandsbediening_variant_id
                   endcapture
@@ -670,7 +671,7 @@
                   {%- if cg_keys == '|' -%}{%- continue -%}{%- endif -%}
                   <div class="ovgroup ovgroup--{{ cg }}">
                     <h3 class="ovg-head">{% render 'zv-cart-group-label', group: cg %}</h3>
-                    {%- for item in cart.items -%}
+                    {%- for item in sorted_items -%}
                       {%- assign cg_key = '|' | append: item.key | append: '|' -%}
                       {%- unless cg_keys contains cg_key -%}{%- continue -%}{%- endunless -%}
                       {%- assign item_vid = item.variant_id | append: '' -%}
