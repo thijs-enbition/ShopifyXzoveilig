@@ -395,6 +395,15 @@ shares `unresolved.ODOO_ADDON_BILLING` with Ontzorgpakket, H750 and H0010 (not i
 remove link (removing the doorbell removes it). `check_pricing.py` §17 pins it.
 Full write-up of the NAMI Koop-only Videodeurbel, the retired Afstandsbediening setting and the list
 layout: `docs/uitbreidingen-koop-only-nami-2026-10-27.md`.
+**Afstandsbediening has a count, not a checkbox (2026-10-29)**: its row (Climax cards only, 4th
+`ltc_addons` field `qty`) is a number input, 0 = not wanted, no upper cap, Huren/Kopen choice
+unchanged. The count is recorded in the `Uitbreidingen` property as `Afstandsbediening x2` /
+`Afstandsbediening (koop) x2`, suffix only above 1 (no suffix = 1, so every existing line parses
+as before). `parseAddonName()` in `sections/oplossingen.liquid` is the one reader of that suffix
+(`addonTargets()`, `hydrateLineOptions()`, `findAddon()`): the line quantity is count x PKG_QTY for
+Huren, count x 1 for Kopen. When several package lines record the add-on, the largest count wins
+(the add-on line is shared). Videodeurbel stays a checkbox. A Shopify quantity on the H0010 line is
+no longer "N prepaid months of one unit" alone: flagged on `unresolved.ODOO_ADDON_BILLING`.
 **Ontzorgpakket is one product per package (Thijs, 2026-10-27)**, from `addonNames[].finderKeys`
 in pricing.config.json (`zv_ontzorg_handle_by_fk`; `zv-package-handles` line `ontzorg` for the
 cart pages): Inzicht MOIOH `maandelijks-ontzorg-inzicht-oh` €4,95, Zeker MOZOH €5,95, Alert MOAOH

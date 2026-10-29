@@ -313,12 +313,16 @@
                 the NAMI packages' Videodeurbel has no Huren side and no Huren/Kopen choice, it
                 renders as one single-price row (the bought doorbell's and its camera subscription's live prices) like Ontzorgpakket.
                 The Climax cards keep the Huren/Kopen choice for both hardware add-ons.
+                Since 2026-10-29 the 4th field can instead be 'qty' (never together with 'koop'):
+                Afstandsbediening's row gets a number input (0 = not wanted) instead of a
+                checkbox, so it can be chosen more than once; its Huren/Kopen choice stays.
+                The count is recorded as " x<n>" after the name, only above 1 (see parseAddonName()).
               {%- endcomment -%}
               {%- assign ltc_addons = 'Videodeurbel|' | append: zv_addon_videodeurbel_handle | append: '|/mnd' -%}
               {%- if fk == 'aware' or fk == 'aware_plus' or fk == 'secure' -%}
                 {%- assign ltc_addons = ltc_addons | append: '|koop' -%}
               {%- else -%}
-                {%- assign ltc_addons = ltc_addons | append: '§Afstandsbediening|' | append: zv_addon_afstandsbediening_handle | append: '|/mnd' -%}
+                {%- assign ltc_addons = ltc_addons | append: '§Afstandsbediening|' | append: zv_addon_afstandsbediening_handle | append: '|/mnd|qty' -%}
               {%- endif -%}
               {%- comment -%}
                 Ontzorgpakket per package (2026-10-27): this package's own product from
@@ -436,6 +440,7 @@
                       {%- assign aparts = a | split: '|' -%}
                       {%- assign a_name = aparts[0] -%}
                       {%- assign a_koop_only = false -%}{%- if aparts[3] == 'koop' -%}{%- assign a_koop_only = true -%}{%- endif -%}
+                      {%- assign a_qty = false -%}{%- if aparts[3] == 'qty' -%}{%- assign a_qty = true -%}{%- endif -%}
                       {%- assign a_product = all_products[aparts[1]] -%}
                       {%- assign a_price_display = 'Prijs volgt' -%}{%- assign a_huur_price = 'Prijs volgt' -%}
                       {%- if a_product.price > 0 -%}
@@ -474,10 +479,18 @@
                           {%- endif -%}
                         {%- endcapture -%}
                         {%- assign a_koop_seg = a_koop_seg | strip -%}
+                        {%- comment -%}
+                          Quantity row (2026-10-29): a number input instead of the checkbox, plus the
+                          unit prices in cents so the row's own price can follow the count (a rider
+                          price is a compound string, so no Kopen cents then). Every other row keeps
+                          the plain checkbox and no extra attributes.
+                        {%- endcomment -%}
+                        {%- capture a_input -%}{% if a_qty %}<input type="number" min="0" step="1" value="0" inputmode="numeric" data-zv-qty aria-label="Aantal {{ a_name | escape }}">{% else %}<input type="checkbox">{% endif %}{%- endcapture -%}
+                        {%- capture a_qty_attrs -%}{% if a_qty %} data-huur-cents="{{ a_product.price }}"{% unless a_rider_cents %} data-koop-cents="{{ a_kp.price }}"{% endunless %}{% endif %}{%- endcapture -%}
                         {%- if a_koop_only -%}
                           <label class="pcard__plus-opt is-koop{% if a_koop_variant == blank %} is-soon{% endif %}"><input type="checkbox"{% if a_koop_variant == blank %} disabled{% endif %}><span>{{ a_name }}</span><span class="pcard__plus-pr">{{ a_koop_price }}</span></label>
                         {%- else -%}
-                          <div class="pcard__plus-item"><label class="pcard__plus-opt" data-huur-pr="{{ a_price_display | escape }}" data-koop-pr="{{ a_koop_price | escape }}" data-koop-variant="{{ a_koop_variant | escape }}"><input type="checkbox"><span>{{ a_name }}</span><span class="pcard__plus-pr">{{ a_price_display }}</span></label><div class="ltc__mode ltc__mode--seg" role="radiogroup" aria-label="Huren of kopen: {{ a_name | escape }}"><label><input type="radio" name="zv-mode-{{ p.id }}-{{ forloop.index }}" value="huur" data-zv-mode="addon" checked><span>Huren {{ a_huur_price }}</span></label><label><input type="radio" name="zv-mode-{{ p.id }}-{{ forloop.index }}" value="koop" data-zv-mode="addon" aria-label="Kopen {{ a_koop_price | escape }}"><span>Kopen {{ a_koop_seg }}</span></label></div></div>
+                          <div class="pcard__plus-item"><label class="pcard__plus-opt" data-huur-pr="{{ a_price_display | escape }}" data-koop-pr="{{ a_koop_price | escape }}" data-koop-variant="{{ a_koop_variant | escape }}"{{ a_qty_attrs }}>{{ a_input }}<span>{{ a_name }}</span><span class="pcard__plus-pr">{{ a_price_display }}</span></label><div class="ltc__mode ltc__mode--seg" role="radiogroup" aria-label="Huren of kopen: {{ a_name | escape }}"><label><input type="radio" name="zv-mode-{{ p.id }}-{{ forloop.index }}" value="huur" data-zv-mode="addon" checked><span>Huren {{ a_huur_price }}</span></label><label><input type="radio" name="zv-mode-{{ p.id }}-{{ forloop.index }}" value="koop" data-zv-mode="addon" aria-label="Kopen {{ a_koop_price | escape }}"><span>Kopen {{ a_koop_seg }}</span></label></div></div>
                         {%- endif -%}
                       {%- elsif a_name != blank -%}<label class="pcard__plus-opt"><input type="checkbox"><span>{{ a_name }}</span><span class="pcard__plus-pr">{{ a_price_display }}</span></label>{%- endif -%}
                     {%- endfor -%}
@@ -1060,6 +1073,8 @@
 .pcard__plus[open] summary svg { transform: rotate(180deg); }
 .pcard__plus-opt { display: flex; align-items: center; gap: 9px; padding: 0 2px 12px; font-size: 13px; font-weight: 700; color: #4a4458; cursor: pointer; }
 .pcard__plus-opt input { width: 17px; height: 17px; accent-color: #322469; flex: none; cursor: pointer; }
+/* Quantity row (Afstandsbediening, 2026-10-29): a count instead of a checkbox. */
+.pcard__plus-opt input[data-zv-qty] { width: 46px; height: 28px; padding: 0 4px; border: 1.5px solid var(--line-2); border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-weight: 800; text-align: center; cursor: text; }
 .pcard__plus-opt span:nth-of-type(1) { flex: 1; }
 .pcard__plus-pr { font-weight: 900; color: var(--belt); }
 .pcard__plus-hint { font-size: 12px; font-weight: 600; color: var(--muted-2); margin: -2px 2px 10px; }
@@ -1797,14 +1812,53 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     var name = span ? span.textContent.trim() : '';
     return name && opt.classList.contains('is-koop') ? name + KOOP_SUFFIX : name;
   }
+  /* Quantity (2026-10-29): Afstandsbediening is the one add-on row with a number input instead
+     of a checkbox (data-zv-qty). Its chosen count n is recorded as "<naam> x<n>", only when n > 1,
+     so a plain "<naam>" keeps meaning 1 and every existing line parses as before. parseAddonName()
+     is the one reader of that suffix: addonTargets(), hydrateLineOptions() and findAddon() use it. */
+  function parseAddonName(n) { var m = n.match(/ x(\d+)$/); return { base: m ? n.slice(0, -m[0].length) : n, qty: m ? parseInt(m[1], 10) : 1 }; }
+  // The stored entry of `names` whose base name is `base` (a quantity suffix is ignored), or null.
+  function findAddon(names, base) {
+    for (var i = 0; i < names.length; i++) {
+      var parsed = parseAddonName(names[i]);
+      if (parsed.base === base) return parsed;
+    }
+    return null;
+  }
+  // The row's count as a whole number >= 0 (blank, negative or fractional input reads as 0 / rounds down; no upper cap).
+  function addonQty(inp) { var n = Math.floor(Number(inp.value)); return n > 0 ? n : 0; }
+  // What one option input records in its property: '' when not chosen, else the (koop) name, plus " x<n>" above 1 for a quantity row.
+  function optRecord(inp) {
+    var name = optName(inp.closest('.pcard__plus-opt'));
+    if (!name) return '';
+    if (inp.hasAttribute('data-zv-qty')) { var q = addonQty(inp); return q ? name + (q > 1 ? ' x' + q : '') : ''; }
+    return inp.checked ? name : '';
+  }
+  // A quantity row's own price follows its count (the unit price in its text is replaced by unit x count). 0 and 1 show the unit price.
+  // Only this row: the package card's /mnd banner stays add-on-free (recomputeCardPrice, 2026-10-22).
+  function paintAddonPrice(opt) {
+    var inp = opt.querySelector('input[data-zv-qty]'), pr = opt.querySelector('.pcard__plus-pr');
+    if (!inp || !pr) return;
+    var koop = opt.classList.contains('is-koop');
+    var base = opt.getAttribute(koop ? 'data-koop-pr' : 'data-huur-pr') || '';
+    var cents = parseInt(opt.getAttribute(koop ? 'data-koop-cents' : 'data-huur-cents'), 10);
+    var n = addonQty(inp);
+    pr.textContent = n > 1 && cents > 0 ? base.replace(/€\s?[\d.]+,\d\d/, money(cents * n)) : base;
+  }
   function setAddonMode(opt, koop) {
     var inp = opt.querySelector('input'), pr = opt.querySelector('.pcard__plus-pr');
     var soon = koop && !opt.getAttribute('data-koop-variant');
     opt.classList.toggle('is-koop', koop);
     opt.classList.toggle('is-soon', soon);
     if (pr) pr.textContent = opt.getAttribute(koop ? 'data-koop-pr' : 'data-huur-pr') || '';
-    if (inp) { if (soon) inp.checked = false; inp.disabled = soon; }
+    if (inp) { if (soon) { inp.checked = false; if (inp.hasAttribute('data-zv-qty')) inp.value = 0; } inp.disabled = soon; }
+    paintAddonPrice(opt);
   }
+  // Live price for the quantity row, card and drawer alike (the drawer is portaled out of `page`).
+  document.addEventListener('input', function (e) {
+    var q = e.target.closest && e.target.closest('.pcard__plus-opt input[data-zv-qty]');
+    if (q) paintAddonPrice(q.closest('.pcard__plus-opt'));
+  });
   page.addEventListener('change', function (e) {
     var r = e.target.closest && e.target.closest('[data-zv-mode]');
     if (!r || !r.checked) return;
@@ -1888,14 +1942,22 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
           var card = cardsBySku[p['SKU'] || ''];
           var ov = card && card.getAttribute('data-ontzorg-variant');
           if (ov) targets[ov] = PKG_QTY || 1;
-        } else if (n && ADDON_VARIANT_IDS[n]) {
+        } else if (n) {
+          // 2026-10-29: the stored name may end in " x<n>" (Afstandsbediening's count, see
+          // parseAddonName()); look the add-on up by its base name and multiply by that count.
+          // Videodeurbel never carries the suffix, so its count is always 1: unchanged.
+          var parsed = parseAddonName(n);
+          if (!ADDON_VARIANT_IDS[parsed.base]) return;
           // 2026-10-28: Huren Videodeurbel/Afstandsbediening now follow the Ontzorgpakket
           // pattern — both were added to the "Eerste 3 maanden" discount scope in Shopify
           // Admin on 2026-10-28, so like a package line they prepay PKG_QTY months at the
           // discounted rate. Koop variants (name ends in KOOP_SUFFIX) are never discounted
           // or prepaid (koop.promoApplies: false) and stay flat at quantity 1.
-          var isKoop = n.indexOf(KOOP_SUFFIX) !== -1;
-          targets[String(ADDON_VARIANT_IDS[n])] = isKoop ? 1 : (PKG_QTY || 1);
+          var isKoop = parsed.base.indexOf(KOOP_SUFFIX) !== -1;
+          // Several package lines can each record the add-on: the line is shared, so the
+          // largest count wins (equal counts, e.g. every Videodeurbel, give the same target as before).
+          var vid = String(ADDON_VARIANT_IDS[parsed.base]);
+          targets[vid] = Math.max(targets[vid] || 0, (isKoop ? 1 : (PKG_QTY || 1)) * parsed.qty);
         }
       });
     });
@@ -2146,13 +2208,22 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
         // Huren/Kopen: the drawer edits a line, it doesn't switch modes. Drop the cloned choices
         // and show each hardware row in the mode the line records ("<naam> (koop)" or not).
         wrap.querySelectorAll('.ltc__mode').forEach(function (m) { m.remove(); });
+        // Matched by base name: a stored name may carry a " x<n>" count after the koop suffix.
         wrap.querySelectorAll('.pcard__plus-opt[data-koop-pr]').forEach(function (o) {
           var base = o.querySelector('span') ? o.querySelector('span').textContent.trim() : '';
-          setAddonMode(o, names.indexOf(base + KOOP_SUFFIX) !== -1);
+          setAddonMode(o, !!findAddon(names, base + KOOP_SUFFIX));
         });
         wrap.querySelectorAll('.pcard__plus-opt input').forEach(function (inp) {
-          var name = optName(inp.closest('.pcard__plus-opt'));
-          inp.checked = !!(name && names.indexOf(name) !== -1);
+          var opt = inp.closest('.pcard__plus-opt');
+          var name = optName(opt);
+          if (inp.hasAttribute('data-zv-qty')) {
+            // Quantity row: the stored count (0 when the line doesn't record it), not a boolean.
+            var hit = name && findAddon(names, name);
+            inp.value = hit ? hit.qty : 0;
+            paintAddonPrice(opt);
+          } else {
+            inp.checked = !!(name && names.indexOf(name) !== -1);
+          }
         });
         target.appendChild(wrap);
       });
@@ -2289,8 +2360,8 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
         var groupEl = wrap.querySelector('[data-cart-group="' + group + '"]');
         var names = [];
         if (groupEl) {
-          groupEl.querySelectorAll('.pcard__plus-opt input:checked').forEach(function (inp) {
-            var name = optName(inp.closest('.pcard__plus-opt'));
+          groupEl.querySelectorAll('.pcard__plus-opt input:checked, .pcard__plus-opt input[data-zv-qty]').forEach(function (inp) {
+            var name = optRecord(inp);
             if (name) names.push(name);
           });
         }
@@ -2298,7 +2369,11 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
         if (names.length) lprops[propKey] = names.join(', '); else delete lprops[propKey];
       });
       lineOpt.disabled = true;
-      cartWrite('/cart/change.js', { id: lkey, quantity: lline.quantity, properties: lprops }, function () { lineOpt.checked = !lon; lineOpt.disabled = false; }, syncAddonLines);
+      // A quantity input reverts by redrawing the drawer from the unchanged cart; a checkbox just flips back.
+      var lrevert = lineOpt.hasAttribute('data-zv-qty')
+        ? function () { renderCart(cartState, true); }
+        : function () { lineOpt.checked = !lon; lineOpt.disabled = false; };
+      cartWrite('/cart/change.js', { id: lkey, quantity: lline.quantity, properties: lprops }, lrevert, syncAddonLines);
     }
   });
 
@@ -2321,9 +2396,8 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     // doesn't matter here.
     card.querySelectorAll('.pcard__plus, .ltc__optgroup').forEach(function (det) {
       var group = det.getAttribute('data-group');
-      det.querySelectorAll('.pcard__plus-opt input:checked').forEach(function (inp) {
-        var opt = inp.closest('.pcard__plus-opt');
-        var name = optName(opt);
+      det.querySelectorAll('.pcard__plus-opt input:checked, .pcard__plus-opt input[data-zv-qty]').forEach(function (inp) {
+        var name = optRecord(inp);   // '' for an unchecked option or a quantity row at 0
         if (!name) return;
         // Woning: the exact property value for the checked option's level, cards in
         // WONING.appliesTo only. The tile copy's single checkbox (no data-woning-floors) means 1 floor.
@@ -2344,12 +2418,15 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     // read the live checked state.
     var woningGroup = inp.checked && inp.closest('[data-group="woning"]');
     if (woningGroup) woningGroup.querySelectorAll('.pcard__plus-opt input').forEach(function (o) { if (o !== inp) o.checked = false; });
+    var isQty = inp.hasAttribute('data-zv-qty');
+    if (isQty) inp.value = addonQty(inp);   // tidy a blank/negative/fractional entry to the whole count recorded
     var card = inp.closest('.pcard'), opt = inp.closest('.pcard__plus-opt');
+    if (isQty) paintAddonPrice(opt);
     var name = opt && opt.querySelector('span') ? opt.querySelector('span').textContent.trim() : '';
     var addBtn = card && card.querySelector('[data-zv-add]');
     if (addBtn) { var o = readCardOptions(card); addBtn.setAttribute('data-selected-term', o.terms.join(', ')); addBtn.setAttribute('data-selected-addon', o.addons.join(', ')); }
     if (card) recomputeCardPrice(card);   // live price feedback
-    fire('package_option_select', { solution: card && card.dataset.solutionType, package: card && card.dataset.packageSku, option: name, selected: inp.checked });
+    fire('package_option_select', { solution: card && card.dataset.solutionType, package: card && card.dataset.packageSku, option: name, selected: isQty ? addonQty(inp) > 0 : inp.checked });
   });
 
   /* card-level "In winkelwagen": collect any checked uitbreidingen/abonnementen too */
