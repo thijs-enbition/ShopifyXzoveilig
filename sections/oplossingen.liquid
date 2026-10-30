@@ -48,7 +48,8 @@
 {%- comment -%}
   Riders (2026-10-27): the camera subscription rides along with ADC-750, the bought
   Videodeurbel (zv_addon_rider_by_lead). 'leadVariant:riderVariant:riderCents' pairs, resolved by
-  handle; syncAddonLines() keeps one rider line at quantity 1 while a lead line is in the cart, and
+  handle; syncAddonLines() keeps one rider line at quantity PKG_QTY (the prepaid months, in the
+  "Eerste 3 maanden" discount; flat 1 until 2026-10-28) while a lead line is in the cart, and
   the Videodeurbel row's Kopen price names the rider's live monthly price.
 {%- endcomment -%}
 {%- capture zv_addon_riders -%}{%- render 'zv-addon-riders', map: zv_addon_rider_by_lead -%}{%- endcapture -%}
@@ -1393,6 +1394,12 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
 .addcart__price .per { font-size: 12px; font-weight: 700; color: var(--muted); }
 .addcart__rm { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--line); background: #fff; color: var(--muted); display: grid; place-items: center; font-size: 16px; line-height: 1; cursor: pointer; flex: none; transition: border-color 0.15s, color 0.15s; }
 .addcart__rm:hover { border-color: var(--red); color: var(--red); }
+/* Rider row (2026-10-30): informational, quieter than a package row (cream, smaller, muted note). */
+.addcart__item--rider { background: var(--cream); }
+.addcart__item--rider .addcart__item-head { padding: 12px 18px; }
+.addcart__item--rider .addcart__name { font-size: 14px; font-weight: 800; }
+.addcart__item--rider .addcart__meta { color: var(--muted); font-weight: 600; }
+.addcart__item--rider .addcart__price { font-size: 13px; }
 .addcart__opt { display: flex; align-items: center; gap: 11px; padding: 12px 18px; background: var(--sand); border-top: 1px solid var(--line); cursor: pointer; }
 .addcart__opt input { width: 18px; height: 18px; accent-color: var(--indigo); flex: none; cursor: pointer; }
 .addcart__opt-label { flex: 1; font-size: 13px; font-weight: 800; color: var(--indigo); }
@@ -1870,6 +1877,9 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
       opt = item && item.querySelector('.pcard__plus-opt');
       if (opt) setAddonMode(opt, koop);
     }
+    // A Huren/Kopen switch changes what a checked add-on records ("Videodeurbel" vs
+    // "Videodeurbel (koop)"), so the button's analytics attributes follow it (2026-10-30).
+    syncAddBtnSelection(card);
     fire('package_mode_select', { solution: card && card.dataset.solutionType, package: card && card.dataset.packageSku,
       option: opt ? optName(opt) : '', mode: koop ? 'kopen' : 'huren' });
   });
@@ -1903,17 +1913,19 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
   /* Riders (2026-10-27): a product nobody picks on its own, kept in step with another add-on's
      Koop line: the camera subscription rides with ADC-750 (the bought Videodeurbel). One
      rider line while the cart holds a lead line, none otherwise. 2026-10-28: the camera subscription now prepays
-     PKG_QTY months like Ontzorgpakket, but still at full price (outside the discount, since it
-     only ever rides a Koop line; see its addonNames note in pricing.config.json). zv-cart-guard rule 7 and the
+     PKG_QTY months like Ontzorgpakket, and like it is in the "Eerste 3 maanden" discount (added in
+     Admin that day, confirmed live), so those months are 50% off although only a Koop line brings it;
+     see its addonNames note in pricing.config.json. zv-cart-guard rule 7 and the
      Overzicht gate use the same quantity. From data-addon-riders, 'lead:rider:cents' pairs
      resolved by handle. */
   var ADDON_RIDERS = (page.dataset.addonRiders || '').split('|').map(function (s) { return s.split(':'); })
     .filter(function (p) { return p[0] && p[1]; }).map(function (p) { return { lead: p[0], rider: p[1] }; });
+  function isRiderLine(it) { return ADDON_RIDERS.some(function (r) { return String(it.variant_id) === r.rider; }); }
   function isAddonLine(it) {
     for (var name in ADDON_VARIANT_IDS) {
       if (ADDON_VARIANT_IDS[name] && String(it.variant_id) === String(ADDON_VARIANT_IDS[name])) return true;
     }
-    if (ADDON_RIDERS.some(function (r) { return String(it.variant_id) === r.rider; })) return true;
+    if (isRiderLine(it)) return true;
     return ONTZORG_VARIANT_IDS.indexOf(String(it.variant_id)) !== -1;
   }
   // variant id -> wanted quantity, from the add-on names recorded on the package lines'
@@ -1928,8 +1940,9 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
   // 2026-10-28, when its products joined the "Eerste 3 maanden" scope; see its addonNames notes).
   // 2026-10-28: Huren Videodeurbel/Afstandsbediening are the same exception now (monthly
   // rentals, in the discount scope since 2026-10-28, so they prepay PKG_QTY months at the
-  // discounted rate); Koop is not. The camera-subscription rider (syncAddonLines()) joins it too, but
-  // stays OUTSIDE the discount (it only rides a Koop line), so it prepays PKG_QTY months at full price.
+  // discounted rate); Koop is not. The camera-subscription rider (syncAddonLines()) joins it too: it
+  // is in the discount scope as well (since 2026-10-28), so it prepays PKG_QTY months at the
+  // discounted rate, although only a Koop line brings it.
   // No PKG_QTY (pricing config missing) falls back to 1. Beschermd and Protect share OHC012:
   // one line, either or both wanting it.
   function addonTargets(items) {
@@ -1967,9 +1980,10 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
      add-ons never race each other in the same request); not wanted is 0, which removes the
      line. Several lines for the same variant merge into one, same shape as woningLinePlan().
      Threads the (possibly updated) cart through each step, same convention used by the cart
-     guard elsewhere in this theme. A failed write for one add-on keeps the cart as it was and
-     still lets the next add-on's plan run. Riders come last, so each one's target is read from
-     the cart its lead line was just synced into (a lead line that failed to add takes no rider). */
+     guard elsewhere in this theme. A failed write for one add-on is tried again (syncAddonLine());
+     after the last try it keeps the cart as it was and still lets the next add-on's plan run.
+     Riders come last, so each one's target is read from the cart its lead line was just synced
+     into (a lead line that failed to add takes no rider). */
   function syncAddonLines(cart) {
     var variantIds = [], riderLead = {};
     ADDON_RIDERS.forEach(function (r) { riderLead[r.rider] = r.lead; });
@@ -1977,30 +1991,63 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
       .concat(ADDON_RIDERS.map(function (r) { return r.rider; }))
       .forEach(function (id) { if (id && variantIds.indexOf(String(id)) === -1) variantIds.push(String(id)); });
     return variantIds.reduce(function (prev, variantId) {
-      return prev.then(function (cart) {
-        var items = (cart && cart.items) || [];
-        var lead = riderLead[variantId];
-        var target = lead
-          ? (items.some(function (it) { return String(it.variant_id) === lead; }) ? (PKG_QTY || 1) : 0)
-          : (addonTargets(items)[variantId] || 0);
-        var lines = items.filter(function (it) { return String(it.variant_id) === String(variantId); });
-        var plan = null;
-        if (lines.length > 1) {
-          var merge = {};
-          lines.forEach(function (it, i) { merge[it.key] = i === 0 ? target : 0; });
-          plan = { url: '/cart/update.js', body: { updates: merge } };
-        } else if (!lines.length) {
-          if (target > 0) plan = { url: '/cart/add.js', body: { items: [{ id: variantId, quantity: target }] } };
-        } else if (lines[0].quantity !== target) {
-          plan = { url: '/cart/change.js', body: { id: lines[0].key, quantity: target } };
-        }
-        if (!plan) return cart;
-        return window.fetch(plan.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(plan.body) })
-          .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-          .then(function () { return window.fetch('/cart.js').then(function (r) { return r.json(); }); })
-          .catch(function () { return cart; });
-      });
+      return prev.then(function (cart) { return syncAddonLine(cart, variantId, riderLead[variantId], ADDON_SYNC_RETRIES); });
     }, Promise.resolve(cart));
+  }
+  // The one request that brings one add-on's line to its target in `cart`, or null when it's right.
+  function addonLinePlan(cart, variantId, lead) {
+    var items = (cart && cart.items) || [];
+    var target = lead
+      ? (items.some(function (it) { return String(it.variant_id) === lead; }) ? (PKG_QTY || 1) : 0)
+      : (addonTargets(items)[variantId] || 0);
+    var lines = items.filter(function (it) { return String(it.variant_id) === String(variantId); });
+    if (lines.length > 1) {
+      var merge = {};
+      lines.forEach(function (it, i) { merge[it.key] = i === 0 ? target : 0; });
+      return { url: '/cart/update.js', body: { updates: merge } };
+    }
+    if (!lines.length) return target > 0 ? { url: '/cart/add.js', body: { items: [{ id: variantId, quantity: target }] } } : null;
+    if (lines[0].quantity !== target) return { url: '/cart/change.js', body: { id: lines[0].key, quantity: target } };
+    return null;
+  }
+  /* One add-on's step, with retries (2026-10-30). Before, one dropped request or answer skipped the
+     add-on silently, and a skipped ADC-750 step skipped its camera-subscription rider too (its target is
+     read from the cart that step returns). A failed write may still have landed (it reached Shopify,
+     the answer got lost), and add.js adds on top of what is there, so a retry never resends the same
+     request: it waits, re-reads the cart and plans again from that. A cart that can't be re-read is
+     never planned from (a stale cart could add the line twice); that read is tried again instead.
+     Retry n waits n x ADDON_SYNC_RETRY_MS (1s, then 2s), so a blip of a few seconds is covered. After
+     ADDON_SYNC_RETRIES failed tries it resolves with the cart as it was; zv-cart-guard rule 7 still
+     restores a missing rider on /cart and Overzicht. */
+  var ADDON_SYNC_RETRIES = 2, ADDON_SYNC_RETRY_MS = 1000;
+  function readCart() {
+    return window.fetch('/cart.js').then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+  }
+  // readCart() with the same retries, for the read right after a package add that the add-on sync
+  // starts from: when it failed, the package was in the cart but no add-on was synced and the card
+  // said "Toevoegen mislukt" (2026-10-30 repro). Rejects after the last try, as before.
+  function readCartRetrying(left) {
+    if (left == null) left = ADDON_SYNC_RETRIES;
+    return readCart().catch(function (err) {
+      if (!left) throw err;
+      var wait = ADDON_SYNC_RETRY_MS * (ADDON_SYNC_RETRIES - left + 1);
+      return new Promise(function (res) { setTimeout(res, wait); }).then(function () { return readCartRetrying(left - 1); });
+    });
+  }
+  function syncAddonLine(cart, variantId, lead, triesLeft) {
+    var plan = addonLinePlan(cart, variantId, lead);
+    if (!plan) return Promise.resolve(cart);
+    function retry(left) {
+      if (!left) return cart;
+      var wait = ADDON_SYNC_RETRY_MS * (ADDON_SYNC_RETRIES - left + 1);
+      return new Promise(function (res) { setTimeout(res, wait); }).then(readCart).then(
+        function (fresh) { return syncAddonLine(fresh, variantId, lead, left - 1); },
+        function () { return retry(left - 1); });
+    }
+    return window.fetch(plan.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(plan.body) })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(readCart)
+      .catch(function () { return retry(triesLeft); });
   }
 
   /* A package goes in the cart as the real package product at quantity PKG_QTY (the 3
@@ -2048,7 +2095,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
         var itemPrice = staticCents ? (staticCents / 100) : ((line && line.price) ? line.price / 100 : undefined);
         if (ZV && ZV.addToCart) ZV.addToCart({ item_id: (properties && properties['SKU']) || (line && line.sku), item_name: properties && properties['Pakket'], item_brand: 'Zo Veilig', price: itemPrice, quantity: 1 }, { cta_location: (btn && btn.getAttribute('data-cta-position')) || 'oplossingen' });
         if (btn) { btn.dataset.busy = ''; btn.disabled = false; btn.removeAttribute('aria-busy'); btn.innerHTML = btn.dataset.label || label; }
-        return window.fetch('/cart.js').then(function (r) { return r.json(); }).then(syncWoningLine).then(syncAddonLines).then(function (cart) {
+        return readCartRetrying().then(syncWoningLine).then(syncAddonLines).then(function (cart) {
           if (mode === 'checkout') { window.location.href = overzichtUrl; return; }
           updateCartCount(cart);
           openCart(cart);
@@ -2164,6 +2211,19 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     '</li>';
   }
 
+  /* A rider line's quiet row: its config name (#zv-item-names), the same note /cart shows and its
+     monthly price (the unit price before the discount, like a package row's "/mnd"). */
+  function riderRowHtml(it) {
+    return '<li class="addcart__item addcart__item--rider">' +
+      '<div class="addcart__item-head"><div class="addcart__info">' +
+        '<span class="addcart__name">' + esc(ITEM_NAMES[it.handle] || it.product_title || '') + '</span>' +
+        '<span class="addcart__meta">Hoort bij uw gekochte videodeurbel.</span>' +
+      '</div><div class="addcart__pricewrap">' +
+        '<span class="addcart__price">' + money(it.original_price != null ? it.original_price : it.price) + '<span class="per">/mnd</span></span>' +
+      '</div></div>' +
+    '</li>';
+  }
+
   /* One package line's Woning control: the question and one checkbox per option (value and
      price from the config island), the stored level checked. The change handler below makes
      them one choice. */
@@ -2243,9 +2303,15 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     // separate remove button on the add-on's own row would just bounce it back on the next
     // syncAddonLines() call, since the package line's Uitbreidingen property still wants it.
     var items = ((cart && cart.items) || []).filter(function (it) { return !isWoningLine(it) && !isAddonLine(it); });
-    var list = items.map(cartRowHtml).join('');
+    // A rider line (the camera subscription of a bought Videodeurbel) is the one add-on line that
+    // still gets a row (2026-10-30): no checkbox of its own shows it, so without one it was invisible
+    // here. Informational only, after the package rows, with no remove control: it goes when the
+    // Videodeurbel goes (syncAddonLines(), and zv-cart-guard rule 7 on /cart and Overzicht). The
+    // counts are unchanged: it was always counted below, and the header badge still leaves it out.
+    var list = items.map(cartRowHtml).join('') + ((cart && cart.items) || []).filter(isRiderLine).map(riderRowHtml).join('');
     // Logical count, same as the header badge and /cart: one per cart line, so the Woning and
-    // add-on lines count too even though they show inside the package row, not as rows here.
+    // add-on lines count too even though they show inside the package row (the rider's own row
+    // above is informational, it was always counted here).
     var n = ((cart && cart.items) || []).length;
     var count = n + (n === 1 ? ' item in winkelwagen' : ' items in winkelwagen');
     var body = items.length
@@ -2408,6 +2474,12 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     });
     return out;
   }
+  // The card's "In winkelwagen" button carries the chosen options for GTM/GA4
+  // (data-selected-term / data-selected-addon); refreshed on every option toggle and Huren/Kopen switch.
+  function syncAddBtnSelection(card) {
+    var addBtn = card && card.querySelector('[data-zv-add]');
+    if (addBtn) { var o = readCardOptions(card); addBtn.setAttribute('data-selected-term', o.terms.join(', ')); addBtn.setAttribute('data-selected-addon', o.addons.join(', ')); }
+  }
 
   /* fire package_option_select on any option toggle (deduped by not firing on unchanged) */
   page.addEventListener('change', function (e) {
@@ -2423,8 +2495,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     var card = inp.closest('.pcard'), opt = inp.closest('.pcard__plus-opt');
     if (isQty) paintAddonPrice(opt);
     var name = opt && opt.querySelector('span') ? opt.querySelector('span').textContent.trim() : '';
-    var addBtn = card && card.querySelector('[data-zv-add]');
-    if (addBtn) { var o = readCardOptions(card); addBtn.setAttribute('data-selected-term', o.terms.join(', ')); addBtn.setAttribute('data-selected-addon', o.addons.join(', ')); }
+    syncAddBtnSelection(card);
     if (card) recomputeCardPrice(card);   // live price feedback
     fire('package_option_select', { solution: card && card.dataset.solutionType, package: card && card.dataset.packageSku, option: name, selected: isQty ? addonQty(inp) > 0 : inp.checked });
   });
@@ -2481,7 +2552,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
           var line = res && res.items && res.items[0];
           var ZV = window.ZVMeasurement;
           if (String((line || {}).variant_id) === String(variantId) && ZV && ZV.addToCart) ZV.addToCart({ item_id: (line && line.sku) || properties['SKU'], item_name: properties['Pakket'], item_brand: 'Zo Veilig', price: onceCents ? onceCents / 100 : undefined, quantity: 1 }, { cta_location: (btn && btn.getAttribute('data-cta-position')) || 'oplossingen' });
-          return window.fetch('/cart.js').then(function (r) { return r.json(); });
+          return readCartRetrying();
         });
     })
       .then(syncWoningLine)

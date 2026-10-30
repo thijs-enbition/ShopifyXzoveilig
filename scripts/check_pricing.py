@@ -635,8 +635,9 @@ check(not stale, "no theme file looks up the archived ontzorgpakket-inzicht prod
 print("\n17. A102B camera subscription rides with a bought Videodeurbel (2026-10-27)")
 # camera-abonnement-videodeurbel-1200-clips / A102B (EUR 3,50/mnd, Admin API 2026-10-27): one line
 # whenever the cart holds a koop-video-deurbel-750 / ADC-750 line, none otherwise. Since 2026-10-28 it
-# syncs at PKG_QTY like Ontzorgpakket (was flat quantity 1), but at full price: it stays outside the
-# "Eerste 3 maanden" discount (see its addonNames note). cartQuantity: 1 is a stale reference value.
+# syncs at PKG_QTY like Ontzorgpakket (was flat quantity 1), and like it is in the "Eerste 3 maanden"
+# discount (see its addonNames note; the scope lives in Admin, nothing here checks it).
+# cartQuantity: 1 is a stale reference value.
 a102b = next((a for a in cfg.get("addonNames", []) if a.get("sku") == "A102B"), {})
 check(a102b.get("productHandle") == "camera-abonnement-videodeurbel-1200-clips",
       "A102B is camera-abonnement-videodeurbel-1200-clips", f"got {a102b.get('productHandle')!r}")
