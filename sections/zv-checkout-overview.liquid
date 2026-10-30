@@ -928,7 +928,7 @@
               {%- if pkg_available -%}
                 <div class="ovblock">
                   <span class="ovblock-eb">Contract</span>
-                  <p>Looptijd {{ pkg_term }} maanden. Indicatieve totale contractwaarde, inclusief eenmalige kosten: <b>{{ pkg_icv }}</b>.</p>
+                  <p>Looptijd {{ pkg_term }} maanden.</p>
                 </div>
               {%- endif -%}
 
@@ -1195,6 +1195,17 @@
 .zv-overzicht .ovi-price { font-size:17px; font-weight:900; color:var(--ink); white-space:nowrap; }
 .zv-overzicht .ovi-price span { font-size:12px; font-weight:700; color:var(--muted); }
 .zv-overzicht .ovi-right .ovi-meta { max-width:230px; margin-left:auto; }
+@media(max-width:480px){
+  .zv-overzicht .ovitem { grid-template-columns:64px 1fr; }
+  .zv-overzicht .ovi-right {
+    grid-column:1 / -1;
+    text-align:left;
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px solid var(--line);
+  }
+  .zv-overzicht .ovi-right .ovi-meta { text-align:left; max-width:none; margin-left:0; }
+}
 .zv-overzicht .ovgroup + .ovgroup { margin-top:20px; }
 .zv-overzicht .ovg-head { margin:0 0 2px; font-size:12px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; color:var(--belt); }
 .zv-overzicht .ovg-sub { display:flex; justify-content:space-between; gap:12px; padding:12px 0 0; font-size:14px; font-weight:700; color:#5b5374; }
