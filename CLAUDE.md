@@ -63,6 +63,12 @@ after the fact or a package reaching the cart through an unexpected route:
   - (2026-10-27) the **A102B** camera subscription is kept at one line at quantity `pkg_qty` (flat 1
     until 2026-10-28) while the cart holds an ADC-750 (bought Videodeurbel) line, and removed without one.
 
+  **Gap (reproduced 2026-10-30): no rule reconciles the add-on lines (H750/ADC-750, H0010/CL004,
+  Ontzorgpakket) with the `Uitbreidingen` property that asks for them.** Only the rider has one
+  (rule 7, keyed on ADC-750 itself). If `syncAddonLines()` gives up on ADC-750, a package line
+  recording `Videodeurbel (koop)` reaches checkout with no ADC-750 and so no A102B line, and
+  neither the guard nor the Overzicht gate notices. See `docs/addon-rider-fixes-2026-10-30.md`.
+
   It never picks one of the three **nami** install options on the customer's behalf; that's
   the customer's choice in the required radio group on Overzicht. The Woning line never
   matches the package or installation rules (product type `NAMI_abonnementen`, not
@@ -392,7 +398,13 @@ Koop purchase triggers it (the cart groups by billing cadence, see
 Koop products themselves. `addonNames[].cartQuantity: 1` is now a stale
 reference value (pinned by `build_pricing.py`/`check_pricing.py`, read by nothing in the theme). It
 shares `unresolved.ODOO_ADDON_BILLING` with Ontzorgpakket, H750 and H0010 (not in "Daarna"). /cart shows its row without a
-remove link (removing the doorbell removes it). `check_pricing.py` §17 pins it.
+remove link (removing the doorbell removes it). `check_pricing.py` §17 pins it. **Since 2026-10-30 the
+Oplossingen drawer shows it too**, as a quiet row of its own after the package rows (`riderRowHtml()`: config
+name, "Hoort bij uw gekochte videodeurbel.", unit price "/mnd", no remove control); before, the drawer left
+it out entirely, so it read as "not added". The header badge and the drawer's "N items" count are
+unchanged. `syncAddonLines()` retries a failed step twice (1s, then 2s): it re-reads the cart and plans
+again, never resends an add.js that may have landed. So does the cart read the sync starts from after a
+package add (`readCartRetrying()`). Repro and evidence: `docs/addon-rider-fixes-2026-10-30.md`.
 Full write-up of the NAMI Koop-only Videodeurbel, the retired Afstandsbediening setting and the list
 layout: `docs/uitbreidingen-koop-only-nami-2026-10-27.md`.
 **Afstandsbediening has a count, not a checkbox (2026-10-29)**: its row (Climax cards only, 4th

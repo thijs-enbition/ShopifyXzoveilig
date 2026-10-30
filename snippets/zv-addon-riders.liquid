@@ -2,8 +2,9 @@
   zv-addon-riders (2026-10-27): resolves zv_addon_rider_by_lead ('lead-handle:rider-handle|...',
   from pricing.config.json addonNames[].ridesWith) into 'leadVariantId:riderVariantId:riderCents|...'.
   Today that is one pair: ADC-750 (koop-video-deurbel-750, the bought Videodeurbel) leads the camera
-  subscription: one subscription line at quantity 1 whenever the cart holds an ADC-750 line,
-  none otherwise. riderCents is the rider's live product price, never a config amount.
+  subscription: one subscription line at quantity pkg_qty (the prepaid months, in the "Eerste 3
+  maanden" discount; flat 1 until 2026-10-28) whenever the cart holds an ADC-750 line, none
+  otherwise. riderCents is the rider's live product price, never a config amount.
 
   A pair whose lead or rider product doesn't resolve is left out, so nothing is ever synced
   against a half-known pair. Resolved by handle, never a hardcoded variant id.

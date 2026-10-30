@@ -134,8 +134,8 @@
     Videodeurbel ('leadVariant:riderVariant:cents|…', zv-addon-riders). zv-cart-guard keeps one
     rider line at quantity zv_promo_package_qty while a lead line is in the cart and none
     otherwise; until it has, checkout waits (cart_needs_fix, below the loop). Since 2026-10-28
-    it prepays the months like Ontzorgpakket, at full price; not in "Daarna" (open, like the
-    Huren rentals: unresolved.ODOO_ADDON_BILLING).
+    it prepays the months like Ontzorgpakket, in the "Eerste 3 maanden" discount (50% off); not in
+    "Daarna" (open, like the Huren rentals: unresolved.ODOO_ADDON_BILLING).
   endcomment
   capture zv_rider_pairs
     render 'zv-addon-riders', map: zv_addon_rider_by_lead

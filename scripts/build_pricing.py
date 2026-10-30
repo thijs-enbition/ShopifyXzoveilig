@@ -132,8 +132,9 @@ def build():
     # another add-on's Koop product line (A102B, the camera subscription, with ADC-750, the bought
     # Videodeurbel): one line whenever the cart holds a ridesWith line, none otherwise. Only a Koop
     # product may lead. Since 2026-10-28 the theme syncs the line at PKG_QTY (promo.months) like
-    # Ontzorgpakket, full price; cartQuantity is a stale reference value still pinned to 1 (see the
-    # A102B note in pricing.config.json), emitted but not read by the theme.
+    # Ontzorgpakket, in the "Eerste 3 maanden" discount like it (set in Admin, never computed here);
+    # cartQuantity is a stale reference value still pinned to 1 (see the A102B note in
+    # pricing.config.json), emitted but not read by the theme.
     koop_products = {(a.get("koopProduct") or {}).get("handle"): (a.get("koopProduct") or {}).get("sku")
                      for a in cfg.get("addonNames", []) if a.get("koopProduct")}
     riders = []
