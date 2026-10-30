@@ -413,6 +413,18 @@
 .zv-cart .ci-price span { font-size:12.5px; font-weight:700; color:var(--muted); }
 .zv-cart .ci-note { font-size:12px; font-weight:700; color:var(--muted); text-align:right; line-height:1.4; max-width:160px; }
 .zv-cart .ci-badge { display:inline-block; font-size:10.5px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; color:var(--indigo); background:var(--indigo-soft); border-radius:6px; padding:3px 8px; }
+@media(max-width:480px){
+  .zv-cart .citem { grid-template-columns:88px 1fr; }
+  .zv-cart .ci-right {
+    grid-column:1 / -1;
+    align-items:flex-start;
+    text-align:left;
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px solid var(--line);
+  }
+  .zv-cart .ci-note { text-align:left; max-width:none; }
+}
 .zv-cart .cg-head { margin:0; padding:14px 22px; font-size:12.5px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; color:var(--belt); background:var(--cream); border-bottom:1px solid var(--line); }
 .zv-cart .cgroup + .cgroup .cg-head { border-top:1px solid var(--line); }
 .zv-cart .cg-sub { display:flex; justify-content:space-between; gap:12px; padding:14px 22px; font-size:14.5px; font-weight:700; color:#5b5374; background:var(--cream); }
