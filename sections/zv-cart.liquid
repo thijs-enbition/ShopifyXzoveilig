@@ -374,6 +374,7 @@
           </div>
 
           <aside class="csummary">
+            <div class="ccost ccost--dark">
             <h2>Overzicht</h2>
             {%- assign today_cents = 0 -%}
             {%- assign true_month_cents = 0 -%}
@@ -470,6 +471,8 @@
             {%- else -%}
               <div class="s-sub">Verzend- en eventuele installatiekosten worden bij het afrekenen berekend. Prijzen incl. btw.</div>
             {%- endif -%}
+            </div>
+            <div class="cactions">
             {%- if cart_install_pending -%}
               {%- comment -%} The real gate, not just styling: a disabled button has no href to follow. The picker reloads the page after saving, so this always reflects the live cart. {%- endcomment -%}
               <button type="button" class="btn btn--gold cta-checkout" disabled aria-disabled="true" aria-describedby="cinstall-hint">Naar afrekenen <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -483,6 +486,7 @@
               <div><i><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="2"/></svg></i>Veilig betalen via iDEAL &amp; SEPA</div>
             </div>
             <div class="pay-row"><span>Betaalmethoden</span><span class="pay-chip">iDEAL</span><span class="pay-chip">SEPA</span><span class="pay-chip">Creditcard</span></div>
+            </div>
           </aside>
         </form>
         {%- if show_nami_install -%}
@@ -629,8 +633,9 @@
 .zv-cart .cgroup + .cgroup .cg-head { border-top:1px solid var(--line); }
 .zv-cart .cg-sub { display:flex; justify-content:space-between; gap:12px; padding:14px 22px; font-size:14.5px; font-weight:700; color:#5b5374; background:var(--cream); }
 .zv-cart .cg-sub b { font-weight:800; color:var(--ink); }
-.zv-cart .csummary { position:sticky; top:96px; background:var(--paper); border:1px solid var(--line); border-radius:20px; padding:24px; box-shadow:0 22px 52px -44px rgba(26,18,48,.5); }
-.zv-cart .csummary h2 { font-size:18px; font-weight:900; color:var(--indigo); }
+.zv-cart .csummary { position:sticky; top:96px; display:flex; flex-direction:column; gap:20px; }
+.zv-cart .ccost, .zv-cart .cactions { background:var(--paper); border:1px solid var(--line); border-radius:20px; padding:24px; box-shadow:0 22px 52px -44px rgba(26,18,48,.5); }
+.zv-cart .ccost h2 { font-size:18px; font-weight:900; color:var(--indigo); }
 .zv-cart .srow { display:flex; justify-content:space-between; gap:12px; font-size:14.5px; font-weight:600; color:#5b5374; padding:11px 0; border-bottom:1px solid var(--line); }
 .zv-cart .srow b { font-weight:800; color:var(--ink); }
 .zv-cart .sgroup { margin-top:14px; }
@@ -639,6 +644,15 @@
 .zv-cart .srow.total { font-size:17px; color:var(--ink); border-bottom:none; padding-top:15px; }
 .zv-cart .srow.total b { font-size:22px; color:var(--indigo); }
 .zv-cart .s-sub { font-size:12.5px; font-weight:600; color:var(--muted); margin:2px 0 16px; line-height:1.5; }
+/* Dark cost-breakdown card (2026-11-02), mirrors Overzicht's .ovcost--dark; .cactions is the light card below it. */
+.zv-cart .ccost--dark { background:var(--indigo); border-color:var(--indigo); color:var(--cream); }
+.zv-cart .ccost--dark h2 { color:var(--cream); }
+.zv-cart .ccost--dark .sg-head { color:var(--gold-lt); }
+.zv-cart .ccost--dark .srow { color:var(--indigo-soft); border-bottom-color:rgba(255,255,255,.12); }
+.zv-cart .ccost--dark .srow b { color:var(--cream); }
+.zv-cart .ccost--dark .srow.total { border-bottom:none; }
+.zv-cart .ccost--dark .srow.total b { color:var(--gold-lt); }
+.zv-cart .ccost--dark .s-sub { color:var(--indigo-soft); }
 .zv-cart .btn { display:inline-flex; align-items:center; gap:9px; border:none; cursor:pointer; border-radius:12px; font:inherit; font-weight:800; text-decoration:none; padding:14px 24px; }
 .zv-cart .btn svg { width:18px; height:18px; }
 .zv-cart .btn--gold { background:linear-gradient(180deg,var(--gold-lt),var(--gold)); color:#3a2a06; box-shadow:0 14px 30px -18px rgba(228,163,17,.9); }
