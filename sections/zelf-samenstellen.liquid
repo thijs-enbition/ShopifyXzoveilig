@@ -1,0 +1,622 @@
+{%- comment -%}
+  Zo Veilig — Liever zelf samenstellen (2026-11-02). A copy of sections/camera-hardware.liquid's
+  Winkelgrid (hero, trust strip, filter chips, 3-column grid, the visitor's set, callback band, FAQ)
+  for hardware picked one by one, linked from the "Liever zelf samenstellen" pill on Oplossingen.
+  Same conversion as the camera page: by phone or callback only, never self-checkout (nothing here
+  touches the cart, so the Overzicht/av_akkoord rule in CLAUDE.md has no new entry point). The
+  callback POSTs a lead to window.ZV_LEAD_ENDPOINT (Odoo CRM), lead_type kept as 'camerahardware'.
+
+  Product data is the HW array below, not Shopify products (hardware has no images or tags and
+  most Koop products aren't published to the Online Store). Rows are the camera page's own rows,
+  verbatim, for the sensor, camera, doorbell and remote categories; `kh`/`hh` are the Koop and Huur
+  product handles, `sku`/`huurSku` the SKUs, all read from Shopify (Admin API, 2026-11-02), none
+  used by the grid itself. Prices are literals like on the camera page; the one that differed from
+  the live product (Afstandsbediening Huren, H0010) is the live EUR 0,80. Not here, deliberately:
+  no hub/panel product exists in Shopify, the Ontzorgpakket is a per-package add-on (a different
+  product per package) and the Woning lines belong to a package line, so the cart
+  guard would remove it. See docs/zelf-samenstellen-2026-11-02.md.
+
+  Filter chips (data-filter) match a row's `cat`; a chip that matches no row is hidden.
+  Trust strip: one `trust` block per item (template JSON), a label plus an optional zv-route
+  key for the page that backs it.
+{%- endcomment -%}
+
+<div class="zv-zelf">
+  <div class="topbar">
+    <div class="wrap">
+      <div class="crumb">
+        <a href="{% render 'zv-route', key: 'oplossingen' %}"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Oplossingen</a>
+        <span class="sep">/</span><b>Liever zelf samenstellen</b>
+      </div>
+    </div>
+  </div>
+
+  <section class="ch-hero">
+    <div class="wrap">
+      <span class="eyebrow">{{ section.settings.eyebrow | default: 'Zelf samenstellen' | escape }}</span>
+      <h1>{{ section.settings.title | default: "Stel uw eigen beveiliging samen" | escape }}</h1>
+      <p>{{ section.settings.lead | default: "Kies per onderdeel wat u wilt: sensoren, camera's, een videodeurbel of een afstandsbediening. Kopen of huren, u bepaalt het per product." | escape }}</p>
+      <div class="ch-ctas">
+        <a class="btn btn--gold" href="#winkel">{{ section.settings.cta_shop | default: "Bekijk alle onderdelen" | escape }}<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <a class="btn btn--ghost" href="{% render 'zv-route', key: 'contact' %}">{{ section.settings.cta_advice | default: 'Vraag advies aan' | escape }}</a>
+      </div>
+    </div>
+  </section>
+
+  {%- if section.blocks.size > 0 -%}
+    <div class="ch-trust">
+      <ul class="wrap">
+        {%- for block in section.blocks -%}
+          <li {{ block.shopify_attributes }}>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            {%- if block.settings.route != blank -%}
+              <a href="{% render 'zv-route', key: block.settings.route %}">{{ block.settings.label | escape }}</a>
+            {%- else -%}
+              <span>{{ block.settings.label | escape }}</span>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+      </ul>
+    </div>
+  {%- endif -%}
+
+  <section class="wrap ch-shop" id="winkel" aria-labelledby="ch-shop-h">
+    <div class="cat-head">
+      <h2 id="ch-shop-h">Kies uw onderdelen</h2>
+      <span class="cat-hint"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Kies per product kopen of huren</span>
+    </div>
+    <div class="ch-filters" role="group" aria-label="Filter op categorie">
+      <button type="button" class="ch-chip on" data-filter="" aria-pressed="true">Alle <span class="n"></span></button>
+      <button type="button" class="ch-chip" data-filter="sensoren" aria-pressed="false">Sensoren <span class="n"></span></button>
+      <button type="button" class="ch-chip" data-filter="camera" aria-pressed="false">Camera's <span class="n"></span></button>
+      <button type="button" class="ch-chip" data-filter="deurbel" aria-pressed="false">Videodeurbel <span class="n"></span></button>
+      <button type="button" class="ch-chip" data-filter="bediening" aria-pressed="false">Bediening <span class="n"></span></button>
+    </div>
+    <div class="rows" id="rows"></div>
+  </section>
+
+  <div class="ch-bar" id="chBar" hidden>
+    <div class="ch-bar-in">
+      <span class="ch-bar-t" id="chBarT"></span>
+      <a href="#uw-setup">Bekijk uw setup</a>
+    </div>
+  </div>
+
+  <section class="wrap ch-setup" id="uw-setup" aria-labelledby="ch-setup-h">
+    <div class="summary">
+      <h2 id="ch-setup-h">Uw set</h2>
+      <div class="sum-cams">
+        <span class="ci"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8.5h4l1.5-2.5h7L17 8.5h4v11H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="14" r="3.4" stroke="currentColor" stroke-width="2"/></svg></span>
+        <div><b id="camCount">0</b><span>onderdelen gekozen</span></div>
+      </div>
+      <div class="sum-list" id="sumList"></div>
+      <div class="sum-empty" id="sumEmpty">Nog niets toegevoegd. Kies per product kopen of huren.</div>
+      <div class="sum-tot" id="sumTot"></div>
+      <button class="sumbtn" id="sumBtn" disabled>Bel om te bestellen<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="sum-note"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Bestellen gaat altijd via een kort telefoongesprek, 088 122 11 11</div>
+    </div>
+    <form class="cam-contact" id="camContact" data-consent-error="{% render 'zv-form-copy', key: 'consent_error' %}">
+      <div class="cam-contact-h">Of laat ons u terugbellen</div>
+      <input type="text" id="ccName" placeholder="Naam" required>
+      <input type="tel" id="ccPhone" placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}" aria-label="Telefoonnummer" required>
+      <input type="email" id="ccEmail" placeholder="E-mailadres (optioneel)">
+      <label class="cam-contact-consent">
+        <input type="checkbox" id="ccConsent" required>
+        <span>{% render 'zv-form-copy', key: 'consent' %}</span>
+      </label>
+      <div class="cam-contact-err" id="ccErr"></div>
+      <button type="submit">Verstuur terugbelverzoek</button>
+      <div class="cam-contact-done" id="ccDone"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Dank voor je interesse, we nemen snel contact met u op.</div>
+    </form>
+  </section>
+
+  <section class="ch-cta" aria-labelledby="ch-cta-h">
+    <div class="wrap">
+      <div class="ch-cta-in">
+        <div>
+          <h2 id="ch-cta-h">Niet gevonden wat u zocht?</h2>
+          <p>Staat het product dat u zoekt er niet bij, of weet u niet zeker welke onderdelen bij uw woning passen? Onze adviseurs kijken vrijblijvend met u mee en stellen samen met u de juiste set samen.</p>
+        </div>
+        <div class="ch-cta-actions">
+          <a class="btn btn--gold" href="{% render 'zv-route', key: 'contact' %}">Plan een adviesgesprek</a>
+          <a class="btn btn--ghost-light" href="tel:0881221111">Bel 088 122 11 11</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap ch-faq" aria-labelledby="ch-faq-h">
+    <h2 id="ch-faq-h">Veelgestelde vragen over zelf samenstellen</h2>
+    <div class="fq-item"><button class="fq-q" type="button" aria-expanded="false" aria-controls="ch-fqa-1">Wat is het verschil tussen kopen en huren?<span class="pm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></span></button><div class="fq-a" id="ch-fqa-1" role="region"><div class="fq-a-in">Kiest u kopen, dan betaalt u één keer. Kiest u huren, dan betaalt u een vast bedrag per maand via SEPA-incasso. Huren kan bij de meeste producten; een enkel product is alleen te koop. U kiest het per product.</div></div></div>
+    <div class="fq-item"><button class="fq-q" type="button" aria-expanded="false" aria-controls="ch-fqa-2">Hoe bestel ik mijn set?<span class="pm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></span></button><div class="fq-a" id="ch-fqa-2" role="region"><div class="fq-a-in">Bestellen gaat altijd via een kort telefoongesprek. Stel op deze pagina uw set samen en bel <a href="tel:0881221111">088 122 11 11</a>, of laat uw naam en telefoonnummer achter, dan bellen wij u terug.</div></div></div>
+    <div class="fq-item"><button class="fq-q" type="button" aria-expanded="false" aria-controls="ch-fqa-3">Wat heb ik nodig om een camera te gebruiken?<span class="pm" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></span></button><div class="fq-a" id="ch-fqa-3" role="region"><div class="fq-a-in">Voor onze camera's is een cloudopslag-abonnement vereist. Daarnaast heeft u een stabiele internetverbinding nodig met een uploadsnelheid van minimaal 2,0 Mbps per camera, en voldoende wifi-signaal op de plek waar de camera komt.</div></div></div>
+    <p class="ch-faq-more">Meer vragen? <a href="{% render 'zv-route', key: 'faq' %}">Bekijk alle veelgestelde vragen</a></p>
+  </section>
+</div>
+
+<script>
+(function(){
+  var scope = document.querySelector('.zv-zelf'); if(!scope || !document.getElementById('rows')) return;
+  var HW=[
+    {cat:'sensoren', kh:'koop-magneetcontact', hh:'huur-magneetcontact-dc-23', n:'Magneetcontact (DC-23)', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0001', k:'magneetcontact_dc23', sku:'CL001'},
+    {cat:'sensoren', kh:'koop-pir-bewegingsdetector', hh:'huur-pir-bewegingsdetector', n:'PIR Bewegingsdetector', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0003', k:'pir_bewegingsdetector', sku:'CL002', desc:[
+      'Nadat de sensor beweging heeft waargenomen, wordt er een melding doorgestuurd naar de centrale. Zodra het alarmsysteem ingeschakeld is en er wordt beweging waargenomen, dan gaat het alarm af en wordt er een melding gestuurd naar uw telefoon en, indien u bent aangesloten op de meldkamer van Securitas, dan worden zij ook gealarmeerd en komen zij in actie volgens het protocol.'
+    ]},
+    {cat:'sensoren', kh:'koop-rookmelder', hh:'huur-rookmelder', n:'Rookmelder', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0011', k:'rookmelder', sku:'CL005', desc:[
+      'Wij leveren het alarmsysteem altijd met één rookmelder. De rookmelder is gekoppeld aan de centrale en geeft bij het detecteren van rook of warmte, een zeer luid geluidssignaal van 95 dB af en tegelijk wordt de ingebouwde sirene in de centrale in werking gesteld. U ontvangt dan direct een melding op uw telefoon. Dit zorgt ervoor dat ook als u niet thuis bent, u snel in actie kan komen, om zodoende de schade zoveel mogelijk beperkt te houden.',
+      'Als u heeft gekozen dat uw alarmsysteem gekoppeld wordt aan de meldkamer van Securitas, dan komt Securitas direct in actie bij een alarmsituatie.'
+    ]},
+    {cat:'sensoren', kh:'koop-watersensor', hh:'huur-watersensor', n:'Watersensor', type:'Sensor', koop:45.00, huur:1.44, huurSku:'H0014', k:'watersensor', sku:'CL020'},
+    {cat:'camera', kh:'koop-binnencamera-516', hh:'huur-binnencamera', n:'Binnencamera 516', type:'Binnen', koop:175.00, huur:5.59, huurSku:'H515', k:'cam_516', sku:'ADC-516', desc:[
+      'De ADC-V516 is een binnencamera die werkt via wifi en is gekoppeld aan het Alarm.com platform. Via de app kunt u live meekijken, meldingen ontvangen en beelden terugkijken.',
+      'De camera maakt gebruik van wifi (draadloze verbinding) en wordt aangesloten op netstroom (230V via adapter). De camera wordt binnenshuis geplaatst en kan eenvoudig op een vlakke ondergrond worden neergezet of gemonteerd.',
+      'De camera werkt met cloudopslag (gebeurtenissen): Cloud: opslag van bewegingen, ca. 30 dagen terugkijken. In de app ziet u een overzicht van gebeurtenissen en kunt u filteren op basis van beweging.',
+      'De camera beschikt over bewegingsdetectie en beeldkwaliteit in HD. Daarnaast is tweeweg-audio beschikbaar (spreken en luisteren) en beschikt de camera over infrarood nachtzicht voor gebruik in het donker.',
+      'De camera is geschikt voor gebruik binnenshuis, bijvoorbeeld voor het monitoren van een ruimte, entree of huisdieren.'
+    ]},
+    {cat:'camera', kh:'koop-730-buitencamera-met-spotlight', hh:null, n:'730 Buitencamera met spotlight', type:'Buiten', koop:325.00, huur:null, huurSku:null, k:'cam_730_adc', sku:'ADC-730', model:'Alarm.com ADC-V730', specs:[
+      ['Resolutie','4MP, max 2688×1520, 1/3" HDR-sensor'],
+      ['Beeldhoek','129° horizontaal, 68° verticaal, 153° diagonaal'],
+      ['Nachtzicht','IR + kleuren-spotlightmodus; IR-bereik ~49 ft (15m)'],
+      ['Opslag','microSD, tot 1TB'],
+      ['Verbinding','Dual-band Wi-Fi 6, 802.11b/g/n/ac/ax, 2.4 en 5GHz'],
+      ['Voeding','12V, 1.5A DC-adapter (inbegrepen), 10ft kabel'],
+      ['Waterdichtheid','IP66; -40°F tot 122°F (-40°C tot 50°C)']
+    ], desc:[
+      'De ADC-V730 is een buitencamera die werkt via wifi en is gekoppeld aan onze app. Via de app kunt u live meekijken, meldingen ontvangen en beelden terugkijken.',
+      'De camera maakt gebruik van wifi (draadloze verbinding), maar wordt aangesloten op netstroom (230V via adapter). Hiervoor wordt tijdens installatie doorgaans een doorvoer door de muur geboord om de bekabeling van binnen naar buiten te brengen.',
+      'De camera werkt met een combinatie van cloudopslag (gebeurtenissen) en lokale opslag via SD-kaart: Cloud: opslag van gebeurtenissen (zoals personen en voertuigen), ca. 30 dagen terugkijken. SD-kaart: mogelijkheid tot (aanvullend) continue opname.',
+      'In de app ziet u een overzicht van gebeurtenissen en kunt u filteren op type melding. Bij gebruik van een SD-kaart is het mogelijk om lokaal door beelden te scrollen, afhankelijk van de configuratie.',
+      'De camera beschikt over videodetectie (personen, voertuigen, beweging) met instelbare detectiegebieden en 4MP beeldkwaliteit met HDR. Daarnaast heeft de camera een ingebouwde verlichting (spotlight), waardoor bij weinig licht kleurbeelden mogelijk zijn. Ook is tweeweg-audio beschikbaar (spreken en luisteren).',
+      'De camera kan worden uitgebreid met een Alarm.com recorder (SVR) voor continue opname en langere opslag van meerdere camera\'s.',
+      'Vereisten: Cloudabonnement; stabiele internetverbinding (min. 2 Mbps upload per camera); voldoende wifi-signaal op de montageplek (2,4 &amp; 5 GHz); stroompunt in de buurt. Installatie wordt verzorgd door de monteur, inclusief afwerking van de bekabeling.'
+    ]},
+    {cat:'camera', kh:'koop-buitencamera-bedraad-dome-826', hh:'huur-dome-camera', n:'Buitencamera bedraad Dome 826', type:'Buiten', koop:199.00, huur:12.75, huurSku:'H067', k:'cam_dome_826', sku:'ADC826'},
+    {cat:'camera', kh:'koop-729-wifi-camera-floodlight-mickey', hh:'huur-729-wifi-camera-floodlight-mickey', n:'729 WiFi Camera Floodlight (Mickey)', type:'Camera', koop:475.00, huur:15.17, huurSku:'H729', k:'cam_adc_mm', sku:'ADC-MM'},
+    {cat:'deurbel', kh:'koop-video-deurbel-750', hh:'huur-video-deurbel-750', n:'Video Deurbel 750', type:'Deurbel', koop:299.00, huur:9.55, huurSku:'H750', k:'vdb_750_adc', sku:'ADC-750', model:'Alarm.com ADC-VDB750', specs:[
+      ['Resolutie','max 1440×1440 (2MP, 1/2.4" HDR-sensor)'],
+      ['Beeldhoek','165° horizontaal, 145° verticaal'],
+      ['Tweerichtingsaudio','ja, full-duplex'],
+      ['Nachtzicht','IR, 0 lux met IR; bereik tot 15ft (5m)'],
+      ['Voeding','AC 16–24VAC 10–40VA (16VAC/10VA aanbevolen), of DC 15–24V 6–20W'],
+      ['Chime','compatibel met Alarm.com Smart Chime (ADC-W115C); mechanische chime vereist 22Ω 5W vlamvertragende weerstand'],
+      ['Waterdichtheid','IP65; -58°F tot 122°F (-50°C tot 50°C); vochtigheid onder 95% RV, niet-condenserend']
+    ], desc:[
+      'De ADC-VDB750 is een videodeurbel die wordt aangesloten op de bestaande deurbelbekabeling (bedraad). Via de app kunt u live meekijken, meldingen ontvangen en communiceren met bezoekers.',
+      'De deurbel werkt met netvoeding (16–24V AC via bestaande bedrading) en heeft geen batterij, wat zorgt voor een stabiele werking zonder opladen.',
+      'De deurbel beschikt over: 2MP beeldkwaliteit (Full HD) met HDR; zeer brede kijkhoek (±165°) → zicht op persoon én pakket op de grond; videodetectie (persoonherkenning); tweeweg-audio (spreken en luisteren); infrarood nachtzicht.',
+      'Voor het gebruik van onze camera\'s is een cloudopslag-abonnement vereist. Hiermee worden uw camerabeelden veilig opgeslagen en kunt u deze op elk gewenst moment terugkijken. Om de camera goed te laten functioneren, is een stabiele internetverbinding nodig met een minimale uploadsnelheid van 2,0 Mbps per camera. Daarnaast is het belangrijk dat het wifi-signaal op de locatie waar de camera geplaatst wordt, voldoende sterk is.',
+      'Wij leveren onze deurbellen altijd met een chime, die een geluidssignaal in huis afgeeft als er wordt aangebeld, draadloos verbindt met de deurbel en het wifi-signaal rond de deurbel versterkt; deze wordt geplaatst in een stopcontact binnen (meestal in de woonkamer).',
+      'Installatie: wordt aangesloten op bestaande deurbelbedrading. In de meeste gevallen geen extra voeding nodig.'
+    ]},
+    {cat:'deurbel', kh:'koop-video-deurbel-780', hh:'huur-video-deurbel-780-accu', n:'Video Deurbel 780 (accu)', type:'Deurbel', koop:425.00, huur:13.58, huurSku:'H780', k:'vdb_780_adc', sku:'ADC-780', model:'Alarm.com ADC-VDB780B', specs:[
+      ['Resolutie','1920×1080, 2.12MP Sony IMX323-sensor'],
+      ['Beeldhoek','160° horizontaal, 90° verticaal, 175° diagonaal'],
+      ['Tweerichtingsaudio','ja; 1W/8Ω speaker, omnidirectionele microfoon'],
+      ['Nachtzicht','IR tot 15ft (5m); 0.5 lux bij weinig licht'],
+      ['Batterij','9540mAh oplaadbaar, opladen via micro-USB (~7 uur), ~6 maanden per lading bij normaal gebruik'],
+      ['Chime','inbegrepen Alarm.com Smart Chime ADC-W115C: 1.5W/77dB, instelbare tonen, fungeert ook als 2.4GHz wifi-versterker'],
+      ['Waterdichtheid','IP66; -20°C tot 50°C; 20–100% RV, niet-condenserend']
+    ], desc:[
+      'De ADC-VDB780 is een videodeurbel die werkt op batterij en via wifi verbonden is met het Alarm.com platform. Via de app kunt u live meekijken, meldingen ontvangen en communiceren met bezoekers.',
+      'De deurbel wordt toegepast op locaties waar geen bestaande deurbelbedrading aanwezig is.',
+      'De deurbel beschikt over: videobeelden met meldingen op basis van detectie; tweeweg-audio (spreken en luisteren); videodetectie (personen/meldingen); flexibele plaatsing zonder bekabeling.',
+      'Voor het gebruik van onze camera\'s is een cloudopslag-abonnement vereist. Om de camera goed te laten functioneren, is een stabiele internetverbinding nodig met een minimale uploadsnelheid van 2,0 Mbps per camera, en voldoende wifi-signaal op de montageplek.',
+      'Wij leveren onze deurbellen altijd met een chime, die een geluidssignaal in huis afgeeft als er wordt aangebeld, draadloos verbindt met de deurbel en het wifi-signaal rond de deurbel versterkt; deze wordt geplaatst in een stopcontact binnen (meestal in de woonkamer).',
+      'Installatie: wordt draadloos geplaatst en werkt op batterij. Voor gebruik is een Alarm.com chime (gong) nodig voor het ontvangen van de bel binnen (werkt niet op een bestaande bekabelde gong).'
+    ]},
+    {cat:'bediening', kh:'koop-afstandsbediening', hh:'huur-afstandsbediening', n:'Afstandsbediening', type:'Accessoire', koop:40.00, huur:0.80, huurSku:'H0010', k:'afstandsbediening', sku:'CL004', desc:[
+      'Met deze afstandsbediening kunt u uw alarmsysteem in- en uitschakelen. De afstandsbediening kan gemakkelijk aan uw sleutelbos gehangen worden.',
+      'De afstandsbediening telt vier knoppen, om uw alarmsysteem geheel of gedeeltelijk in- of uit te schakelen. Ze is voorzien van een ring en een beschermklep om te verhinderen dat de knopjes per ongeluk worden ingeduwd. Via de afstandsbediening kunt u ook een panieksignaal versturen. Activeer uw alarmsysteem of doof zeer eenvoudig automatisch uw verlichting.'
+    ]}
+  ];
+  var state={ lines:{}, filter:'', open:{} };
+  function euro(n){ return '€ '+Number(n).toFixed(2).replace('.',','); }
+
+  var SRC=['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid'];
+  function captureSource(){
+    var store={}; try{ store=JSON.parse(sessionStorage.getItem('zv_src')||'{}'); }catch(e){}
+    var qs=new URLSearchParams(location.search);
+    SRC.forEach(function(k){ var v=qs.get(k); if(v) store[k]=v; });
+    if(qs.get('pakket')) store.pakket_intent=qs.get('pakket');
+    try{ sessionStorage.setItem('zv_src',JSON.stringify(store)); }catch(e){}
+    var out={}; SRC.forEach(function(k){ out[k]=store[k]||''; });
+    out.pakket_intent=store.pakket_intent||'';
+    out.landing_page=location.pathname+location.search; out.referrer=document.referrer;
+    return out;
+  }
+  captureSource();
+
+  /* Filter categories: the row's `cat` (sensoren, camera, deurbel, bediening). Nothing is inferred. */
+  function catsOf(h){ return [h.cat]; }
+  var ICON={
+    cam:'<svg viewBox="0 0 24 24" fill="none"><path d="M3 8.5h4l1.5-2.5h7L17 8.5h4v11H3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="14" r="3.4" stroke="currentColor" stroke-width="1.6"/></svg>',
+    bel:'<svg viewBox="0 0 24 24" fill="none"><rect x="7" y="2.5" width="10" height="19" rx="3" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="8" r="2.2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="15.5" r="1.8" stroke="currentColor" stroke-width="1.6"/></svg>',
+    rec:'<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M7 12h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="17" cy="12" r="1.2" fill="currentColor"/></svg>',
+    sensor:'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="2.4" stroke="currentColor" stroke-width="1.6"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    acc:'<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M9 8h6M9 12h6M9 16h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
+  };
+  function iconFor(h){
+    if(h.type==='Deurbel') return ICON.bel;
+    if(h.type==='Recorder') return ICON.rec;
+    if(h.type==='Sensor') return ICON.sensor;
+    if(h.type==='Accessoire') return ICON.acc;
+    return ICON.cam;
+  }
+
+  function modeChip(h,mode){
+    var l=state.lines[h.k], on=l&&l.mode===mode;
+    var price=euro(mode==='koop'?h.koop:h.huur);
+    var lab=mode==='koop'?'Kopen':'Huren', unit=mode==='koop'?'eenmalig':'per maand';
+    return '<button type="button" class="modechip '+mode+(on?' on':'')+'" data-mode="'+mode+'" aria-pressed="'+(on?'true':'false')+'"><span class="ml">'+lab+'</span><span class="mp">'+price+'</span><span class="mu">'+unit+'</span></button>';
+  }
+  function specHtml(h){
+    var desc=h.desc?'<div class="hw-desc">'+h.desc.map(function(p){ return '<p>'+p+'</p>'; }).join('')+'</div>':'';
+    if(!h.specs) return desc;
+    var model=h.model?'<div class="hw-spec-model">'+h.model+'</div>':'';
+    var rows=h.specs.map(function(s){
+      return '<div class="hw-spec-row"><span class="hw-spec-l">'+s[0]+'</span><span class="hw-spec-v">'+s[1]+'</span></div>';
+    }).join('');
+    return desc+model+'<div class="hw-spec-list">'+rows+'</div>';
+  }
+  /* Two groups, split on h.huur: rows with a huur price offer Kopen and Huren, the rest are
+     koop-only (one chip, no "binnenkort" Huren). Array order is kept within each group. Each
+     card shows the first three spec rows of a row that has specs; the toggle opens the full
+     specs and/or desc ("Meer info" when there's only desc). */
+  var GROUPS=[
+    {title:'Kopen of huren', huur:true},
+    {title:'Alleen eenmalig te koop', huur:false}
+  ];
+  function rowEl(h){
+    var l=state.lines[h.k], q=l?l.qty:0, hasMode=!!(l&&l.mode), open=!!state.open[h.k];
+    var chosenSku=hasMode&&l.mode==='huur'&&h.huurSku?h.huurSku:h.sku;
+    var chosen=hasMode?'<span class="hw-chosen">Gekozen: '+(l.mode==='koop'?'Kopen · eenmalig':'Huren · maandelijks')+' &middot; '+chosenSku+'</span>':'';
+    var specsId='specs-'+h.k;
+    var hasInfo=!!(h.specs||h.desc);
+    var key=h.specs?'<dl class="hw-key">'+h.specs.slice(0,3).map(function(s){ return '<div><dt>'+s[0]+'</dt><dd>'+s[1]+'</dd></div>'; }).join('')+'</dl>':'';
+    var specBtn=hasInfo?'<button type="button" class="hw-spec-btn" aria-expanded="'+(open?'true':'false')+'" aria-controls="'+specsId+'">'+(h.specs?'Alle specificaties':'Meer info')+'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>':'';
+    var specPanel=hasInfo?'<div class="hw-specs" id="'+specsId+'" role="region"'+(open?' style="max-height:none"':'')+'><div class="hw-specs-in">'+specHtml(h)+'</div></div>':'';
+    var el=document.createElement('article'); el.className='hw'+(q>0?' has':'')+(open?' specs-open':''); el.setAttribute('data-k',h.k);
+    el.innerHTML=
+      '<div class="hw-media" aria-hidden="true">'+iconFor(h)+'<span class="hw-type">'+h.type.replace('+',' / ')+'</span></div>'+
+      '<h3 class="hw-name">'+h.n+'</h3>'+
+      (h.model?'<div class="hw-model">'+h.model+'</div>':'')+
+      key+specBtn+specPanel+
+      '<div class="hw-buy">'+
+        '<div class="hw-modes">'+modeChip(h,'koop')+(h.huur!=null?modeChip(h,'huur'):'')+'</div>'+
+        '<div class="stepper"><button type="button" data-d="-1" aria-label="Eén minder"'+(q===0?' disabled':'')+'>−</button><span class="q">'+q+'</span><button type="button" data-d="1" aria-label="Eén meer"'+(hasMode?'':' disabled')+'>+</button></div>'+
+        chosen+
+      '</div>';
+    return el;
+  }
+  function renderRows(){
+    var rows=document.getElementById('rows'); rows.innerHTML='';
+    GROUPS.forEach(function(g){
+      var list=HW.filter(function(h){ return (h.huur!=null)===g.huur && (!state.filter || catsOf(h).indexOf(state.filter)>-1); });
+      if(!list.length) return;
+      var head=document.createElement('h3'); head.className='hw-group-h'; head.textContent=g.title;
+      var grid=document.createElement('div'); grid.className='hw-grid';
+      list.forEach(function(h){ grid.appendChild(rowEl(h)); });
+      rows.appendChild(head); rows.appendChild(grid);
+    });
+  }
+  document.getElementById('rows').addEventListener('click',function(e){
+    var specBtn=e.target.closest('.hw-spec-btn');
+    if(specBtn){
+      var hwEl=specBtn.closest('.hw'), panel=hwEl.querySelector('.hw-specs');
+      var open=hwEl.classList.toggle('specs-open');
+      state.open[hwEl.getAttribute('data-k')]=open;
+      specBtn.setAttribute('aria-expanded', open?'true':'false');
+      panel.style.maxHeight=panel.scrollHeight+'px';
+      if(!open){ panel.offsetHeight; panel.style.maxHeight='0'; }
+      return;
+    }
+    var chip=e.target.closest('.modechip');
+    if(chip){
+      var k=chip.closest('.hw').getAttribute('data-k'), m=chip.getAttribute('data-mode');
+      var l=state.lines[k]||{mode:null,qty:0}; l.mode=m; if(l.qty<1) l.qty=1; state.lines[k]=l;
+      renderRows(); renderSummary(); return;
+    }
+    var btn=e.target.closest('button[data-d]'); if(!btn) return;
+    var k=btn.closest('.hw').getAttribute('data-k'), l=state.lines[k], d=parseInt(btn.getAttribute('data-d'),10);
+    if(d>0 && (!l||!l.mode)) return;
+    l=l||{mode:null,qty:0}; l.qty+=d;
+    if(l.qty<=0) delete state.lines[k]; else state.lines[k]=l;
+    renderRows(); renderSummary();
+  });
+
+  // Filter chips: count per category from the HW data; a chip with no match is hidden.
+  var filters=scope.querySelector('.ch-filters');
+  filters.querySelectorAll('[data-filter]').forEach(function(b){
+    var f=b.getAttribute('data-filter');
+    var n=f?HW.filter(function(h){ return catsOf(h).indexOf(f)>-1; }).length:HW.length;
+    b.querySelector('.n').textContent=n;
+    if(!n) b.hidden=true;
+  });
+  filters.addEventListener('click',function(e){
+    var b=e.target.closest('[data-filter]'); if(!b) return;
+    state.filter=b.getAttribute('data-filter');
+    filters.querySelectorAll('[data-filter]').forEach(function(x){
+      var on=x===b; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on?'true':'false');
+    });
+    renderRows();
+  });
+
+  function renderSummary(){
+    var list=document.getElementById('sumList'), keys=Object.keys(state.lines);
+    list.innerHTML='';
+    var items=0, koop=0, huur=0;
+    keys.forEach(function(k){
+      var h=HW.find(function(x){return x.k===k;}); var l=state.lines[k], q=l.qty;
+      items+=q;
+      var isKoop=l.mode==='koop', unit=isKoop?h.koop:h.huur, line=unit*q;
+      if(isKoop) koop+=line; else huur+=line;
+      list.insertAdjacentHTML('beforeend','<div class="sl"><span><span class="q">'+q+'×</span> '+h.n+' <em style="color:'+(isKoop?'var(--belt)':'var(--indigo-2)')+';font-style:normal;font-weight:800">('+(isKoop?'Kopen':'Huren')+')</em></span><span class="v">'+euro(line)+(isKoop?'':'/m')+'</span></div>');
+    });
+    document.getElementById('camCount').textContent=items;
+    document.getElementById('sumEmpty').style.display=keys.length?'none':'block';
+    document.getElementById('sumBtn').disabled=!keys.length;
+    document.getElementById('chBar').hidden=!keys.length;
+    document.getElementById('chBarT').innerHTML='<b>'+items+'</b> '+(items===1?'product':'producten')+' &middot; '+euro(koop)+' eenmalig'+(huur?' &middot; '+euro(huur)+'/mnd':'');
+    var tot=document.getElementById('sumTot');
+    if(!keys.length){ tot.innerHTML=''; return; }
+    tot.innerHTML=
+      '<div class="tr big"><span>Totaal eenmalig</span><span class="accent" style="color:var(--belt)">'+euro(koop)+'</span></div>'+
+      '<div class="tr muted"><span>Vandaag via iDEAL / creditcard</span></div>'+
+      '<div class="tr big" style="margin-top:8px"><span>Totaal per maand</span><span class="accent">'+euro(huur)+'</span></div>'+
+      '<div class="tr muted"><span>Maandelijks via SEPA-incasso</span></div>';
+  }
+
+  document.getElementById('sumBtn').addEventListener('click',function(){
+    var keys=Object.keys(state.lines); if(!keys.length) return;
+    var lines=keys.map(function(k){
+      var h=HW.find(function(x){return x.k===k;}); var l=state.lines[k], isKoop=l.mode==='koop';
+      return { sku:isKoop?h.sku:(h.huurSku||h.sku), key:k, name:h.n, type:h.type, mode:isKoop?'Kopen':'Huren',
+        bucket:isKoop?'Eenmalig':'Maandelijks', unit:isKoop?h.koop:h.huur, qty:l.qty };
+    });
+    var payload={ lines:lines, source:captureSource() };
+    try{ localStorage.setItem('zv_addons_intake', JSON.stringify(payload)); }catch(e){}
+    window.location.href='tel:0881221111';
+  });
+
+  document.getElementById('camContact').addEventListener('submit', function(e){
+    e.preventDefault();
+    var name=document.getElementById('ccName').value.trim();
+    var phone=document.getElementById('ccPhone').value.trim();
+    var email=document.getElementById('ccEmail').value.trim();
+    var consent=document.getElementById('ccConsent').checked;
+    var err=document.getElementById('ccErr');
+    if(!name || !phone){ err.textContent='Vul uw naam en telefoonnummer in.'; err.style.display='block'; return; }
+    if(!consent){ err.textContent=this.getAttribute('data-consent-error'); err.style.display='block'; return; }
+    err.style.display='none';
+    /* The configured setup rides along so Odoo's Pakket/Prijs fields aren't blank: every line of
+       state.lines in summary order, plus the Kopen and Huren totals. Nothing configured (a plain
+       callback) sends null for all three, never empty strings. */
+    var koop=0, huur=0;
+    var setup=Object.keys(state.lines).map(function(k){
+      var h=HW.find(function(x){return x.k===k;}); var l=state.lines[k], isKoop=l.mode==='koop';
+      if(isKoop) koop+=h.koop*l.qty; else huur+=h.huur*l.qty;
+      return l.qty+'x '+h.n+' ('+(isKoop?'Kopen':'Huren')+')';
+    });
+    var payload={ lead_type:'camerahardware', source_page:'zelf-samenstellen', name:name, phone:phone, email:email||null,
+      consent:consent, cta_location:'zelf_samenstellen_page', source:captureSource(),
+      item_name:setup.length?setup.join(', '):null, one_time_price:koop?euro(koop):null, monthly_price:huur?euro(huur):null };
+    if (window.ZVLeadWebhook) { window.ZVLeadWebhook.send(payload, 'zelf_samenstellen'); }
+    try{ var leads=JSON.parse(localStorage.getItem('zv_leads')||'[]'); leads.push(payload); localStorage.setItem('zv_leads', JSON.stringify(leads)); }catch(ex){}
+    /* #ccDone sits inside the form, so hide the fields, not the form, or the thank-you never shows. */
+    Array.prototype.forEach.call(this.children, function(el){ if(el.id!=='ccDone') el.style.display='none'; });
+    document.getElementById('ccDone').style.display='flex';
+  });
+
+  // FAQ accordion, same behaviour as the Veelgestelde vragen page.
+  scope.querySelectorAll('.ch-faq .fq-item').forEach(function(it){
+    var q=it.querySelector('.fq-q'), a=it.querySelector('.fq-a');
+    q.addEventListener('click',function(){
+      var open=it.classList.toggle('open');
+      q.setAttribute('aria-expanded', open?'true':'false');
+      a.style.maxHeight=open?a.scrollHeight+'px':'0';
+    });
+  });
+
+  renderRows(); renderSummary();
+})();
+</script>
+
+{% stylesheet %}
+.zv-zelf {
+  --ink:#1a1230; --indigo:#322469; --indigo-2:#473a86; --indigo-soft:#efecf7;
+  --cream:#fdfaf2; --paper:#fffdf8; --sand:#efe9d6; --sand-2:#e6dfca;
+  --gold:#e4a311; --gold-lt:#f5c84a; --belt:#9c6c08;
+  --rood:#c52e2f; --red:#e24b4a; --ok:#2f8f5b;
+  --line:#e8e0cd; --line-2:#ded6c0; --muted:#6f6786; --muted-2:#8c84a6;
+  color:var(--ink); line-height:1.5; background:linear-gradient(180deg,#fbf5e9,#f4ecda);
+}
+.zv-zelf .wrap { max-width:1180px; margin:0 auto; padding:0 clamp(16px,3.4vw,48px); }
+.zv-zelf .topbar { background:var(--paper); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.zv-zelf .topbar .wrap { display:flex; align-items:center; gap:9px; padding-top:13px; padding-bottom:13px; }
+.zv-zelf .crumb { font-size:13px; font-weight:600; color:var(--muted); display:flex; align-items:center; gap:8px; }
+.zv-zelf .crumb a { color:var(--indigo); font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+.zv-zelf .crumb a svg { width:15px; height:15px; }
+.zv-zelf .crumb .sep { color:var(--line-2); }
+.zv-zelf .crumb b { color:var(--indigo); font-weight:800; }
+.zv-zelf a:focus-visible, .zv-zelf button:focus-visible { outline:2px solid var(--indigo); outline-offset:3px; }
+.zv-zelf .btn svg { width:17px; height:17px; }
+
+/* Hero */
+.zv-zelf .ch-hero .wrap { padding-top:clamp(30px,4.4vw,56px); padding-bottom:clamp(26px,3.4vw,40px); }
+.zv-zelf .eyebrow { display:inline-flex; align-items:center; gap:8px; font-size:11.5px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:var(--rood); background:var(--paper); border:1px solid var(--line); border-radius:999px; padding:7px 14px; }
+.zv-zelf .eyebrow::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--red); }
+.zv-zelf .ch-hero h1 { font-size:clamp(30px,4.4vw,48px); font-weight:900; letter-spacing:-.02em; line-height:1.04; color:var(--indigo); margin:16px 0 0; max-width:760px; }
+.zv-zelf .ch-hero p { font-size:16.5px; font-weight:600; color:var(--muted); margin:14px 0 0; max-width:640px; line-height:1.5; }
+.zv-zelf .ch-ctas { display:flex; flex-wrap:wrap; gap:12px; margin-top:24px; }
+
+/* Trust strip */
+.zv-zelf .ch-trust { background:var(--paper); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.zv-zelf .ch-trust ul { list-style:none; margin:0 auto; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px 22px; padding-top:16px; padding-bottom:16px; }
+@media(max-width:860px){ .zv-zelf .ch-trust ul { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.zv-zelf .ch-trust li { display:flex; align-items:center; gap:9px; font-size:14px; font-weight:800; color:var(--indigo); line-height:1.3; }
+.zv-zelf .ch-trust li svg { width:18px; height:18px; flex:none; color:var(--ok); }
+.zv-zelf .ch-trust a { color:inherit; text-decoration:underline; text-decoration-color:var(--line-2); text-underline-offset:3px; }
+.zv-zelf .ch-trust a:hover { text-decoration-color:currentColor; }
+
+/* Shop: filters + grid */
+.zv-zelf .ch-shop { padding-top:clamp(30px,3.6vw,46px); scroll-margin-top:132px; }
+.zv-zelf .cat-head { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:14px; }
+.zv-zelf .cat-head h2 { font-size:clamp(21px,2.4vw,28px); font-weight:900; color:var(--indigo); letter-spacing:-.015em; margin:0; }
+.zv-zelf .cat-hint { margin-left:auto; font-size:12.5px; font-weight:700; color:var(--muted); display:inline-flex; align-items:center; gap:7px; }
+.zv-zelf .cat-hint svg { width:15px; height:15px; color:var(--belt); }
+@media(max-width:680px){ .zv-zelf .cat-hint { margin-left:0; } }
+.zv-zelf .ch-filters { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
+.zv-zelf .ch-chip { font-family:inherit; font-size:13.5px; font-weight:800; color:var(--indigo); background:#fff; border:1.5px solid var(--line-2); border-radius:999px; padding:9px 15px; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:border-color .14s,background .14s,color .14s; }
+.zv-zelf .ch-chip:hover { border-color:var(--indigo); }
+.zv-zelf .ch-chip .n { font-size:11.5px; font-weight:800; color:var(--muted); background:var(--cream); border-radius:999px; padding:1px 7px; }
+.zv-zelf .ch-chip.on { background:var(--indigo); border-color:var(--indigo); color:#fff; }
+.zv-zelf .ch-chip.on .n { background:rgba(255,255,255,.18); color:#fff; }
+.zv-zelf .ch-chip[hidden] { display:none; }
+.zv-zelf .hw-group-h { font-size:17px; font-weight:900; color:var(--indigo); letter-spacing:-.01em; line-height:1.2; margin:0 0 12px; }
+.zv-zelf .hw-grid + .hw-group-h { margin-top:30px; }
+.zv-zelf .hw-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+@media(max-width:980px){ .zv-zelf .hw-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:620px){ .zv-zelf .hw-grid { grid-template-columns:1fr; } }
+.zv-zelf .hw { display:flex; flex-direction:column; gap:10px; min-width:0; background:var(--paper); border:1.5px solid var(--line); border-radius:16px; padding:12px 12px 16px; transition:border-color .14s,box-shadow .14s; }
+.zv-zelf .hw.has { border-color:var(--indigo); box-shadow:0 10px 26px -18px rgba(50,36,105,.6); }
+.zv-zelf .hw-media { position:relative; aspect-ratio:5/2; border-radius:11px; background:linear-gradient(135deg,var(--indigo-soft),#f6f1e3); display:grid; place-items:center; color:var(--indigo); }
+.zv-zelf .hw-media svg { width:46px; height:46px; opacity:.8; }
+.zv-zelf .hw-type { position:absolute; top:10px; left:10px; font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--indigo); background:#fff; border-radius:999px; padding:4px 9px; }
+.zv-zelf .hw-name { font-size:16px; font-weight:800; color:var(--ink); line-height:1.25; margin:4px 4px 0; }
+.zv-zelf .hw-model { font-size:11px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:var(--muted); margin:-4px 4px 0; }
+.zv-zelf .hw-key { margin:0 4px; display:flex; flex-direction:column; gap:4px; }
+.zv-zelf .hw-key div { display:grid; grid-template-columns:82px 1fr; gap:8px; font-size:12.5px; line-height:1.4; }
+.zv-zelf .hw-key dt { color:var(--muted); font-weight:700; }
+.zv-zelf .hw-key dd { margin:0; color:#3a3550; font-weight:600; overflow-wrap:anywhere; }
+.zv-zelf .hw-spec-btn { align-self:flex-start; display:inline-flex; align-items:center; gap:4px; font-family:inherit; font-size:12px; font-weight:800; color:var(--indigo); background:none; border:none; padding:2px 4px; cursor:pointer; }
+.zv-zelf .hw-spec-btn svg { width:12px; height:12px; transition:transform .16s; }
+.zv-zelf .hw-spec-btn[aria-expanded="true"] svg { transform:rotate(180deg); }
+.zv-zelf .hw-specs { max-height:0; overflow:hidden; transition:max-height .2s ease; margin:0 4px; }
+.zv-zelf .hw-specs-in { padding-top:10px; border-top:1px solid var(--line); }
+.zv-zelf .hw-desc p { font-size:12.5px; font-weight:500; line-height:1.55; color:#3a3550; margin:0 0 8px; }
+.zv-zelf .hw-desc + .hw-spec-model { margin-top:12px; }
+.zv-zelf .hw-spec-model { font-size:11px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+.zv-zelf .hw-spec-list { display:flex; flex-direction:column; gap:6px; }
+.zv-zelf .hw-spec-row { display:flex; flex-direction:column; gap:1px; font-size:12.5px; font-weight:600; color:#3a3550; }
+.zv-zelf .hw-spec-l { color:var(--muted); font-weight:700; }
+.zv-zelf .hw-buy { margin-top:auto; padding:6px 4px 0; display:flex; flex-direction:column; gap:10px; }
+.zv-zelf .hw-modes { display:flex; gap:8px; }
+.zv-zelf .modechip { flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:1px; font-family:inherit; border:1.5px solid var(--line-2); background:#fff; border-radius:11px; padding:7px 12px; text-align:left; cursor:pointer; transition:border-color .14s,background .14s,box-shadow .14s; }
+.zv-zelf .modechip:hover { border-color:#c9bda0; }
+.zv-zelf .modechip .ml { font-size:10.5px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); }
+.zv-zelf .modechip .mp { font-size:16px; font-weight:900; color:var(--ink); line-height:1.15; }
+.zv-zelf .modechip .mu { font-size:10.5px; font-weight:700; color:var(--muted); }
+.zv-zelf .modechip.on { border-color:var(--indigo); background:var(--indigo-soft); box-shadow:0 8px 20px -14px rgba(50,36,105,.7); }
+.zv-zelf .modechip.on .ml { color:var(--indigo); }
+.zv-zelf .modechip.on .mp { color:var(--indigo); }
+.zv-zelf .modechip.koop.on { border-color:var(--belt); background:#fbf1e0; }
+.zv-zelf .modechip.koop.on .ml, .zv-zelf .modechip.koop.on .mp { color:var(--belt); }
+.zv-zelf .stepper { align-self:flex-start; display:inline-flex; align-items:center; border:1.5px solid var(--line-2); border-radius:11px; overflow:hidden; background:#fff; }
+.zv-zelf .stepper button { width:38px; height:40px; border:none; background:#fff; color:var(--indigo); font-size:20px; font-weight:800; line-height:1; display:grid; place-items:center; cursor:pointer; }
+.zv-zelf .stepper button:disabled { color:var(--line-2); cursor:default; }
+.zv-zelf .stepper button:hover:not(:disabled) { background:var(--indigo-soft); }
+.zv-zelf .stepper .q { min-width:34px; text-align:center; font-size:15px; font-weight:900; color:var(--ink); }
+.zv-zelf .hw-chosen { display:block; font-size:11px; font-weight:800; color:var(--ok); }
+
+/* Sticky setup bar: shown once something is chosen, settles above Uw set. Right-
+   aligned so it clears the contact FAB (bottom-left, assets/zv-contact-fab.css); below 960px
+   the two don't fit side by side, so the bar sits above the FAB (96px tall, 72px <=600px). */
+.zv-zelf .ch-bar { position:sticky; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); z-index:5; display:flex; justify-content:flex-end; padding:0 20px; margin-top:24px; pointer-events:none; }
+@media(max-width:960px){ .zv-zelf .ch-bar { bottom:calc(128px + env(safe-area-inset-bottom, 0px)); } }
+@media(max-width:600px){ .zv-zelf .ch-bar { bottom:calc(100px + env(safe-area-inset-bottom, 0px)); padding:0 16px; } }
+.zv-zelf .ch-bar[hidden] { display:none; }
+.zv-zelf .ch-bar-in { pointer-events:auto; display:flex; align-items:center; gap:14px; max-width:100%; background:var(--indigo); color:#fff; border-radius:999px; padding:8px 8px 8px 18px; box-shadow:0 18px 40px -18px rgba(26,18,48,.7); }
+.zv-zelf .ch-bar-t { font-size:13.5px; font-weight:700; }
+.zv-zelf .ch-bar-t b { font-weight:900; }
+.zv-zelf .ch-bar a { flex:none; font-size:13.5px; font-weight:800; color:var(--ink); background:var(--gold); border-radius:999px; padding:9px 15px; text-decoration:none; }
+@media(max-width:620px){ .zv-zelf .ch-bar-in { gap:10px; padding-left:14px; } .zv-zelf .ch-bar-t { font-size:12.5px; } }
+
+/* Uw set: summary + callback */
+.zv-zelf .ch-setup { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); gap:20px; align-items:start; padding-top:clamp(28px,3.4vw,40px); scroll-margin-top:132px; }
+@media(max-width:860px){ .zv-zelf .ch-setup { grid-template-columns:1fr; } }
+.zv-zelf .summary, .zv-zelf .cam-contact { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:22px; box-shadow:0 26px 56px -42px rgba(26,18,48,.5); }
+.zv-zelf .summary h2 { font-size:clamp(19px,2.2vw,24px); font-weight:900; color:var(--indigo); letter-spacing:-.015em; margin:0; }
+.zv-zelf .sum-cams { display:flex; align-items:center; gap:10px; margin-top:14px; background:var(--cream); border:1px solid var(--line-2); border-radius:13px; padding:12px 14px; }
+.zv-zelf .sum-cams .ci { width:34px; height:34px; border-radius:10px; background:#fff; display:grid; place-items:center; flex:none; box-shadow:inset 0 0 0 1px var(--line-2); }
+.zv-zelf .sum-cams .ci svg { width:19px; height:19px; color:var(--indigo); }
+.zv-zelf .sum-cams b { font-size:21px; font-weight:900; color:var(--ink); line-height:1; }
+.zv-zelf .sum-cams span { font-size:12px; font-weight:700; color:var(--muted); display:block; margin-top:2px; }
+.zv-zelf .sum-list { margin-top:14px; display:flex; flex-direction:column; gap:8px; max-height:260px; overflow:auto; }
+.zv-zelf .sum-list .sl { display:flex; justify-content:space-between; gap:10px; font-size:13px; font-weight:600; color:#3a3550; }
+.zv-zelf .sum-list .sl .q { color:var(--muted); font-weight:800; }
+.zv-zelf .sum-list .sl .v { font-weight:800; white-space:nowrap; }
+.zv-zelf .sum-empty { font-size:13px; font-weight:600; color:var(--muted-2); margin-top:14px; line-height:1.5; }
+.zv-zelf .sum-tot { border-top:1.5px solid var(--line); margin-top:14px; padding-top:14px; display:flex; flex-direction:column; gap:7px; }
+.zv-zelf .sum-tot:empty { display:none; }
+.zv-zelf .sum-tot .tr { display:flex; justify-content:space-between; font-size:13.5px; font-weight:700; color:#3a3550; }
+.zv-zelf .sum-tot .tr.big { font-size:17px; font-weight:900; color:var(--ink); }
+.zv-zelf .sum-tot .tr.big .accent { color:var(--indigo); }
+.zv-zelf .sum-tot .muted { font-size:12px; font-weight:600; color:var(--muted-2); }
+.zv-zelf .sumbtn { margin-top:16px; width:100%; font-family:inherit; font-weight:800; font-size:15.5px; border:none; border-radius:13px; padding:15px; display:inline-flex; align-items:center; justify-content:center; gap:9px; background:var(--gold); color:var(--ink); box-shadow:0 2px 0 var(--belt); transition:transform .14s,box-shadow .14s; cursor:pointer; }
+.zv-zelf .sumbtn:hover { transform:translateY(-1px); box-shadow:0 4px 0 var(--belt),0 12px 24px -12px rgba(180,126,10,.7); }
+.zv-zelf .sumbtn:disabled { background:var(--sand); color:var(--muted-2); box-shadow:none; cursor:default; transform:none; }
+.zv-zelf .sumbtn svg { width:18px; height:18px; }
+.zv-zelf .sum-note { display:flex; align-items:center; gap:8px; justify-content:center; font-size:12px; font-weight:700; color:var(--muted); margin-top:11px; text-align:center; }
+.zv-zelf .sum-note svg { width:14px; height:14px; color:var(--ok); flex:none; }
+.zv-zelf .cam-contact { display:flex; flex-direction:column; gap:9px; }
+.zv-zelf .cam-contact-h { font-size:15px; font-weight:900; color:var(--indigo); margin-bottom:2px; }
+.zv-zelf .cam-contact input { font-family:inherit; font-size:13.5px; font-weight:600; color:var(--ink); border:1.5px solid var(--line); border-radius:8px; padding:11px 12px; background:#fff; }
+.zv-zelf .cam-contact-consent { display:flex; align-items:flex-start; gap:10px; cursor:pointer; }
+.zv-zelf .cam-contact-consent input { width:18px; height:18px; margin-top:2px; flex:none; accent-color:var(--indigo); }
+.zv-zelf .cam-contact-consent span { font-size:12.5px; font-weight:600; color:var(--muted); line-height:1.45; }
+.zv-zelf .cam-contact-consent a { color:var(--indigo); font-weight:800; }
+.zv-zelf .cam-contact button { font-family:inherit; font-size:14px; font-weight:800; color:#fff; background:var(--indigo); border:none; border-radius:8px; padding:12px 16px; cursor:pointer; }
+.zv-zelf .cam-contact-err { font-size:12px; font-weight:700; color:var(--red); display:none; }
+.zv-zelf .cam-contact-done { display:none; align-items:center; gap:8px; font-size:13px; font-weight:700; color:#2f8f5b; }
+.zv-zelf .cam-contact-done svg { width:16px; height:16px; flex:none; }
+
+/* Niet gevonden wat u zocht? */
+.zv-zelf .ch-cta { padding-top:clamp(36px,4.4vw,56px); }
+.zv-zelf .ch-cta-in { display:flex; align-items:center; justify-content:space-between; gap:20px 32px; flex-wrap:wrap; background:var(--indigo); color:#fff; border-radius:20px; padding:clamp(22px,3vw,34px); }
+.zv-zelf .ch-cta-in > div:first-child { flex:1 1 380px; }
+.zv-zelf .ch-cta h2 { font-size:clamp(21px,2.4vw,28px); font-weight:900; letter-spacing:-.015em; line-height:1.15; margin:0; color:#fff; }
+.zv-zelf .ch-cta p { font-size:15px; font-weight:600; line-height:1.5; margin:8px 0 0; color:rgba(255,255,255,.82); max-width:620px; }
+.zv-zelf .ch-cta-actions { display:flex; flex-wrap:wrap; gap:10px; }
+
+/* FAQ: the Veelgestelde vragen accordion (.fq-item), scoped here. */
+.zv-zelf .ch-faq { padding-top:clamp(36px,4.4vw,56px); padding-bottom:80px; }
+.zv-zelf .ch-faq > * { max-width:880px; }
+.zv-zelf .ch-faq h2 { font-size:clamp(21px,2.4vw,28px); font-weight:900; color:var(--indigo); letter-spacing:-.015em; line-height:1.15; margin:0 0 16px; }
+.zv-zelf .fq-item { background:var(--paper); border:1px solid var(--line); border-radius:14px; margin-bottom:10px; overflow:hidden; box-shadow:0 12px 30px -34px rgba(26,18,48,.5); }
+.zv-zelf .fq-q { width:100%; display:flex; align-items:center; justify-content:space-between; gap:16px; text-align:left; font-family:inherit; background:none; border:none; padding:18px 20px; font-size:16px; font-weight:800; color:var(--indigo); line-height:1.35; cursor:pointer; }
+.zv-zelf .fq-q .pm { flex:none; width:26px; height:26px; border-radius:50%; background:var(--cream); color:var(--indigo); display:grid; place-items:center; transition:transform .2s,background .15s; }
+.zv-zelf .fq-q .pm svg { width:15px; height:15px; }
+.zv-zelf .fq-item.open .fq-q .pm { transform:rotate(45deg); background:var(--gold); }
+.zv-zelf .fq-a { max-height:0; overflow:hidden; transition:max-height .28s ease; }
+.zv-zelf .fq-a-in { padding:0 20px 20px; font-size:15px; font-weight:500; color:#5b5374; line-height:1.6; }
+.zv-zelf .fq-a-in a { font-weight:800; color:var(--indigo); }
+.zv-zelf .ch-faq-more { font-size:14px; font-weight:600; color:var(--muted); margin:16px 0 0; }
+.zv-zelf .ch-faq-more a { font-weight:800; color:var(--indigo); }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Zelf samenstellen",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Zelf samenstellen" },
+    { "type": "text", "id": "title", "label": "Titel", "default": "Stel uw eigen beveiliging samen" },
+    { "type": "textarea", "id": "lead", "label": "Lead" },
+    { "type": "text", "id": "cta_shop", "label": "Knop naar de producten", "default": "Bekijk alle onderdelen" },
+    { "type": "text", "id": "cta_advice", "label": "Knop naar advies (Contact)", "default": "Vraag advies aan" }
+  ],
+  "blocks": [
+    {
+      "type": "trust",
+      "name": "Vertrouwenspunt",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Tekst" },
+        { "type": "text", "id": "route", "label": "Link (zv-route sleutel)", "info": "Optioneel, bijv. borg, herroepingsrecht, contact of kc/hoe-werkt-een-meldkamer." }
+      ]
+    }
+  ],
+  "max_blocks": 6,
+  "presets": [{ "name": "Zelf samenstellen" }]
+}
+{% endschema %}

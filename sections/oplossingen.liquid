@@ -122,9 +122,9 @@
 {%- if sols.size > 0 -%}
 <div class="opl-page" id="oplossingen-page" data-zv-oplossingen data-activation-variant-id="{{ activation_variant_id }}" data-install-handles="{{ zv_activation_handle }}|{{ zv_nami_install_geen_handle }}|{{ zv_nami_install_telefonisch_handle }}|{{ zv_nami_install_huis_handle }}" data-woning-variant-ids="{{ woning_variant_ids }}" data-addon-riders="{{ zv_addon_riders }}" data-cart-url="{{ routes.cart_url }}" data-addon-videodeurbel-variant-id="{{ zv_addon_videodeurbel_variant_id }}" data-addon-afstandsbediening-variant-id="{{ zv_addon_afstandsbediening_variant_id }}" data-ontzorg-variant-ids="{{ zv_ontzorg_variant_ids }}" data-koop-addon-videodeurbel-variant-id="{{ zv_koop_variant_videodeurbel }}" data-koop-addon-afstandsbediening-variant-id="{{ zv_koop_addon_afstandsbediening_variant }}">
 
-  <div class="catnav" role="tablist" aria-label="Onze oplossingen">
+  <div class="catnav">
     <span class="catnav__lbl">Onze oplossingen</span>
-    <div class="catnav__tabs">
+    <div class="catnav__tabs" role="tablist" aria-label="Onze oplossingen">
       {%- for b in sols -%}
         <button class="catnav__t{% if forloop.first %} on{% endif %}" type="button" role="tab"
           aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="panel-{{ b.settings.anchor }}"
@@ -134,6 +134,18 @@
         </button>
       {%- endfor -%}
     </div>
+    {%- comment -%}
+      "Liever zelf samenstellen" (2026-11-02): a plain link to the hardware-by-hardware page, not a 4th
+      solution tab, so it sits outside the tablist and carries no data-opl-tab. Shown only once the
+      Shopify page exists (Admin > Pages, handle zelf-samenstellen, template page.zelf-samenstellen):
+      a merge to main is a live deploy, and until then the link would 404.
+    {%- endcomment -%}
+    {%- if pages['zelf-samenstellen'] != blank and section.settings.zelf_label != blank -%}
+      <a class="catnav__t catnav__t--link" href="{% render 'zv-route', key: 'zelf-samenstellen' %}"
+        data-cta-name="zelf_samenstellen" data-cta-position="oplossingen_subnav">
+        <b>{{ section.settings.zelf_label }}</b>{% if section.settings.zelf_sublabel != blank %}<span>{{ section.settings.zelf_sublabel }}</span>{% endif %}
+      </a>
+    {%- endif -%}
   </div>
 
   {%- for b in sols -%}
@@ -996,6 +1008,7 @@
 .catnav__t span { font-size: 11.5px; font-weight: 600; color: var(--muted-2); }
 .catnav__t:hover { border-color: var(--indigo); transform: translateY(-1px); }
 .catnav__t:hover b { color: var(--indigo); }
+.catnav__t--link { text-decoration: none; color: inherit; line-height: normal; }
 .catnav__t.on { background: var(--indigo); border-color: var(--indigo); }
 .catnav__t.on b { color: #fff; }
 .catnav__t.on span { color: #cdc6e8; }
@@ -2905,6 +2918,9 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
   "name": "Oplossingen",
   "tag": "section",
   "settings": [
+    { "type": "header", "content": "Link \"Liever zelf samenstellen\"" },
+    { "type": "text", "id": "zelf_label", "label": "Tekst", "default": "Liever zelf samenstellen", "info": "Leeg laten verbergt de link. Hij verschijnt alleen als de pagina met handle zelf-samenstellen bestaat." },
+    { "type": "text", "id": "zelf_sublabel", "label": "Subtekst", "default": "Kies per onderdeel" },
     { "type": "header", "content": "Service-sectie (Online wanneer u wilt)" },
     { "type": "text", "id": "service_heading", "label": "Kop", "default": "Online wanneer u wilt. Persoonlijk wanneer u dat prettig vindt." },
     { "type": "textarea", "id": "service_intro", "label": "Introtekst", "default": "Bestel eenvoudig online of laat u adviseren door een van onze specialisten. U kiest zelf hoeveel ondersteuning u prettig vindt." },
