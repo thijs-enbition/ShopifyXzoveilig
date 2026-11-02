@@ -70,7 +70,8 @@ after the fact or a package reaching the cart through an unexpected route:
   neither the guard nor the Overzicht gate notices. See `docs/addon-rider-fixes-2026-10-30.md`.
 
   It never picks one of the three **nami** install options on the customer's behalf; that's
-  the customer's choice in the required radio group on Overzicht. The Woning line never
+  the customer's choice: the required radio group on /cart (since 2026-11-02, it also disables
+  "Naar afrekenen" there) and, as the fallback, the same group on Overzicht. The Woning line never
   matches the package or installation rules (product type `NAMI_abonnementen`, not
   `Beveiligingsabonnement`); neither does A102B (`ADC Camera ABO`).
 - **Server-side:** `zv-checkout-overview.liquid` disables the checkout button while any of
@@ -151,7 +152,7 @@ it was outside the discount on 2026-10-27 and is in it since 2026-10-28 (15 prod
 
 Installation products (2026-09-23): NAMI `geen-installatie-nami` N0006 €0,
 `telefonische-ondersteuning-installatie-nami` N0005 €35, `installatie-nami` N0004 €99 (customer
-picks one on Overzicht); Climax `climax-instalatie` CL003 €99 (Beschermd/Protect only, never in a
+picks one on /cart, fallback on Overzicht); Climax `climax-instalatie` CL003 €99 (Beschermd/Protect only, never in a
 NAMI cart). Full table with variant ids: `docs/prepay-qty3-2026-09-23.md`.
 
 **Odoo's product sync can replace Shopify products.** On 2026-09-23 it swapped Inzicht and Alert
@@ -338,7 +339,7 @@ hardware is not confirmed); the modal's Woning box is gated by the config (`woni
 `climax-instalatie`, CL003, €99, since 2026-09-23 (it replaced `activatie-en-installatie` /
 ACT-INSTALL, which no longer exists). It is resolved by handle (`all_products[zv_activation_handle]`),
 never a hardcoded variant id, for Beschermd/Protect only. NAMI packages use
-`installationOptions.nami` instead, chosen by the customer on Overzicht.
+`installationOptions.nami` instead, chosen by the customer on /cart (fallback: Overzicht).
 
 **Videodeurbel and Afstandsbediening** are real Shopify products with live-priced rows in the
 Uitbreidingen accordion. All their products are resolved by handle, never a variant id or a theme
