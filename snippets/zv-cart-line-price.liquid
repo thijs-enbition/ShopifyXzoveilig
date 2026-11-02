@@ -2,10 +2,9 @@
   zv-cart-line-price: a cart line's amount for today, shared by /cart and Overzicht (2026-10-28,
   docs/cart-huur-koop-split-2026-10-28.md). A line with a line-level discount allocation (the
   automatic "Eerste 3 maanden" discount) shows its original_line_price struck through next to its
-  final_line_price, plus one badge per allocation carrying the discount's own title from Shopify
-  (never a hardcoded percentage or name). Which lines get all this is decided only by the
-  allocation, never by SKU, so it follows the discount's scope in Shopify Admin. A line without
-  an allocation shows just final_line_price.
+  final_line_price. Which lines get this is decided only by the allocation, never by SKU, so it
+  follows the discount's scope in Shopify Admin. A line without an allocation shows just
+  final_line_price.
 
   The final price is a <strong>, not a <span>: both pages style `<price class> span` (the "p/m"
   suffix), which would shrink and mute it.
@@ -22,14 +21,10 @@
     <span class="visually-hidden">Prijs met korting</span>
     <strong>{{ item.final_line_price | money }}</strong>
   </div>
-  {%- for allocation in item.line_level_discount_allocations -%}
-    <span class="zv-line-deal">{{ allocation.discount_application.title | escape }}</span>
-  {%- endfor -%}
 {%- else -%}
   <div class="{{ zv_price_class }}">{{ item.final_line_price | money }}</div>
 {%- endif -%}
 
 {% stylesheet %}
 .zv-line-was { font-size:.8em; font-weight:700; color:var(--muted); text-decoration:line-through; margin-right:6px; }
-.zv-line-deal { display:inline-block; font-size:10.5px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; color:#3a2a06; background:var(--gold-lt); border-radius:6px; padding:3px 8px; }
 {% endstylesheet %}

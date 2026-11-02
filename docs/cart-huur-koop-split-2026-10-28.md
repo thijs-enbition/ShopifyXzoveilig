@@ -133,7 +133,7 @@ cannot drift:
 |---|---|
 | `snippets/zv-cart-line-group.liquid` | the grouping decision (`huren` / `kopen`), extracted from `zv-cart.liquid` (it was inline there, not shared) |
 | `snippets/zv-cart-group-label.liquid` | "Huren", "Kopen · eenmalig", "Subtotaal vandaag" |
-| `snippets/zv-cart-line-price.liquid` | struck original price, final price, badge (discount title), post-promo line, and the badge/strikethrough CSS (`.zv-line-was`, `.zv-line-deal`); a page passes its own `price_class` / `note_class` |
+| `snippets/zv-cart-line-price.liquid` | struck original price, final price, post-promo line, and the strikethrough CSS (`.zv-line-was`); the discount-title badge (`.zv-line-deal`) was removed 2026-11-02; a page passes its own `price_class` / `note_class` |
 
 Each page still has a short pre-pass that sums each group's subtotal (Liquid can't return values from a
 snippet), and its own heading/subtotal/row markup and CSS (`.cg-*` on /cart, `.ovg-*` on Overzicht).
