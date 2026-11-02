@@ -305,6 +305,18 @@
       else
         assign distinct_koop_fks = distinct_koop_fks | append: koop_fk_token
       endif
+      comment
+        A Koop package line's service fee (koopMaandelijks, 2026-11-02): never a Shopify line
+        (the config's koop.cartNote) and, like every other line since today's
+        fix/remove-cart-overzicht-notes-2026-11-02, no per-line note either - but it's a real
+        ongoing cost the customer agreed to on Oplossingen, so it belongs in the "Daarna" total
+        the same as a rented package's monthly rate. See docs/koop-maandelijks-cart-2026-11-02.md.
+      endcomment
+      capture item_koop_month_cents
+        render 'zv-koop-maandelijks', finder_key: item_koop_fk, maandelijks: zv_koop_maandelijks_by_fk
+      endcapture
+      assign item_koop_month_cents = item_koop_month_cents | strip | plus: 0
+      assign true_month_cents = true_month_cents | plus: item_koop_month_cents
     endif
 
     comment
