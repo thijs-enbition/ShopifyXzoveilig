@@ -115,6 +115,56 @@
     endunless
   endfor
 -%}
+{%- comment -%}
+  NAMI installation choice (2026-11-02, docs/install-choice-to-cart-2026-11-02.md): the picker lives on
+  this page and gates "Naar afrekenen". Detection mirrors sections/zv-checkout-overview.liquid
+  (which keeps its own required radio group and cart_needs_activation gate as the fallback for a
+  cart that reaches Overzicht without choosing here): a NAMI package is a rented line (sub_type /
+  sub_tag plus a NAMI finder_key) or a Koop line (zv-koop-fk) of a NAMI package; the chosen option
+  is whichever of the 3 install variants is in the cart. Climax needs no choice (CL003 is added
+  by zv-cart-guard), so a Climax-only cart shows no picker and keeps an active button. Nothing here
+  ever picks an option for the customer (zv-cart-guard must not either).
+{%- endcomment -%}
+{%- liquid
+  assign has_nami_pkg = false
+  assign has_nami_install_line = false
+  assign selected_nami_install_id = nil
+  for item in cart.items
+    if nami_install_geen_variant_id != blank and item.variant_id == nami_install_geen_variant_id
+      assign has_nami_install_line = true
+      assign selected_nami_install_id = 'geen'
+    endif
+    if nami_install_telefonisch_variant_id != blank and item.variant_id == nami_install_telefonisch_variant_id
+      assign has_nami_install_line = true
+      assign selected_nami_install_id = 'telefonisch'
+    endif
+    if nami_install_huis_variant_id != blank and item.variant_id == nami_install_huis_variant_id
+      assign has_nami_install_line = true
+      assign selected_nami_install_id = 'huis'
+    endif
+
+    capture nami_koop_fk
+      render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle
+    endcapture
+    assign nami_koop_fk = nami_koop_fk | strip
+    assign nami_pkg_fk = blank
+    if nami_koop_fk == blank
+      if item.product.type == sub_type or item.product.tags contains sub_tag
+        assign nami_pkg_fk = item.product.metafields.custom.finder_key.value
+      endif
+    elsif nami_koop_fk != 'invalid'
+      assign nami_pkg_fk = nami_koop_fk
+    endif
+    if nami_pkg_fk == 'aware' or nami_pkg_fk == 'aware_plus' or nami_pkg_fk == 'secure'
+      assign has_nami_pkg = true
+    endif
+  endfor
+  assign show_nami_install = has_nami_pkg
+  assign cart_install_pending = false
+  if show_nami_install and has_nami_install_line == false
+    assign cart_install_pending = true
+  endif
+-%}
 <div class="zv-cart">
   <section class="cartbar">
     <div class="wrap">
@@ -278,6 +328,47 @@
                 <div class="cg-sub"><span>{% render 'zv-cart-group-label', group: cg, part: 'subtotal' %}</span><b>{{ cg_cents | money }}</b></div>
               </div>
             {%- endfor -%}
+            {%- if show_nami_install -%}
+              <div class="cinstall-section" id="cinstall">
+                <span class="ci-line">Installatie</span>
+                <div class="cinstall-options" data-cart-install-options role="radiogroup" aria-label="Installatie">
+                  <label class="cinstall-opt">
+                    <input type="radio" name="cart_install_option" required
+                      data-install-variant-id="{{ nami_install_geen_variant_id }}"
+                      data-install-cents="{{ zv_nami_install_geen_cents }}"
+                      {%- if selected_nami_install_id == 'geen' %} checked{% endif %}>
+                    <span class="cinstall-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 5.5l13 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                    </span>
+                    <span class="cinstall-title">{{ zv_nami_install_geen_label }}</span>
+                    <span class="cinstall-price">{{ zv_nami_install_geen_display }}</span>
+                  </label>
+                  <label class="cinstall-opt">
+                    <input type="radio" name="cart_install_option" required
+                      data-install-variant-id="{{ nami_install_telefonisch_variant_id }}"
+                      data-install-cents="{{ zv_nami_install_telefonisch_cents }}"
+                      {%- if selected_nami_install_id == 'telefonisch' %} checked{% endif %}>
+                    <span class="cinstall-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                    <span class="cinstall-title">{{ zv_nami_install_telefonisch_label }}</span>
+                    <span class="cinstall-price">{{ zv_nami_install_telefonisch_display }}</span>
+                  </label>
+                  <label class="cinstall-opt">
+                    <input type="radio" name="cart_install_option" required
+                      data-install-variant-id="{{ nami_install_huis_variant_id }}"
+                      data-install-cents="{{ zv_nami_install_huis_cents }}"
+                      {%- if selected_nami_install_id == 'huis' %} checked{% endif %}>
+                    <span class="cinstall-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-7 9 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                    <span class="cinstall-title">{{ zv_nami_install_huis_label }}</span>
+                    <span class="cinstall-price">{{ zv_nami_install_huis_display }}</span>
+                  </label>
+                </div>
+                <div class="cinstall-err" data-cart-install-err hidden>Er ging iets mis bij het opslaan van uw keuze. Probeer het opnieuw.</div>
+              </div>
+            {%- endif -%}
           </div>
 
           <aside class="csummary">
@@ -367,7 +458,13 @@
             {%- else -%}
               <div class="s-sub">Verzend- en eventuele installatiekosten worden bij het afrekenen berekend. Prijzen incl. btw.</div>
             {%- endif -%}
-            <a href="{{ routes.cart_url }}?view=overzicht" class="btn btn--gold cta-checkout">Naar afrekenen <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            {%- if cart_install_pending -%}
+              {%- comment -%} The real gate, not just styling: a disabled button has no href to follow. The picker reloads the page after saving, so this always reflects the live cart. {%- endcomment -%}
+              <button type="button" class="btn btn--gold cta-checkout" disabled aria-disabled="true" aria-describedby="cinstall-hint">Naar afrekenen <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <p class="cinstall-hint" id="cinstall-hint" role="status">Kies eerst uw installatie hierboven.</p>
+            {%- else -%}
+              <a href="{{ routes.cart_url }}?view=overzicht" class="btn btn--gold cta-checkout">Naar afrekenen <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            {%- endif -%}
             <div class="c-guarantee">
               <div><i><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L14 14l5 2v3a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></i>Nederlandse meldkamer, 24/7 bewaakt</div>
               <div><i><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12l5 5 11-11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></i>14 dagen bedenktijd (herroepingsrecht)</div>
@@ -376,6 +473,65 @@
             <div class="pay-row"><span>Betaalmethoden</span><span class="pay-chip">iDEAL</span><span class="pay-chip">SEPA</span><span class="pay-chip">Creditcard</span></div>
           </aside>
         </form>
+        {%- if show_nami_install -%}
+        <script>
+          (function () {
+            // NAMI installation choice: swap the cart's install-fee line to match the selected
+            // radio, then reload so the server-rendered button state, totals and Overzicht all
+            // reflect the real live cart (same reload-after-fix pattern as zv-cart-guard).
+            // Same swap as the fallback radio group on Overzicht.
+            var options = document.querySelector('#cart-form [data-cart-install-options]');
+            var err = document.querySelector('#cart-form [data-cart-install-err]');
+            if (!options) return;
+            var radios = Array.prototype.slice.call(options.querySelectorAll('input[type="radio"]'));
+            var FEE_VARIANT_IDS = [
+              {{ activation_variant_id | json }},
+              {{ nami_install_geen_variant_id | json }},
+              {{ nami_install_telefonisch_variant_id | json }},
+              {{ nami_install_huis_variant_id | json }}
+            ].filter(function (id) { return id != null; }).map(String);
+
+            radios.forEach(function (radio) {
+              radio.addEventListener('change', function () {
+                if (!radio.checked) return;
+                var targetId = radio.getAttribute('data-install-variant-id');
+                if (!targetId) return;
+                radios.forEach(function (r) { r.disabled = true; });
+                if (err) err.hidden = true;
+
+                // Remove every other fee-type line first (swap, not stack): the 2 other NAMI
+                // options and a stray activation-fee line, in one request.
+                var updates = {};
+                FEE_VARIANT_IDS.forEach(function (id) {
+                  if (id !== String(targetId)) updates[id] = 0;
+                });
+
+                window.fetch('/cart/update.js', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ updates: updates })
+                })
+                  .then(function (res) {
+                    if (!res.ok) throw new Error(res.status);
+                    return window.fetch('/cart/add.js', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ items: [{ id: targetId, quantity: 1 }] })
+                    });
+                  })
+                  .then(function (res) {
+                    if (!res.ok) throw new Error(res.status);
+                    window.location.reload();
+                  })
+                  .catch(function () {
+                    radios.forEach(function (r) { r.disabled = false; });
+                    if (err) err.hidden = false;
+                  });
+              });
+            });
+          })();
+        </script>
+        {%- endif -%}
       {%- else -%}
         <div class="cempty">
           <div class="ic"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 4h3l2.2 12.2a2 2 0 0 0 2 1.6h7.1a2 2 0 0 0 2-1.55L22 8H6.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="21" r="1.6" fill="currentColor"/><circle cx="19" cy="21" r="1.6" fill="currentColor"/></svg></div>
@@ -461,6 +617,28 @@
 .zv-cart .btn--gold { background:linear-gradient(180deg,var(--gold-lt),var(--gold)); color:#3a2a06; box-shadow:0 14px 30px -18px rgba(228,163,17,.9); }
 .zv-cart .btn--ghost { background:transparent; color:var(--indigo); border:1.5px solid var(--line); }
 .zv-cart .cta-checkout { width:100%; justify-content:center; margin-top:4px; }
+.zv-cart .cta-checkout[disabled] { opacity:.5; cursor:not-allowed; box-shadow:none; }
+.zv-cart .cinstall-hint { margin:10px 0 0; font-size:13px; font-weight:700; color:#c52e2f; text-align:center; }
+.zv-cart .cinstall-section { padding:22px; border-top:1px solid var(--line); }
+.zv-cart .cinstall-section > .ci-line { display:block; margin-bottom:12px; }
+.zv-cart .cinstall-options { display:flex; flex-direction:column; gap:12px; }
+.zv-cart .cinstall-opt { display:grid; grid-template-columns:auto 64px 1fr auto; gap:16px; align-items:center; padding:16px; border:1.5px solid var(--line-2); border-radius:16px; cursor:pointer; }
+.zv-cart .cinstall-opt:has(input:checked) { border-color:var(--indigo); background:var(--indigo-soft); }
+.zv-cart .cinstall-opt:has(input:checked) .cinstall-icon { background:var(--indigo); color:#fff; }
+.zv-cart .cinstall-opt input { width:22px; height:22px; flex:none; accent-color:var(--indigo); }
+.zv-cart .cinstall-opt input:disabled { opacity:.6; }
+.zv-cart .cinstall-icon { width:64px; height:64px; border-radius:12px; background:var(--indigo-soft); color:var(--indigo); display:grid; place-items:center; flex:none; }
+.zv-cart .cinstall-icon svg { width:30px; height:30px; }
+.zv-cart .cinstall-title { font-size:16px; font-weight:900; color:var(--indigo); }
+.zv-cart .cinstall-price { font-size:16px; font-weight:900; color:var(--ink); white-space:nowrap; }
+.zv-cart .cinstall-err { margin-top:10px; font-size:12.5px; font-weight:700; color:#c52e2f; }
+@media(max-width:480px){
+  .zv-cart .cinstall-section { padding:18px; }
+  .zv-cart .cinstall-opt { grid-template-columns:auto 52px 1fr; row-gap:6px; }
+  .zv-cart .cinstall-icon { width:52px; height:52px; }
+  .zv-cart .cinstall-icon svg { width:24px; height:24px; }
+  .zv-cart .cinstall-price { grid-column:2 / 4; font-size:14px; }
+}
 .zv-cart .c-guarantee { margin-top:18px; display:flex; flex-direction:column; gap:11px; }
 .zv-cart .c-guarantee div { display:flex; align-items:center; gap:11px; font-size:13px; font-weight:700; color:#5b5374; }
 .zv-cart .c-guarantee i { flex:none; width:26px; height:26px; border-radius:50%; background:var(--indigo-soft); color:var(--indigo); display:grid; place-items:center; }
