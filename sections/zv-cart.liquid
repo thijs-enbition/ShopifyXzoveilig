@@ -100,7 +100,6 @@
   unresolved.ODOO_ADDON_BILLING).
 {%- endcomment -%}
 {%- assign woning_applies_list = zv_woning_applies_handles | split: '|' -%}
-{%- assign woning_applies_fk_list = zv_woning_applies_fks | split: '|' -%}
 {%- capture zv_rider_pairs -%}{%- render 'zv-addon-riders', map: zv_addon_rider_by_lead -%}{%- endcapture -%}
 {%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_ids: woning_variant_ids, woning_applies_by_product: zv_woning_applies_by_product, woning_applies_fks_by_product: zv_woning_applies_fks_by_product, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles, woning_applies_fks: zv_woning_applies_fks, rider_pairs: zv_rider_pairs, koop_map: zv_koop_fk_by_handle -%}
 {%- liquid
@@ -229,19 +228,6 @@
                       <div class="ci-name"><a href="{{ item.url }}">{{ item_name | escape }}</a></div>
                       {%- unless item.variant.title contains 'Default' -%}<div class="ci-meta">{{ item.variant.title | escape }}</div>{%- endunless -%}
                       {%- if item.selling_plan_allocation -%}<div class="ci-meta">{{ item.selling_plan_allocation.selling_plan.name | escape }}</div>{%- endif -%}
-                      {%- assign ci_woning_line = false -%}
-                      {%- if is_sub and woning_applies_list contains item.product.handle -%}{%- assign ci_woning_line = true -%}{%- endif -%}
-                      {%- if is_koop and woning_applies_fk_list contains ci_koop_fk -%}{%- assign ci_woning_line = true -%}{%- endif -%}
-                      {%- if ci_woning_line -%}
-                        {%- comment -%} Woning (spec §7): its own line, not a generic property tag, on package lines whose package offers Woning (zv_woning_applies_handles / _fks). The generic tags below never render (item.properties has no .size), and enabling them would also show internal keys like SKU and Bron. A legacy "Groter dan 100 m²…" value reads as option 1. {%- endcomment -%}
-                        {%- capture ci_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
-                        {%- assign ci_wf = ci_wf | strip | plus: 0 -%}
-                        {%- if ci_wf > 0 -%}
-                          {%- if ci_wf == 2 -%}{%- assign ci_wl = zv_woning_2_value -%}{%- else -%}{%- assign ci_wl = zv_woning_1_value -%}{%- endif -%}
-                          {%- assign ci_wc = zv_woning_unit_cents | times: ci_wf -%}
-                          <div class="ci-meta">Woning: {{ ci_wl | escape }} (+{{ ci_wc | money_without_trailing_zeros }}/mnd)</div>
-                        {%- endif -%}
-                      {%- endif -%}
                       {%- if is_rider -%}<div class="ci-meta">Hoort bij uw gekochte videodeurbel.</div>{%- endif -%}
                       {%- if item.properties.size > 0 -%}
                         <div class="ci-tags">
@@ -267,7 +253,6 @@
                         <span class="ci-badge">Abonnement</span>
                         <span class="ci-note">Vandaag, {{ item.quantity }} maanden vooruit:</span>
                         {%- render 'zv-cart-line-price', item: item -%}
-                        {%- if item.line_level_discount_allocations.size == 0 -%}<span class="ci-note">Loopt daarna door via SEPA-incasso.</span>{%- endif -%}
                       {%- else -%}
                         {%- render 'zv-cart-line-price', item: item -%}
                         {%- if is_koop -%}<span class="ci-note">Apparatuur, eenmalig</span>{%- endif -%}
