@@ -1,0 +1,14 @@
+{
+  "sections": {
+    "main": {
+      "type": "zelf-samenstellen",
+      "blocks": {
+        "trust-bedenktijd": { "type": "trust", "settings": { "label": "14 dagen bedenktijd", "route": "herroepingsrecht" } },
+        "trust-advies": { "type": "trust", "settings": { "label": "Gratis installatieadvies", "route": "contact" } }
+      },
+      "block_order": ["trust-bedenktijd", "trust-advies"],
+      "settings": {}
+    }
+  },
+  "order": ["main"]
+}
