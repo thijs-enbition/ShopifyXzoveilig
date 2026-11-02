@@ -64,3 +64,27 @@ CLAUDE.md's "every checkout entry point" paragraph updated to match.
 (`aware`, `care`), all land on `/cart`. Inzicht: picker shown, CTA a disabled button. Beschermd: no picker,
 active CTA, which goes on to `/cart?view=overzicht`. `sections/betaling-mislukt.liquid` still links
 straight to Overzicht ("Probeer opnieuw te betalen"): left as is, that cart already has its install line.
+
+## Follow-up, same day: the picker collapses once a choice is made
+Before, `/cart` kept all 3 radios stacked even after one was chosen. Now (`sections/zv-cart.liquid` only):
+- Nothing chosen (`cart_install_pending`): the full radio list, as before; the CTA stays a disabled button.
+- A choice is in the cart (`selected_nami_install_id` set): the section renders a summary row instead
+  (`.cinstall-summary`: icon, name, price from `zv_nami_install_*_cents | money` so it reads "€35,00" like the
+  cart lines, not the config's "€ 35,00") with a **Wijzigen** button. The radio list is still in the DOM,
+  `hidden`, with the chosen radio still `checked`; Wijzigen swaps the two (aria-expanded, focus moves to the
+  checked radio), so the previous selection is never lost. An **Annuleren** button in the expanded list swaps
+  back without touching the cart (picking the already-checked radio fires no `change`, so without it the
+  list would have no way out). Picking another option runs the same swap + reload as before.
+- The three icons are `capture`d once and used by both the radios and the summary.
+- Overzicht's fallback radio group is unchanged (still always open); the "change both files" note in
+  *Duplication* above does not apply to this behaviour, it was /cart only.
+- Known overlap: the chosen option is also its own cart line ("Installatie", with Verwijderen) in the
+  group above, so the collapsed row repeats it. Asked for that way; `fix/hide-install-picker-2026-11-02`
+  (local, unpushed) took the opposite approach, hiding the picker entirely.
+
+**Verified 2026-11-02** (disposable theme, real Chrome over CDP, NAMI Inzicht x3): pending = 3 radios + disabled
+CTA; pick huis -> collapsed row "Installatie aan huis €99,00" + active CTA; Wijzigen -> 3 radios with huis
+checked; Annuleren -> collapsed again, cart unchanged; Wijzigen + telefonisch -> cart holds exactly one
+install line (telefonisch), collapsed row updated, still collapsed after a plain reload; 390px width fine.
+`check_pricing.py` passes; `shopify theme check` 0 errors, +6 `UndefinedObject` warnings vs main (535 -> 541,
+the `zv_nami_install_*_label` / `_display` globals now used a second time).
