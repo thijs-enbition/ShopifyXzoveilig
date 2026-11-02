@@ -397,7 +397,7 @@ Koop purchase triggers it (the cart groups by billing cadence, see
 `docs/cart-huur-koop-split-2026-10-28.md`); `koop.promoApplies` stays false because that is about the
 Koop products themselves. `addonNames[].cartQuantity: 1` is now a stale
 reference value (pinned by `build_pricing.py`/`check_pricing.py`, read by nothing in the theme). It
-shares `unresolved.ODOO_ADDON_BILLING` with Ontzorgpakket, H750 and H0010 (not in "Daarna"). /cart shows its row without a
+shares `unresolved.ODOO_ADDON_BILLING` with Ontzorgpakket, H750 and H0010 (Odoo's month-4 billing; its unit price is in "Daarna" since 2026-11-02, see below). /cart shows its row without a
 remove link (removing the doorbell removes it). `check_pricing.py` §17 pins it. **Since 2026-10-30 the
 Oplossingen drawer shows it too**, as a quiet row of its own after the package rows (`riderRowHtml()`: config
 name, "Hoort bij uw gekochte videodeurbel.", unit price "/mnd", no remove control); before, the drawer left
@@ -432,7 +432,12 @@ Checking a box keeps one shared cart line per add-on in sync (`syncAddonLines()`
 **The Huren variants (H750, H0010) sync to `PKG_QTY` since 2026-10-28**, the Ontzorgpakket pattern:
 both were added to the "Eerste 3 maanden" discount scope in Admin that day (10 products then; 14 once the four Ontzorgpakket products were added the same day, confirmed live),
 so they prepay 3 months at 50% off, with the discount badge (`addonTargets()` picks by the
-`(koop)` name suffix). They are not in Overzicht's "Daarna", and how Odoo bills them from month 4
+`(koop)` name suffix). **Since 2026-11-02 (Thijs) H750, H0010 and the A102B rider count in "Daarna"**
+on both Overzicht and /cart: an add-on line adds `original_price x quantity / zv_promo_package_qty`
+(units x unit price; assign it to its own variable, never chain `times`/`divided_by` onto
+`true_month_cents`, which would scale the whole accumulator), the rider adds one unit price (it sits
+at quantity `zv_promo_package_qty`). Koop variants stay out (one-time). No cart-guard rule for
+H750/H0010 quantity exists (separate follow-up). How Odoo bills them from month 4
 is the open `ODOO_ADDON_BILLING` question. **Ontzorgpakket syncs to `PKG_QTY`
 like a package line** (2026-10-26): it is a recurring monthly service, so it prepays the 3
 months, at full price until 2026-10-28 and, since the four Ontzorgpakket products joined the "Eerste 3
