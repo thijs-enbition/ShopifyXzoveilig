@@ -139,9 +139,16 @@
       solution tab, so it sits outside the tablist and carries no data-opl-tab. Shown only once the
       Shopify page exists (Admin > Pages, handle zelf-samenstellen, template page.zelf-samenstellen):
       a merge to main is a live deploy, and until then the link would 404.
+      (2026-11-02) The setting zelf_url_override wins when filled in (default https://offerte.zoveilig.nl,
+      opens in a new tab); empty it to fall back to the internal page.
     {%- endcomment -%}
-    {%- if pages['zelf-samenstellen'] != blank and section.settings.zelf_label != blank -%}
-      <a class="catnav__t catnav__t--link" href="{% render 'zv-route', key: 'zelf-samenstellen' %}"
+    {%- capture zelf_internal_href -%}{% render 'zv-route', key: 'zelf-samenstellen' %}{%- endcapture -%}
+    {%- assign zelf_href = section.settings.zelf_url_override | strip -%}
+    {%- if zelf_href == blank and pages['zelf-samenstellen'] != blank -%}
+      {%- assign zelf_href = zelf_internal_href -%}
+    {%- endif -%}
+    {%- if zelf_href != blank and section.settings.zelf_label != blank -%}
+      <a class="catnav__t catnav__t--link" href="{{ zelf_href }}"{% if zelf_href contains '://' %} target="_blank" rel="noopener noreferrer"{% endif %}
         data-cta-name="zelf_samenstellen" data-cta-position="oplossingen_subnav">
         <b>{{ section.settings.zelf_label }}</b>{% if section.settings.zelf_sublabel != blank %}<span>{{ section.settings.zelf_sublabel }}</span>{% endif %}
       </a>
@@ -2928,6 +2935,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     { "type": "header", "content": "Link \"Liever zelf samenstellen\"" },
     { "type": "text", "id": "zelf_label", "label": "Tekst", "default": "Liever zelf samenstellen", "info": "Leeg laten verbergt de link. Hij verschijnt alleen als de pagina met handle zelf-samenstellen bestaat." },
     { "type": "text", "id": "zelf_sublabel", "label": "Subtekst", "default": "Kies per onderdeel" },
+    { "type": "text", "id": "zelf_url_override", "label": "Externe link (tijdelijk)", "default": "https://offerte.zoveilig.nl", "info": "Indien ingevuld linkt de pill hiernaartoe i.p.v. naar de interne zelf-samenstellen pagina. Leegmaken schakelt terug naar de interne pagina/matcher, zonder code-wijziging." },
     { "type": "header", "content": "Service-sectie (Online wanneer u wilt)" },
     { "type": "text", "id": "service_heading", "label": "Kop", "default": "Online wanneer u wilt. Persoonlijk wanneer u dat prettig vindt." },
     { "type": "textarea", "id": "service_intro", "label": "Introtekst", "default": "Bestel eenvoudig online of laat u adviseren door een van onze specialisten. U kiest zelf hoeveel ondersteuning u prettig vindt." },
