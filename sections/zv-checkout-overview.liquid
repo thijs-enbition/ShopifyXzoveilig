@@ -890,9 +890,6 @@
                 {%- endfor -%}
                 <dl class="ovdl ovbreakdown">
                   <div class="ovbreakdown-total"><dt>{{ zv_label_due_today }}</dt><dd class="strong">{{ today_cents | money }}</dd></div>
-                  {%- if true_month_cents > 0 -%}
-                    <div><dt>Daarna</dt><dd>{{ true_month_cents | money }}/mnd</dd></div>
-                  {%- endif -%}
                 </dl>
               </div>
 
@@ -914,12 +911,6 @@
                   <li class="ovtimeline-step ovtimeline-step--today">
                     <span class="ovtimeline-label">Vandaag</span>
                     <span class="ovtimeline-amt">{{ today_cents | money }}</span>
-                    {%- if cg_huren_cents > 0 or cg_kopen_cents > 0 -%}
-                      <dl class="ovtimeline-parts">
-                        {%- if cg_huren_cents > 0 -%}<div><dt>{{ zv_promo_months }} maanden vooruit</dt><dd>{{ cg_huren_cents | money }}</dd></div>{%- endif -%}
-                        {%- if cg_kopen_cents > 0 -%}<div><dt>Eenmalige kosten</dt><dd>{{ cg_kopen_cents | money }}</dd></div>{%- endif -%}
-                      </dl>
-                    {%- endif -%}
                   </li>
                   {%- if true_month_cents > 0 -%}
                     <li class="ovtimeline-step ovtimeline-step--prepaid">
