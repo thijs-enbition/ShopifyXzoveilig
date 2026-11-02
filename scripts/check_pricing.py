@@ -647,6 +647,24 @@ exp_rider_by_lead = "|".join(
 check(snippet_str("zv_addon_rider_by_lead") == exp_rider_by_lead,
       "zv_addon_rider_by_lead includes all 6 lead:rider pairs, in config order",
       f"got {snippet_str('zv_addon_rider_by_lead')!r}")
+# Oplossingen's handle budget (2026-11-02): the page is at Shopify's 20-unique-handle cap, so it renders
+# zv-addon-riders with a narrowed map holding only the add-on-level pair (A102B/ADC-750), never the 5
+# package-level pairs. With the full map those 10 extra lookups starve the package loop and every
+# package card goes blank. /cart and Overzicht keep the full map (rule 7 adds the "(maand)" riders).
+opl_rider_map = snippet_str("zv_addon_rider_by_lead_oplossingen")
+check(opl_rider_map == "koop-video-deurbel-750:camera-abonnement-videodeurbel-1200-clips",
+      "zv_addon_rider_by_lead_oplossingen is exactly the A102B/ADC-750 pair", f"got {opl_rider_map!r}")
+for handle, (_, lead, _) in EXPECTED_KOOP_MAANDELIJKS_RIDERS.items():
+    check(f"{lead}:{handle}" not in opl_rider_map.split("|"),
+          f"zv_addon_rider_by_lead_oplossingen excludes the package-level pair {lead}:{handle}")
+opl_riders_src = (ROOT / "sections" / "oplossingen.liquid").read_text(encoding="utf-8")
+check("render 'zv-addon-riders', map: zv_addon_rider_by_lead_oplossingen" in opl_riders_src
+      and not re.search(r"render 'zv-addon-riders', map: zv_addon_rider_by_lead(?!\w)", opl_riders_src),
+      "sections/oplossingen.liquid renders zv-addon-riders with the narrowed map, not the full one")
+for tpl in ("zv-cart.liquid", "zv-checkout-overview.liquid"):
+    check(re.search(r"render 'zv-addon-riders', map: zv_addon_rider_by_lead(?!\w)",
+                    (ROOT / "sections" / tpl).read_text(encoding="utf-8")) is not None,
+          f"sections/{tpl} still renders zv-addon-riders with the full map (rule 7 needs the package-level pairs)")
 # Every package's own koopProduct (the lead) is a real, resolvable rider lead; none of the 5
 # riders is also a one-time hardware koop_addon or carries Ontzorgpakket/koopEenmalig fields
 # (the same guard A102B gets below, applied to all 5).
