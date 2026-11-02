@@ -559,15 +559,6 @@ for p in gen["packages"]:
     pid = p["id"].replace("-", "_")
     check((snippet_int(f"zv_{pid}_koop_eenmalig_cents"), snippet_int(f"zv_{pid}_koop_maandelijks_cents")) == exp,
           f"zv_{pid}_koop_* assigns match the config")
-# finder_key -> koop monthly service-fee cents (2026-11-02, zv-koop-maandelijks.liquid): /cart and
-# Overzicht read this to add the fee into "Daarna", which they were silently not doing before
-# (docs/koop-maandelijks-cart-2026-11-02.md). No per-line note: fix/remove-cart-overzicht-notes-2026-11-02
-# dropped every line type's per-line note the same day.
-exp_koop_maandelijks_by_fk = "|".join(
-    f"{p['finderKey']}:{p['koop']['maandelijksCents']}" for p in gen["packages"] if p.get("finderKey") and p.get("koop"))
-check(snippet_str("zv_koop_maandelijks_by_fk") == exp_koop_maandelijks_by_fk,
-      "zv_koop_maandelijks_by_fk maps each koop package's finder_key to its monthly service fee",
-      f"got {snippet_str('zv_koop_maandelijks_by_fk')!r}")
 # The Shopify Koop products (Admin API, 2026-10-24): a cart line with Afname: Kopen maps back to
 # its package only through these handles. They are never a huur package handle and never carry
 # Woning as a priced N0008 line (property only, Thijs 2026-10-24).
@@ -622,22 +613,74 @@ check(not stale, f"the retired {retired_setting} theme setting is gone from the 
 check(not re.search(r"settings\.zv_koop_variant_(videodeurbel|afstandsbediening)", "".join(
         f.read_text(encoding="utf-8", errors="ignore") for d in THEME_DIRS for f in (ROOT / d).rglob("*") if f.is_file() and f.suffix in {".liquid", ".js"})),
       "no theme file reads a Koop setting for a hardware add-on")
-# Cart/Overzicht "Daarna" surfacing of koopMaandelijks (2026-11-02,
-# docs/koop-maandelijks-cart-2026-11-02.md): a Koop package's monthly service fee was defined
-# everywhere above but silently left out of "Daarna" once the line reached /cart or Overzicht.
-# Each template renders the snippet exactly once, to add its figure into true_month_cents - no
-# per-line note, since fix/remove-cart-overzicht-notes-2026-11-02 dropped every line type's
-# per-line note the same day.
+# Koop monthly service-fee products ride with their package's Koop line (2026-11-02,
+# docs/koop-maandelijks-product-sync-2026-11-02.md; supersedes the same-day koopMaandelijks-in-
+# Daarna fix, docs/koop-maandelijks-cart-2026-11-02.md). K001.1-K005.1 are real Shopify products
+# (Admin API) that ride with K001-K005 exactly like A102B rides with ADC-750: no bespoke
+# koopMaandelijks code should remain anywhere in the theme, since the generic rider handling
+# already counts a rider's price into "Daarna" and renders its line like any other add-on.
 cart_txt = (ROOT / "sections" / "zv-cart.liquid").read_text(encoding="utf-8")
 ovz_koop_txt = (ROOT / "sections" / "zv-checkout-overview.liquid").read_text(encoding="utf-8")
-cart_koop_snippet_calls = cart_txt.count("render 'zv-koop-maandelijks'")
-ovz_koop_snippet_calls = ovz_koop_txt.count("render 'zv-koop-maandelijks'")
-check(cart_koop_snippet_calls == 1,
-      "zv-cart.liquid renders the koop monthly fee once, into Daarna",
-      f"found {cart_koop_snippet_calls} occurrences")
-check(ovz_koop_snippet_calls == 1,
-      "zv-checkout-overview.liquid renders the koop monthly fee once, into Daarna",
-      f"found {ovz_koop_snippet_calls} occurrences")
+opl_koop_txt = (ROOT / "sections" / "oplossingen.liquid").read_text(encoding="utf-8")
+stale_snippet = [str(f.relative_to(ROOT)) for d in THEME_DIRS for f in (ROOT / d).rglob("*")
+                 if f.is_file() and "zv-koop-maandelijks" in f.read_text(encoding="utf-8", errors="ignore")]
+check(not stale_snippet, "no theme file still references the retired zv-koop-maandelijks snippet", f"found in {stale_snippet}")
+check("Hoort bij uw gekochte videodeurbel" not in cart_txt + ovz_koop_txt + opl_koop_txt,
+      "the old A102B-only rider caption is gone from every template that had it")
+EXPECTED_KOOP_MAANDELIJKS_RIDERS = {
+    "koop-inzicht-maand": ("K001.1", "koop-inzicht", "K001"),
+    "koop-zeker-maand": ("K002.1", "koop-zeker", "K002"),
+    "koop-beschermd-maand": ("K003.1", "koop-beschermd", "K003"),
+    "koop-alert-maand": ("K004.1", "koop-alert", "K004"),
+    "koop-protect-maand": ("K005.1", "koop-protect", "K005"),
+}
+got_riders_by_handle = {r["productHandle"]: (r["sku"], r["ridesWith"]["handle"], r["ridesWith"]["sku"])
+                        for r in gen.get("addonRiders", [])}
+check(got_riders_by_handle.get("camera-abonnement-videodeurbel-1200-clips") == ("A102B", "koop-video-deurbel-750", "ADC-750"),
+      "A102B still rides with ADC-750, unaffected by the new riders")
+for handle, exp in EXPECTED_KOOP_MAANDELIJKS_RIDERS.items():
+    check(got_riders_by_handle.get(handle) == exp, f"{handle} rides with its package's own Koop product",
+          f"got {got_riders_by_handle.get(handle)}")
+exp_rider_by_lead = "|".join(
+    ["koop-video-deurbel-750:camera-abonnement-videodeurbel-1200-clips"]
+    + [f"{lead}:{handle}" for handle, (_, lead, _) in EXPECTED_KOOP_MAANDELIJKS_RIDERS.items()])
+check(snippet_str("zv_addon_rider_by_lead") == exp_rider_by_lead,
+      "zv_addon_rider_by_lead includes all 6 lead:rider pairs, in config order",
+      f"got {snippet_str('zv_addon_rider_by_lead')!r}")
+# Every package's own koopProduct (the lead) is a real, resolvable rider lead; none of the 5
+# riders is also a one-time hardware koop_addon or carries Ontzorgpakket/koopEenmalig fields
+# (the same guard A102B gets below, applied to all 5).
+cfg_addon_by_handle = {a["productHandle"]: a for a in cfg.get("addonNames", [])}
+for handle in EXPECTED_KOOP_MAANDELIJKS_RIDERS:
+    entry = cfg_addon_by_handle.get(handle) or {}
+    check(not {"koopEenmalig", "finderKeys", "koopProduct"} & set(entry),
+          f"{handle} is no checkbox, koop row or Ontzorgpakket", f"keys {sorted(entry)}")
+    check(entry.get("cartQuantity") == 1,
+          f"{handle}'s cartQuantity is the stale reference value 1 (the theme syncs PKG_QTY)")
+# 'koop-maandelijks' (2026-11-02): a narrower zv-package-handles line than 'rider' - exactly the 5
+# package-service riders, never the camera-subscription one, so the theme can show accurate copy
+# for a monthly service fee without reusing A102B's camera benefit text. See
+# docs/koop-maandelijks-product-sync-2026-11-02.md.
+kmblk = ph_text.split("when 'koop-maandelijks'", 1)[1].split("when '", 1)[0] if "when 'koop-maandelijks'" in ph_text else ""
+exp_km_handles = "|".join(sorted(EXPECTED_KOOP_MAANDELIJKS_RIDERS, key=list(EXPECTED_KOOP_MAANDELIJKS_RIDERS).index))
+exp_km_skus = "|".join(EXPECTED_KOOP_MAANDELIJKS_RIDERS[h][0] for h in EXPECTED_KOOP_MAANDELIJKS_RIDERS)
+check(f"echo '{exp_km_handles}'" in kmblk and f"echo '{exp_km_skus}'" in kmblk,
+      "zv-package-handles.liquid 'koop-maandelijks' lists exactly the 5 package-service riders, never A102B",
+      f"block: {kmblk!r}")
+check("camera-abonnement-videodeurbel-1200-clips" not in kmblk,
+      "the camera-subscription rider is not in the 'koop-maandelijks' line")
+# Regression guard: the copy fix itself. Each template that shows rider copy must check the
+# narrower koop-maandelijks list BEFORE the generic rider list, so a package-service rider never
+# falls through to the camera-subscription rider's benefit text.
+cart_txt_km = (ROOT / "sections" / "zv-cart.liquid").read_text(encoding="utf-8")
+ovz_txt_km = (ROOT / "sections" / "zv-checkout-overview.liquid").read_text(encoding="utf-8")
+hidden_txt_km = (ROOT / "snippets" / "zv-hidden-cart-lines.liquid").read_text(encoding="utf-8")
+check("zv_koop_maandelijks_variant_id_list" in cart_txt_km and cart_txt_km.index("zv_koop_maandelijks_variant_id_list contains item_vid") < cart_txt_km.index("is_rider -%}<div"),
+      "zv-cart.liquid checks the koop-maandelijks list before the generic rider check")
+check("zv_koop_maandelijks_variant_id_list" in ovz_txt_km and ovz_txt_km.index("zv_koop_maandelijks_variant_id_list contains item_vid") < ovz_txt_km.rindex("zv_rider_variant_id_list contains item_vid"),
+      "zv-checkout-overview.liquid checks the koop-maandelijks list before the generic rider check")
+check("zv_koop_maandelijks_variant_id_list" in hidden_txt_km,
+      "zv-hidden-cart-lines.liquid resolves zv_koop_maandelijks_variant_id_list for /cart")
 
 print("\n16. Ontzorgpakket per package (Thijs, 2026-10-27)")
 # One Shopify product per package, picked by finder_key; Vista and Veilig Onderweg get none.
@@ -684,13 +727,13 @@ check(not {"koopEenmalig", "finderKeys", "koopProduct"} & set(a102b), "A102B is 
 check("ODOO_ADDON_BILLING" in (a102b.get("note") or "") and "ODOO_ADDON_BILLING" in {u["id"] for u in cfg["unresolved"]},
       "A102B's note names the open Odoo billing question, and the config tracks it")
 got_riders = [(r["productHandle"], r["sku"], r["ridesWith"]["handle"], r["cartQuantity"]) for r in gen.get("addonRiders", [])]
-check(got_riders == [("camera-abonnement-videodeurbel-1200-clips", "A102B", "koop-video-deurbel-750", 1)],
-      "generated addonRiders is exactly A102B with ADC-750 (reference cartQuantity 1)", f"got {got_riders}")
-check(snippet_str("zv_addon_rider_by_lead") == "koop-video-deurbel-750:camera-abonnement-videodeurbel-1200-clips",
+check(("camera-abonnement-videodeurbel-1200-clips", "A102B", "koop-video-deurbel-750", 1) in got_riders,
+      "generated addonRiders includes A102B with ADC-750 (reference cartQuantity 1)", f"got {got_riders}")
+check("koop-video-deurbel-750:camera-abonnement-videodeurbel-1200-clips" in snippet_str("zv_addon_rider_by_lead"),
       "zv_addon_rider_by_lead maps ADC-750's handle to A102B's", f"got {snippet_str('zv_addon_rider_by_lead')!r}")
 rblk = ph_text.split("when 'rider'", 1)[1].split("when '", 1)[0] if "when 'rider'" in ph_text else ""
-check("echo 'camera-abonnement-videodeurbel-1200-clips'" in rblk and "echo 'A102B'" in rblk,
-      "zv-package-handles.liquid 'rider' lists A102B")
+check("camera-abonnement-videodeurbel-1200-clips" in rblk and "A102B" in rblk,
+      "zv-package-handles.liquid 'rider' lists A102B among possibly several riders")
 names = json.loads(re.search(r'id="zv-item-names">(.*)</script>',
                              (ROOT / "snippets" / "zv-item-names.liquid").read_text(encoding="utf-8")).group(1))
 check(names.get("camera-abonnement-videodeurbel-1200-clips") == a102b.get("name"),

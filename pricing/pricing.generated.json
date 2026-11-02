@@ -122,6 +122,56 @@
         "sku": "ADC-750"
       },
       "cartQuantity": 1
+    },
+    {
+      "productHandle": "koop-inzicht-maand",
+      "sku": "K001.1",
+      "name": "Koop Inzicht (maand)",
+      "ridesWith": {
+        "handle": "koop-inzicht",
+        "sku": "K001"
+      },
+      "cartQuantity": 1
+    },
+    {
+      "productHandle": "koop-zeker-maand",
+      "sku": "K002.1",
+      "name": "Koop Zeker (maand)",
+      "ridesWith": {
+        "handle": "koop-zeker",
+        "sku": "K002"
+      },
+      "cartQuantity": 1
+    },
+    {
+      "productHandle": "koop-beschermd-maand",
+      "sku": "K003.1",
+      "name": "Koop Beschermd (maand)",
+      "ridesWith": {
+        "handle": "koop-beschermd",
+        "sku": "K003"
+      },
+      "cartQuantity": 1
+    },
+    {
+      "productHandle": "koop-alert-maand",
+      "sku": "K004.1",
+      "name": "Koop Alert (maand)",
+      "ridesWith": {
+        "handle": "koop-alert",
+        "sku": "K004"
+      },
+      "cartQuantity": 1
+    },
+    {
+      "productHandle": "koop-protect-maand",
+      "sku": "K005.1",
+      "name": "Koop Protect (maand)",
+      "ridesWith": {
+        "handle": "koop-protect",
+        "sku": "K005"
+      },
+      "cartQuantity": 1
     }
   ],
   "labels": {

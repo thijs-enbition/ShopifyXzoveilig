@@ -278,7 +278,8 @@
                       <div class="ci-name"><a href="{{ item.url }}">{{ item_name | escape }}</a></div>
                       {%- unless item.variant.title contains 'Default' -%}<div class="ci-meta">{{ item.variant.title | escape }}</div>{%- endunless -%}
                       {%- if item.selling_plan_allocation -%}<div class="ci-meta">{{ item.selling_plan_allocation.selling_plan.name | escape }}</div>{%- endif -%}
-                      {%- if is_rider -%}<div class="ci-meta">Hoort bij uw gekochte videodeurbel.</div>{%- endif -%}
+                      {%- comment -%} Generic since 2026-11-02 (5 more riders besides the camera-subscription one: the Koop "(maand)" service fees, each riding with its own package's Koop line, not only a bought Videodeurbel). {%- endcomment -%}
+                      {%- if zv_koop_maandelijks_variant_id_list contains item_vid -%}<div class="ci-meta">Maandelijkse dienst, los van de apparatuur.</div>{%- elsif is_rider -%}<div class="ci-meta">Hoort bij deze aankoop.</div>{%- endif -%}
                       {%- if item.properties.size > 0 -%}
                         <div class="ci-tags">
                           {%- for p in item.properties -%}{%- unless p.last == blank or p.first contains '_' -%}<span class="ci-tag">{{ p.first | escape }}: {{ p.last | escape }}</span>{%- endunless -%}{%- endfor -%}
@@ -389,18 +390,15 @@
                 {%- assign true_month_cents = true_month_cents | plus: item.original_price -%}
               {%- endif -%}
               {%- comment -%}
-                A Koop package line's service fee (koopMaandelijks, 2026-11-02): never a Shopify
-                line (the config's koop.cartNote) and, like every other line since today's
-                fix/remove-cart-overzicht-notes-2026-11-02, no per-line note either - but it's a
-                real ongoing cost the customer agreed to on Oplossingen, so it belongs in the
-                "Daarna" total the same as a rented package's monthly rate. See
-                docs/koop-maandelijks-cart-2026-11-02.md.
+                A Koop package's monthly service fee (koopMaandelijks) used to be added here
+                directly from config (2026-11-02, docs/koop-maandelijks-cart-2026-11-02.md),
+                since it was never a real Shopify line. Since 2026-11-02 it IS one: each package's
+                "(maand)" product (K001.1-K005.1) rides with its Koop package line, the same rider
+                mechanism the camera-subscription rider already used for the Videodeurbel's Koop
+                product (see pricing.config.json addonNames, docs/koop-maandelijks-product-sync-
+                2026-11-02.md), so its own line already counts toward "Daarna" via the
+                zv_rider_variant_id_list check above - adding it again here would double it.
               {%- endcomment -%}
-              {%- if li_koop_fk != blank and li_koop_fk != 'invalid' -%}
-                {%- capture li_koop_month_cents -%}{%- render 'zv-koop-maandelijks', finder_key: li_koop_fk, maandelijks: zv_koop_maandelijks_by_fk -%}{%- endcapture -%}
-                {%- assign li_koop_month_cents = li_koop_month_cents | strip | plus: 0 -%}
-                {%- assign true_month_cents = true_month_cents | plus: li_koop_month_cents -%}
-              {%- endif -%}
               {%- comment -%}
                 "Daarna" sums the rented package lines' unit prices plus their Woning surcharge (from
                 the property; a Woning line itself never counts here, it isn't a package line). This

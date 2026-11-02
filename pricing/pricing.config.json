@@ -617,6 +617,61 @@
         "secure"
       ],
       "note": "Ontzorgpakket per package (Thijs, 2026-10-27): one real Shopify product per package, picked by the package's finder_key (finderKeys), never one generic checkbox. Vista and Veilig Onderweg have none. Rendered in the Uitbreidingen accordion's 'Veel gekozen uitbreidingen' group with its live price + '/mnd'. SHIPPED WITHOUT THE PROMO DISCOUNT (Thijs, 2026-10-13), REVERSED 2026-10-28: Thijs added it to the 'Eerste 3 maanden' discount scope via the Shopify Admin API (confirmed live, scope now 14 products). syncAddonLines() still adds it at quantity 3 (PKG_QTY, the prepaid months, like a package line, because it is a recurring monthly service), unchanged, but no longer at full price: Shopify's automatic discount now takes 50% off this line too, same as the packages, N0008 and the Huren add-ons (H750, H0010). Reported on the package line via the Uitbreidingen property. MOAOH, EUR 5,95/mnd, published to Online Store (Admin API, 2026-10-27)."
+    },
+    {
+      "productHandle": "koop-inzicht-maand",
+      "sku": "K001.1",
+      "name": "Koop Inzicht (maand)",
+      "ridesWith": {
+        "handle": "koop-inzicht",
+        "sku": "K001"
+      },
+      "cartQuantity": 1,
+      "note": "Monthly service fee for a bought Inzicht (2026-11-02, Thijs). Real Shopify product K001.1, EUR 9,95/mnd, created and added to the 'Eerste 3 maanden' discount scope via the Admin API, matching lines.langer-thuis.packages[inzicht].koopMaandelijks. Rides with the package's own Koop product (koop-inzicht/K001) exactly like A102B rides with ADC-750: one line while the cart holds a koop-inzicht line, none otherwise, synced at PKG_QTY like Ontzorgpakket/H750/H0010/A102B, so its 3 prepaid months are 50% off and its unit price counts toward 'Daarna' via the same rider mechanism (zv_rider_variant_id_list). Never a checkbox, never chosen on its own. Supersedes the 2026-11-02 fix that added this figure to 'Daarna' directly from config with no real line (docs/koop-maandelijks-cart-2026-11-02.md) - see docs/koop-maandelijks-product-sync-2026-11-02.md."
+    },
+    {
+      "productHandle": "koop-zeker-maand",
+      "sku": "K002.1",
+      "name": "Koop Zeker (maand)",
+      "ridesWith": {
+        "handle": "koop-zeker",
+        "sku": "K002"
+      },
+      "cartQuantity": 1,
+      "note": "Monthly service fee for a bought Zeker (2026-11-02, Thijs). Real Shopify product K002.1, EUR 9,95/mnd, same treatment as Koop Inzicht (maand) above: rides with koop-zeker/K002, PKG_QTY, in the 'Eerste 3 maanden' discount scope. See docs/koop-maandelijks-product-sync-2026-11-02.md."
+    },
+    {
+      "productHandle": "koop-beschermd-maand",
+      "sku": "K003.1",
+      "name": "Koop Beschermd (maand)",
+      "ridesWith": {
+        "handle": "koop-beschermd",
+        "sku": "K003"
+      },
+      "cartQuantity": 1,
+      "note": "Monthly service fee for a bought Beschermd (2026-11-02, Thijs). Real Shopify product K003.1, EUR 19,95/mnd (Climax rate), same treatment as Koop Inzicht (maand) above: rides with koop-beschermd/K003, PKG_QTY, in the 'Eerste 3 maanden' discount scope. See docs/koop-maandelijks-product-sync-2026-11-02.md."
+    },
+    {
+      "productHandle": "koop-alert-maand",
+      "sku": "K004.1",
+      "name": "Koop Alert (maand)",
+      "ridesWith": {
+        "handle": "koop-alert",
+        "sku": "K004"
+      },
+      "cartQuantity": 1,
+      "note": "Monthly service fee for a bought Alert (2026-11-02, Thijs). Real Shopify product K004.1, EUR 9,95/mnd, same treatment as Koop Inzicht (maand) above: rides with koop-alert/K004, PKG_QTY, in the 'Eerste 3 maanden' discount scope. See docs/koop-maandelijks-product-sync-2026-11-02.md."
+    },
+    {
+      "productHandle": "koop-protect-maand",
+      "sku": "K005.1",
+      "name": "Koop Protect (maand)",
+      "ridesWith": {
+        "handle": "koop-protect",
+        "sku": "K005"
+      },
+      "cartQuantity": 1,
+      "note": "Monthly service fee for a bought Protect (2026-11-02, Thijs). Real Shopify product K005.1, EUR 19,95/mnd (Climax rate), same treatment as Koop Inzicht (maand) above: rides with koop-protect/K005, PKG_QTY, in the 'Eerste 3 maanden' discount scope. See docs/koop-maandelijks-product-sync-2026-11-02.md."
     }
   ],
   "bundles": [

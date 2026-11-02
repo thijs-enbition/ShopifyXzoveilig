@@ -76,3 +76,19 @@
 {%- endfor -%}
 {%- assign zv_rider_variant_ids = zv_rider_variant_ids | remove_first: '|' -%}
 {%- assign zv_rider_variant_id_list = zv_rider_variant_ids | split: '|' -%}
+{%- comment -%}
+  Koop monthly service-fee riders only (2026-11-02): a narrower list than zv_rider_variant_id_list
+  above (which is every rider, the camera-subscription one included) - for display copy that must
+  say something accurate about a monthly service fee, never that rider's camera-subscription
+  benefit text. From the generated
+  zv-package-handles (line: 'koop-maandelijks'). See docs/koop-maandelijks-product-sync-2026-11-02.md.
+{%- endcomment -%}
+{%- capture zv_hidden_koop_maandelijks_handles -%}{% render 'zv-package-handles', line: 'koop-maandelijks', what: 'handles' %}{%- endcapture -%}
+{%- assign zv_koop_maandelijks_variant_ids = '' -%}
+{%- assign zv_hidden_koop_maandelijks_list = zv_hidden_koop_maandelijks_handles | strip | split: '|' -%}
+{%- for h in zv_hidden_koop_maandelijks_list -%}
+  {%- assign kmv = all_products[h].variants.first.id -%}
+  {%- if kmv != blank -%}{%- assign zv_koop_maandelijks_variant_ids = zv_koop_maandelijks_variant_ids | append: '|' | append: kmv -%}{%- endif -%}
+{%- endfor -%}
+{%- assign zv_koop_maandelijks_variant_ids = zv_koop_maandelijks_variant_ids | remove_first: '|' -%}
+{%- assign zv_koop_maandelijks_variant_id_list = zv_koop_maandelijks_variant_ids | split: '|' -%}

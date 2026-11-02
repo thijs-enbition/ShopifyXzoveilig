@@ -2241,12 +2241,15 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
   }
 
   /* A rider line's quiet row: its config name (#zv-item-names), the same note /cart shows and its
-     monthly price (the unit price before the discount, like a package row's "/mnd"). */
+     monthly price (the unit price before the discount, like a package row's "/mnd"). Generic
+     caption since 2026-11-02 (5 more riders besides the camera-subscription one: the Koop
+     "(maand)" service fees, each riding with its own package's Koop line, not only a bought
+     Videodeurbel). */
   function riderRowHtml(it) {
     return '<li class="addcart__item addcart__item--rider">' +
       '<div class="addcart__item-head"><div class="addcart__info">' +
         '<span class="addcart__name">' + esc(ITEM_NAMES[it.handle] || it.product_title || '') + '</span>' +
-        '<span class="addcart__meta">Hoort bij uw gekochte videodeurbel.</span>' +
+        '<span class="addcart__meta">Hoort bij deze aankoop.</span>' +
       '</div><div class="addcart__pricewrap">' +
         '<span class="addcart__price">' + money(it.original_price != null ? it.original_price : it.price) + '<span class="per">/mnd</span></span>' +
       '</div></div>' +

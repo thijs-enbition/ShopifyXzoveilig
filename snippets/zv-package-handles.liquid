@@ -43,11 +43,19 @@
       endif
     when 'rider'
       if what == 'skus'
-        echo 'A102B'
+        echo 'A102B|K001.1|K002.1|K003.1|K004.1|K005.1'
       elsif what == 'name'
         echo ''
       else
-        echo 'camera-abonnement-videodeurbel-1200-clips'
+        echo 'camera-abonnement-videodeurbel-1200-clips|koop-inzicht-maand|koop-zeker-maand|koop-beschermd-maand|koop-alert-maand|koop-protect-maand'
+      endif
+    when 'koop-maandelijks'
+      if what == 'skus'
+        echo 'K001.1|K002.1|K003.1|K004.1|K005.1'
+      elsif what == 'name'
+        echo ''
+      else
+        echo 'koop-inzicht-maand|koop-zeker-maand|koop-beschermd-maand|koop-alert-maand|koop-protect-maand'
       endif
     when 'ontzorg'
       if what == 'skus'

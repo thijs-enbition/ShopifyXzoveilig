@@ -433,6 +433,16 @@ by its SKU property. `check_pricing.py` section 16 pins the mapping. The archive
 `ontzorgpakket-inzicht` (also SKU MOIOH, €5,95) is never read. With these the Oplossingen page
 resolved 17 unique `all_products` handles (limit 20); E001 and A102B (2026-10-27) made it 19 and
 CL004 makes it **20**: none left.
+**UNRESOLVED CONFLICT (2026-11-02):** the 5 new Koop "(maand)" riders (K001.1-K005.1, below) each
+need their own handle resolved on this same page, via `zv-addon-riders.liquid`'s render (called
+from Oplossingen to build `data-addon-riders`) - 5 more handles against a budget that was already
+at 20/20 with "none left". This was NOT freed up or verified before shipping: not re-counted live,
+and no handle was removed to make room. Likely effect per the existing A102B precedent (`zv-cart-
+guard` rule 7 restoring a dropped rider on /cart/Overzicht): the new rider lines may not appear
+immediately in the Oplossingen add-to-cart drawer, but should still land once the customer reaches
+/cart (a separate page template, its own budget, almost certainly nowhere near its own limit) -
+this is NOT the same as confirmed-correct. Needs either a live recount/test on Oplossingen, or a
+handle freed there first. See docs/koop-maandelijks-product-sync-2026-11-02.md.
 Checking a box keeps one shared cart line per add-on in sync (`syncAddonLines()` on Oplossingen).
 **Koop Videodeurbel/Afstandsbediening (ADC-750, CL004) sync to flat quantity 1** (quantity
 `zv_promo_package_qty` tripled them, fixed 2026-10-22): one-time purchases, never discounted.

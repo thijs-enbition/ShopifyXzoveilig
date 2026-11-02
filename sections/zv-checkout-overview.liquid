@@ -97,6 +97,27 @@
   assign zv_ontzorg_variant_id_list = zv_ontzorg_variant_ids | remove_first: '|' | split: '|'
 
   comment
+    Koop monthly service-fee riders only (2026-11-02): a narrower list than zv_rider_variant_id_
+    list below (which is every rider, the camera-subscription one included) - for display copy
+    that must say something accurate about a monthly service fee, never that rider's camera-
+    subscription benefit text. From the
+    generated zv-package-handles (line: 'koop-maandelijks'), same pattern as Ontzorgpakket above.
+    See docs/koop-maandelijks-product-sync-2026-11-02.md.
+  endcomment
+  capture zv_koop_maandelijks_handles
+    render 'zv-package-handles', line: 'koop-maandelijks', what: 'handles'
+  endcapture
+  assign zv_koop_maandelijks_variant_ids = ''
+  assign zv_koop_maandelijks_handle_list = zv_koop_maandelijks_handles | strip | split: '|'
+  for h in zv_koop_maandelijks_handle_list
+    assign kmv = all_products[h].variants.first.id
+    if kmv != blank
+      assign zv_koop_maandelijks_variant_ids = zv_koop_maandelijks_variant_ids | append: '|' | append: kmv
+    endif
+  endfor
+  assign zv_koop_maandelijks_variant_id_list = zv_koop_maandelijks_variant_ids | remove_first: '|' | split: '|'
+
+  comment
     Koop add-on lines (Huren/Kopen), synced at quantity 1 by syncAddonLines() on Oplossingen:
     Videodeurbel's Koop product ADC-750 and Afstandsbediening's CL004, both by handle (2026-10-27;
     no Koop setting for either any more). Labelled "<naam> (kopen)" below; one-off, never in
@@ -306,17 +327,15 @@
         assign distinct_koop_fks = distinct_koop_fks | append: koop_fk_token
       endif
       comment
-        A Koop package line's service fee (koopMaandelijks, 2026-11-02): never a Shopify line
-        (the config's koop.cartNote) and, like every other line since today's
-        fix/remove-cart-overzicht-notes-2026-11-02, no per-line note either - but it's a real
-        ongoing cost the customer agreed to on Oplossingen, so it belongs in the "Daarna" total
-        the same as a rented package's monthly rate. See docs/koop-maandelijks-cart-2026-11-02.md.
+        A Koop package's monthly service fee (koopMaandelijks) used to be added here directly
+        from config (2026-11-02, docs/koop-maandelijks-cart-2026-11-02.md), since it was never a
+        real Shopify line. Since 2026-11-02 it IS one: each package's "(maand)" product
+        (K001.1-K005.1) rides with its Koop package line, the same rider mechanism the camera-
+        subscription rider already used for the Videodeurbel's Koop product (see
+        pricing.config.json addonNames, docs/koop-maandelijks-product-sync-2026-11-02.md), so its
+        own line already counts toward "Daarna" via the rider check further up (zv_rider_
+        variant_id_list) - adding it again here would double it.
       endcomment
-      capture item_koop_month_cents
-        render 'zv-koop-maandelijks', finder_key: item_koop_fk, maandelijks: zv_koop_maandelijks_by_fk
-      endcapture
-      assign item_koop_month_cents = item_koop_month_cents | strip | plus: 0
-      assign true_month_cents = true_month_cents | plus: item_koop_month_cents
     endif
 
     comment
@@ -825,6 +844,9 @@
                             {%- if ovi_wf == 2 -%}{%- assign ovi_wl = zv_woning_2_value -%}{%- else -%}{%- assign ovi_wl = zv_woning_1_value -%}{%- endif -%}
                             <div class="ovi-meta">Woning: {{ ovi_wl | escape }}</div>
                           {%- endif -%}
+                        {%- elsif zv_koop_maandelijks_variant_id_list contains item_vid -%}
+                          {%- comment -%} 2026-11-02: must be checked before the generic rider elsif below - these 5 are also in zv_rider_variant_id_list (for sync/Daarna purposes), but "Opslag en live beelden bekijken" is the camera-subscription rider's benefit text and would be wrong here. See docs/koop-maandelijks-product-sync-2026-11-02.md. {%- endcomment -%}
+                          <div class="ovi-meta">Maandelijkse dienst, los van de apparatuur</div>
                         {%- elsif zv_rider_variant_id_list contains item_vid -%}
                           <div class="ovi-meta">Opslag en live beelden bekijken</div>
                         {%- elsif zv_ontzorg_variant_id_list contains item_vid -%}

@@ -135,8 +135,23 @@ def build():
     # Ontzorgpakket, in the "Eerste 3 maanden" discount like it (set in Admin, never computed here);
     # cartQuantity is a stale reference value still pinned to 1 (see the A102B note in
     # pricing.config.json), emitted but not read by the theme.
+    # 2026-11-02: a lead can now also be a PACKAGE's own koopProduct (K001-K005), not just an
+    # add-on's (ADC-750/CL004) - the 5 "Koop <pakket> (maand)" service-fee products (K001.1-K005.1)
+    # ride with their package's Koop line the same way A102B rides with ADC-750. See
+    # docs/koop-maandelijks-product-sync-2026-11-02.md.
     koop_products = {(a.get("koopProduct") or {}).get("handle"): (a.get("koopProduct") or {}).get("sku")
                      for a in cfg.get("addonNames", []) if a.get("koopProduct")}
+    # Separate set (package-level koopProduct handles only, never an add-on's) so the theme can
+    # tell "rides with a package's own Koop line" (the 5 "(maand)" service-fee riders) apart from
+    # "rides with an add-on's Koop line" (A102B/ADC-750) for display copy - see the 'koop-
+    # maandelijks' line below and docs/koop-maandelijks-product-sync-2026-11-02.md.
+    package_koop_handles = set()
+    for line in cfg["lines"]:
+        for pkg in line["packages"]:
+            kp = pkg.get("koopProduct")
+            if kp:
+                koop_products[kp["handle"]] = kp["sku"]
+                package_koop_handles.add(kp["handle"])
     riders = []
     for a in cfg.get("addonNames", []):
         rw = a.get("ridesWith")
@@ -696,6 +711,13 @@ def build():
     # Rider add-ons (A102B, 2026-10-27), for the header count and /cart (zv-hidden-cart-lines).
     ph += _ph_branch("rider", "|".join(r["productHandle"] for r in riders),
                      "|".join(r["sku"] for r in riders), "")
+    # Riders whose lead is a PACKAGE's own Koop line (2026-11-02: the 5 "(maand)" service-fee
+    # products), as a narrower list than 'rider' above (which is every rider, A102B included) -
+    # for display copy that must say something accurate about a monthly service fee, never A102B's
+    # camera-subscription benefit text. See docs/koop-maandelijks-product-sync-2026-11-02.md.
+    koop_maandelijks_riders = [r for r in riders if r["ridesWith"]["handle"] in package_koop_handles]
+    ph += _ph_branch("koop-maandelijks", "|".join(r["productHandle"] for r in koop_maandelijks_riders),
+                     "|".join(r["sku"] for r in koop_maandelijks_riders), "")
     # Ontzorgpakket products (2026-10-27), for /cart, Overzicht and the header count, which only
     # need to recognise their lines (zv-hidden-cart-lines can't include zv-pricing).
     ph += _ph_branch("ontzorg", "|".join(a["productHandle"] for a in ontzorg),
