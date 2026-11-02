@@ -652,6 +652,15 @@ def build():
     # Riders (2026-10-27): lead Koop product handle -> rider product handle (ADC-750 -> A102B).
     lines.append("{%- assign zv_addon_rider_by_lead = '" + "|".join(
         f"{r['ridesWith']['handle']}:{r['productHandle']}" for r in riders) + "' -%}")
+    # Oplossingen's narrower copy (2026-11-02): the same pairs minus the 5 package-level riders
+    # (K001.1-K005.1, lead = a package's own Koop product). Liquid allows 20 unique all_products
+    # handles per page and Oplossingen was already at the cap, so rendering zv-addon-riders with the
+    # full map (12 lookups) before the package loop starved the loop and blanked every package card.
+    # Oplossingen only needs A102B/ADC-750 (instant drawer line); the "(maand)" riders are added by
+    # zv-cart-guard rule 7 once the customer reaches /cart, which keeps the full map above.
+    lines.append("{%- assign zv_addon_rider_by_lead_oplossingen = '" + "|".join(
+        f"{r['ridesWith']['handle']}:{r['productHandle']}" for r in riders
+        if r["ridesWith"]["handle"] not in package_koop_handles) + "' -%}")
     SNIPPET.parent.mkdir(parents=True, exist_ok=True)
     SNIPPET.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

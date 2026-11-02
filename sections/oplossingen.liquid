@@ -47,12 +47,15 @@
 {%- assign woning_applies_list = zv_woning_applies_handles | split: '|' -%}
 {%- comment -%}
   Riders (2026-10-27): the camera subscription rides along with ADC-750, the bought
-  Videodeurbel (zv_addon_rider_by_lead). 'leadVariant:riderVariant:riderCents' pairs, resolved by
+  Videodeurbel (zv_addon_rider_by_lead_oplossingen: only that pair, NOT the full
+  zv_addon_rider_by_lead - the 5 package-level "(maand)" riders would add 10 more handle lookups
+  and blow this page's 20-unique-handle budget before the package loop; /cart adds them via
+  zv-cart-guard rule 7). 'leadVariant:riderVariant:riderCents' pairs, resolved by
   handle; syncAddonLines() keeps one rider line at quantity PKG_QTY (the prepaid months, in the
   "Eerste 3 maanden" discount; flat 1 until 2026-10-28) while a lead line is in the cart, and
   the Videodeurbel row's Kopen price names the rider's live monthly price.
 {%- endcomment -%}
-{%- capture zv_addon_riders -%}{%- render 'zv-addon-riders', map: zv_addon_rider_by_lead -%}{%- endcapture -%}
+{%- capture zv_addon_riders -%}{%- render 'zv-addon-riders', map: zv_addon_rider_by_lead_oplossingen -%}{%- endcapture -%}
 {%- assign zv_addon_riders = zv_addon_riders | strip -%}
 {%- assign zv_addon_rider_list = zv_addon_riders | split: '|' -%}
 {%- comment -%}
