@@ -1668,11 +1668,18 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
   // zv-pricing: the drawer shows them as one-off charges, never "/mnd". By handle rather than
   // variant id so this page needs no extra all_products lookups (20-handle limit).
   var INSTALL_HANDLES = (page.dataset.installHandles || '').split('|').filter(Boolean);
-  /* Every checkout entry point on this page must land on the Overzicht
-     read-only review step (same as the main /cart page), never straight on
-     Shopify's own /checkout — Overzicht is where av_akkoord consent is
-     captured, so skipping it is a compliance gap, not just a UX shortcut. */
-  var overzichtUrl = (page.dataset.cartUrl || '/cart') + '?view=overzicht';
+  /* Every checkout entry point on this page must still end up on the Overzicht
+     read-only review step before Shopify's own /checkout — Overzicht is where
+     av_akkoord consent is captured, so skipping it outright is a compliance gap,
+     not just a UX shortcut. Since 2026-11-02 (docs/install-choice-to-cart-2026-11-02.md)
+     the NAMI installation choice is mandatory on /cart, not Overzicht, so every
+     entry point here (the add-to-cart drawer's CTA and both "Direct afrekenen"
+     call sites below) now routes through /cart first instead of straight to
+     ?view=overzicht: /cart's own "Naar afrekenen" still goes on to Overzicht,
+     so Overzicht is never actually skipped, just reached one stop later. Kept
+     as one shared variable so a future change to either stop only needs to
+     happen here, not at each of the 3 call sites. */
+  var checkoutNextUrl = page.dataset.cartUrl || '/cart';
 
   /* GA4 add_to_cart must report the confirmed recurring monthly rate (pricing.config.json,
      read from the #zv-pricing-config JSON script tag the zv-pricing snippet already renders
@@ -2111,12 +2118,12 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
         if (ZV && ZV.addToCart) ZV.addToCart({ item_id: (properties && properties['SKU']) || (line && line.sku), item_name: properties && properties['Pakket'], item_brand: 'Zo Veilig', price: itemPrice, quantity: 1 }, { cta_location: (btn && btn.getAttribute('data-cta-position')) || 'oplossingen' });
         if (btn) { btn.dataset.busy = ''; btn.disabled = false; btn.removeAttribute('aria-busy'); btn.innerHTML = btn.dataset.label || label; }
         return readCartRetrying().then(syncWoningLine).then(syncAddonLines).then(function (cart) {
-          if (mode === 'checkout') { window.location.href = overzichtUrl; return; }
+          if (mode === 'checkout') { window.location.href = checkoutNextUrl; return; }
           updateCartCount(cart);
           openCart(cart);
         }, function (err) {
-          // The package is in the cart; Overzicht's guard and gate take it from there.
-          if (mode === 'checkout') { window.location.href = overzichtUrl; return; }
+          // The package is in the cart; /cart's own guard and gate (and Overzicht's, after it) take it from there.
+          if (mode === 'checkout') { window.location.href = checkoutNextUrl; return; }
           throw err;
         });
       })
@@ -2343,7 +2350,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
         '<div class="addcart__scroll">' + body + '</div>' +
         '<footer class="addcart__foot">' +
           '<button type="button" class="addcart__cont" data-cart-close>Verder winkelen</button>' +
-          '<a class="addcart__go" href="' + esc(overzichtUrl) + '" data-zv-event="begin_checkout" data-cta-name="naar_afrekenen" data-cta-position="cart_drawer">Naar afrekenen' + CART_ARROW + '</a>' +
+          '<a class="addcart__go" href="' + esc(checkoutNextUrl) + '" data-zv-event="begin_checkout" data-cta-name="naar_afrekenen" data-cta-position="cart_drawer">Naar afrekenen' + CART_ARROW + '</a>' +
         '</footer></aside>';
     hydrateLineOptions(items);
     if (preserveScroll) { var sc = cartEl.querySelector('.addcart__scroll'); if (sc) sc.scrollTop = prev; }
