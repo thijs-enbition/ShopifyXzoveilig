@@ -746,40 +746,17 @@
                           <div class="ovi-name">{{ item_name | escape }}</div>
                           {%- unless item.variant.title contains 'Default' -%}<div class="ovi-meta">{{ item.variant.title | escape }}</div>{%- endunless -%}
                           {%- if is_sub -%}
-                              {%- comment -%} Woning meta on package lines whose package offers Woning (zv_woning_applies_handles). {%- endcomment -%}
-                            {%- assign ovi_wf = 0 -%}
-                            {%- if woning_applies_list contains item.product.handle -%}
-                              {%- capture ovi_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
-                            {%- endif -%}
-                            {%- assign ovi_wf = ovi_wf | strip | plus: 0 -%}
-                            {%- if ovi_wf > 0 -%}
-                              {%- if ovi_wf == 2 -%}{%- assign ovi_wl = zv_woning_2_value -%}{%- else -%}{%- assign ovi_wl = zv_woning_1_value -%}{%- endif -%}
-                              {%- assign ovi_wc = zv_woning_unit_cents | times: ovi_wf -%}
-                              <div class="ovi-meta">Woning: {{ ovi_wl | escape }} (+{{ ovi_wc | money_without_trailing_zeros }}/mnd)</div>
-                            {%- endif -%}
                           {%- elsif ovi_is_koop -%}
                             {%- comment -%} A bought package: the apparatuur once, no looptijd. Woning on a bought package is its property only, billed by Odoo with the service fee, never a line here. {%- endcomment -%}
                             <div class="ovi-meta">Apparatuur, eenmalig</div>
-                            {%- assign ovi_wf = 0 -%}
-                            {%- if woning_applies_fk_list contains ovi_koop_fk -%}
-                              {%- capture ovi_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
-                            {%- endif -%}
-                            {%- assign ovi_wf = ovi_wf | strip | plus: 0 -%}
-                            {%- if ovi_wf > 0 -%}
-                              {%- if ovi_wf == 2 -%}{%- assign ovi_wl = zv_woning_2_value -%}{%- else -%}{%- assign ovi_wl = zv_woning_1_value -%}{%- endif -%}
-                              {%- assign ovi_wc = zv_woning_unit_cents | times: ovi_wf -%}
-                              <div class="ovi-meta">Woning: {{ ovi_wl | escape }} (+{{ ovi_wc | money_without_trailing_zeros }}/mnd)</div>
-                            {%- endif -%}
                           {%- elsif zv_rider_variant_id_list contains item_vid -%}
                             <div class="ovi-meta">Hoort bij uw gekochte videodeurbel</div>
                           {%- else -%}
-                            <div class="ovi-meta">Aantal: {{ item.quantity }}</div>
                           {%- endif -%}
                         </div>
                         <div class="ovi-right">
                           {%- if is_sub -%}
                             {%- render 'zv-cart-line-price', item: item, price_class: 'ovi-price', note_class: 'ovi-meta' -%}
-                            {%- if item.line_level_discount_allocations.size == 0 -%}<div class="ovi-meta">Loopt daarna door via SEPA-incasso.</div>{%- endif -%}
                           {%- else -%}
                             {%- render 'zv-cart-line-price', item: item, price_class: 'ovi-price', note_class: 'ovi-meta' -%}
                           {%- endif -%}

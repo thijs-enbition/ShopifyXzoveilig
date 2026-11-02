@@ -173,3 +173,17 @@ sum vs the aggregate "Daarna":
 
 The same gap exists on /cart. Closing it means deciding how H750, H0010, A102B and Woning-on-a-bought-
 package are billed from month 4 (`ODOO_ADDON_BILLING`), so it is left as is.
+
+## Notes removed (fix/remove-cart-overzicht-notes-2026-11-02)
+
+Thijs, 2026-11-02: the per-line copy below is gone from /cart and Overzicht, so everything above that
+describes it (the post-promo line, the plain "Loopt daarna door via SEPA-incasso." on package lines,
+the "Woning: <option>" meta line under a package, Overzicht's "Aantal: N" line) is historical.
+- `snippets/zv-cart-line-price.liquid` now prints only the struck/final price and the discount badge;
+  its `woning`, `pkg_qty` and `note_class` params are unused (callers still pass them, harmless).
+- `sections/zv-cart.liquid`: no Woning meta under a package line, no plain SEPA span.
+- `sections/zv-checkout-overview.liquid`: no Woning meta, no "Aantal", no plain SEPA line.
+  "Apparatuur, eenmalig" (bought package) and "Hoort bij uw gekochte videodeurbel" stay.
+- Untouched: the Woning row itself ("Woning: <option>" as the line's own name), the Woning line's
+  "Eerste 3 maanden vandaag, daarna in het maandbedrag van uw pakket." note, "Daarna" totals.
+

@@ -392,7 +392,7 @@ does the same on /cart and Overzicht (rule 7, and Overzicht's rider gate expects
 Kopen price reads "€299 + €3,50/mnd" (both live prices, never a hardcoded string). **Since 2026-10-28
 (Thijs) it prepays PKG_QTY months like Ontzorgpakket**: it was flat quantity 1 on 2026-10-27. It was
 added to the "Eerste 3 maanden" discount in Admin that day (read live: 15 products), so /cart shows
-its discount badge and post-promo line like any other discounted line, in the Huren group although a
+its discount badge like any other discounted line (the post-promo line is gone since 2026-11-02), in the Huren group although a
 Koop purchase triggers it (the cart groups by billing cadence, see
 `docs/cart-huur-koop-split-2026-10-28.md`); `koop.promoApplies` stays false because that is about the
 Koop products themselves. `addonNames[].cartQuantity: 1` is now a stale
