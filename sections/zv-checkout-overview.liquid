@@ -826,7 +826,7 @@
           </div>
 
           <div class="ov-right">
-            <div class="ovcard ovcost">
+            <div class="ovcard ovcost ovcost--dark">
               <h2>{{ section.settings.cost_card_heading | default: 'Uw kosten in het kort' | escape }}</h2>
               {%- if section.settings.cost_card_sub != blank -%}<p class="ovcost-sub">{{ section.settings.cost_card_sub | escape }}</p>{%- endif -%}
 
@@ -924,7 +924,9 @@
                   <p class="ovtimeline-note">Eenmalige betaling — geen maandelijkse kosten</p>
                 {%- endif -%}
               </section>
+            </div>
 
+            <div class="ovcard ovcost-details">
               {%- if pkg_available -%}
                 <div class="ovblock">
                   <span class="ovblock-eb">Contract</span>
@@ -1250,7 +1252,7 @@
 .zv-overzicht .ovblock p { font-size:13.5px; font-weight:600; color:#5b5374; line-height:1.5; }
 .zv-overzicht .ovblock-amt { font-size:28px; font-weight:900; color:var(--indigo); margin-top:6px; }
 .zv-overzicht .ovcost-note { font-size:12px; font-weight:600; color:var(--muted); line-height:1.5; margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
-.zv-overzicht .ovtimeline { margin-top:18px; padding:22px 22px 20px; border-radius:16px; background:var(--indigo); color:var(--cream); }
+.zv-overzicht .ovtimeline { margin-top:18px; padding:22px 0 0; border-top:1px solid rgba(255,255,255,.12); color:var(--cream); }
 .zv-overzicht .ovtimeline-title { margin:0 0 16px; font-size:17px; font-weight:900; line-height:1.3; letter-spacing:0; color:var(--cream); }
 .zv-overzicht .ovtimeline-steps { list-style:none; margin:0; padding:0; }
 .zv-overzicht .ovtimeline-step { position:relative; display:flex; flex-direction:column; gap:3px; padding:0 0 20px 28px; }
@@ -1272,11 +1274,23 @@
 .zv-overzicht .ovtimeline-sub { font-size:13px; font-weight:600; color:var(--indigo-soft); }
 .zv-overzicht .ovtimeline-note { margin:14px 0 0; padding-left:28px; font-size:14px; font-weight:700; line-height:1.4; color:var(--indigo-soft); }
 @media(max-width:480px){
-  .zv-overzicht .ovtimeline { padding:18px 16px; }
+  .zv-overzicht .ovtimeline { padding:18px 0 0; }
   .zv-overzicht .ovtimeline-amt { font-size:26px; }
   .zv-overzicht .ovtimeline-amt--sm { font-size:18px; }
   .zv-overzicht .ovtimeline-amt--md { font-size:22px; }
 }
+/* One dark card for the cost breakdown and "Wanneer betaalt u wat?" (2026-11-02); .ovcost-details is the light card below it. */
+.zv-overzicht .ovcost--dark { background:var(--indigo); border-color:var(--indigo); color:var(--cream); }
+.zv-overzicht .ovcost--dark h2 { color:var(--cream); }
+.zv-overzicht .ovcost--dark .ovcost-sub, .zv-overzicht .ovcost--dark .ovblock p { color:var(--indigo-soft); }
+.zv-overzicht .ovcost--dark .ovblock-eb, .zv-overzicht .ovcost--dark .ovg-head { color:var(--gold-lt); }
+.zv-overzicht .ovcost--dark .ovdl > div { color:var(--indigo-soft); border-bottom-color:rgba(255,255,255,.12); }
+.zv-overzicht .ovcost--dark .ovdl > div:last-child { border-bottom:none; }
+.zv-overzicht .ovcost--dark .ovdl dd { color:var(--cream); }
+.zv-overzicht .ovcost--dark .ovbreakdown > div.ovbreakdown-total { border-top-color:rgba(255,255,255,.12); }
+.zv-overzicht .ovcost--dark .ovbreakdown > div.ovbreakdown-total dt { color:var(--cream); }
+.zv-overzicht .ovcost--dark .ovdl dd.strong { font-size:28px; line-height:1.15; color:var(--gold-lt); }
+.zv-overzicht .ovcost-details > :first-child { margin-top:0; }
 .zv-overzicht .ovdelivery { margin-top:16px; padding-top:16px; border-top:1px solid var(--line); display:flex; gap:11px; }
 .zv-overzicht .ovdelivery svg { flex:none; width:22px; height:22px; color:var(--indigo); }
 .zv-overzicht .ovdelivery p { font-size:12.5px; font-weight:600; color:var(--muted); line-height:1.5; }
