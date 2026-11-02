@@ -134,8 +134,9 @@
     Videodeurbel ('leadVariant:riderVariant:cents|…', zv-addon-riders). zv-cart-guard keeps one
     rider line at quantity zv_promo_package_qty while a lead line is in the cart and none
     otherwise; until it has, checkout waits (cart_needs_fix, below the loop). Since 2026-10-28
-    it prepays the months like Ontzorgpakket, in the "Eerste 3 maanden" discount (50% off); not in
-    "Daarna" (open, like the Huren rentals: unresolved.ODOO_ADDON_BILLING).
+    it prepays the months like Ontzorgpakket, in the "Eerste 3 maanden" discount (50% off), and
+    since 2026-11-02 its unit price counts in "Daarna" like the Huren rentals (Odoo's own month-4
+    billing stays open: unresolved.ODOO_ADDON_BILLING).
   endcomment
   capture zv_rider_pairs
     render 'zv-addon-riders', map: zv_addon_rider_by_lead
@@ -227,12 +228,23 @@
     comment
       Ontzorgpakket (per package since 2026-10-27): a confirmed recurring monthly service, so
       its unit price counts toward "Daarna" too. Counted independently of the package-line
-      block below. NOTE: the Huren hardware add-ons (huur-afstandsbediening H0010,
-      huur-video-deurbel-750 H750, productType "Huur Componenten", EUR/mnd) are monthly rentals
-      too but sync at quantity 1 and are not in "Daarna" — an open question (how Odoo bills
-      them), not decided here.
+      block below. Since 2026-11-02 (Thijs) the Huren hardware add-ons (huur-afstandsbediening
+      H0010, huur-video-deurbel-750 H750, productType "Huur Componenten", EUR/mnd) and the camera-subscription
+      rider count too: they are monthly rentals/services that prepay zv_promo_package_qty months
+      (quantity = units x that), so a line contributes unit price x units = price x quantity /
+      zv_promo_package_qty. addon_month_cents is its own variable on purpose: chaining times/
+      divided_by onto true_month_cents would apply them to the whole accumulator. The rider is
+      kept at quantity zv_promo_package_qty, so one unit price. How Odoo bills them from month 4
+      is still open (unresolved.ODOO_ADDON_BILLING), not decided here.
     endcomment
     if zv_ontzorg_variant_id_list contains item_vid
+      assign true_month_cents = true_month_cents | plus: item.original_price
+    endif
+    if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id
+      assign addon_month_cents = item.original_price | times: item.quantity | divided_by: zv_promo_package_qty
+      assign true_month_cents = true_month_cents | plus: addon_month_cents
+    endif
+    if zv_rider_variant_id_list contains item_vid
       assign true_month_cents = true_month_cents | plus: item.original_price
     endif
 
@@ -892,8 +904,9 @@
                 true_month_cents, the same figure as "Daarna". Without a "Daarna" figure the month steps go.
                 Only a cart where nothing recurs (no Huren line and no bought package, whose service fee
                 Odoo bills monthly) says there are no monthly costs; any other cart without a "Daarna"
-                figure (a bought package, or only Huren lines that "Daarna" leaves out, see
-                unresolved.ODOO_ADDON_BILLING) shows the Vandaag step alone.
+                figure (a bought package without a monthly line) shows the Vandaag step alone. Since
+                2026-11-02 the Huren add-ons and the camera-subscription rider count in "Daarna" (Odoo's month-4
+                billing stays open: unresolved.ODOO_ADDON_BILLING).
               {%- endcomment -%}
               <section class="ovtimeline" aria-labelledby="ovtimeline-title">
                 <h3 class="ovtimeline-title" id="ovtimeline-title">Wanneer betaalt u wat?</h3>
