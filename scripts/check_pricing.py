@@ -559,6 +559,15 @@ for p in gen["packages"]:
     pid = p["id"].replace("-", "_")
     check((snippet_int(f"zv_{pid}_koop_eenmalig_cents"), snippet_int(f"zv_{pid}_koop_maandelijks_cents")) == exp,
           f"zv_{pid}_koop_* assigns match the config")
+# finder_key -> koop monthly service-fee cents (2026-11-02, zv-koop-maandelijks.liquid): /cart and
+# Overzicht read this to add the fee into "Daarna", which they were silently not doing before
+# (docs/koop-maandelijks-cart-2026-11-02.md). No per-line note: fix/remove-cart-overzicht-notes-2026-11-02
+# dropped every line type's per-line note the same day.
+exp_koop_maandelijks_by_fk = "|".join(
+    f"{p['finderKey']}:{p['koop']['maandelijksCents']}" for p in gen["packages"] if p.get("finderKey") and p.get("koop"))
+check(snippet_str("zv_koop_maandelijks_by_fk") == exp_koop_maandelijks_by_fk,
+      "zv_koop_maandelijks_by_fk maps each koop package's finder_key to its monthly service fee",
+      f"got {snippet_str('zv_koop_maandelijks_by_fk')!r}")
 # The Shopify Koop products (Admin API, 2026-10-24): a cart line with Afname: Kopen maps back to
 # its package only through these handles. They are never a huur package handle and never carry
 # Woning as a priced N0008 line (property only, Thijs 2026-10-24).
@@ -613,6 +622,22 @@ check(not stale, f"the retired {retired_setting} theme setting is gone from the 
 check(not re.search(r"settings\.zv_koop_variant_(videodeurbel|afstandsbediening)", "".join(
         f.read_text(encoding="utf-8", errors="ignore") for d in THEME_DIRS for f in (ROOT / d).rglob("*") if f.is_file() and f.suffix in {".liquid", ".js"})),
       "no theme file reads a Koop setting for a hardware add-on")
+# Cart/Overzicht "Daarna" surfacing of koopMaandelijks (2026-11-02,
+# docs/koop-maandelijks-cart-2026-11-02.md): a Koop package's monthly service fee was defined
+# everywhere above but silently left out of "Daarna" once the line reached /cart or Overzicht.
+# Each template renders the snippet exactly once, to add its figure into true_month_cents - no
+# per-line note, since fix/remove-cart-overzicht-notes-2026-11-02 dropped every line type's
+# per-line note the same day.
+cart_txt = (ROOT / "sections" / "zv-cart.liquid").read_text(encoding="utf-8")
+ovz_koop_txt = (ROOT / "sections" / "zv-checkout-overview.liquid").read_text(encoding="utf-8")
+cart_koop_snippet_calls = cart_txt.count("render 'zv-koop-maandelijks'")
+ovz_koop_snippet_calls = ovz_koop_txt.count("render 'zv-koop-maandelijks'")
+check(cart_koop_snippet_calls == 1,
+      "zv-cart.liquid renders the koop monthly fee once, into Daarna",
+      f"found {cart_koop_snippet_calls} occurrences")
+check(ovz_koop_snippet_calls == 1,
+      "zv-checkout-overview.liquid renders the koop monthly fee once, into Daarna",
+      f"found {ovz_koop_snippet_calls} occurrences")
 
 print("\n16. Ontzorgpakket per package (Thijs, 2026-10-27)")
 # One Shopify product per package, picked by finder_key; Vista and Veilig Onderweg get none.

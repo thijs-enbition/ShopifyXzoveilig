@@ -513,6 +513,15 @@ def build():
         # these names, never the Shopify product title (Odoo renames products).
         "{%- assign zv_package_names_by_fk = '" + "|".join(
             f"{p['finderKey']}:{p['name']}" for p in out["packages"] if p.get("finderKey")) + "' -%}",
+        # finder_key -> koop (Kopen) monthly service-fee cents, for snippets/zv-koop-maandelijks.liquid.
+        # Only the 5 fixed packages carry a koop figure (koop_row() in this script); Vista and
+        # Veilig Onderweg have no entry here and the snippet returns blank for them. Added
+        # 2026-11-02: the koop service fee was being shown on Oplossingen but silently dropped
+        # from "Daarna" once a Koop line reached /cart or Overzicht - see
+        # docs/koop-maandelijks-cart-2026-11-02.md.
+        "{%- assign zv_koop_maandelijks_by_fk = '" + "|".join(
+            f"{p['finderKey']}:{p['koop']['maandelijksCents']}" for p in out["packages"]
+            if p.get("finderKey") and p.get("koop")) + "' -%}",
         # installation product handle -> its config label, for snippets/zv-install-name.liquid.
         "{%- assign zv_install_names_by_handle = '" + "|".join(
             f"{h}:{n}" for h, n in install_names.items()) + "' -%}",
