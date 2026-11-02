@@ -301,7 +301,6 @@
                       {%- if is_sub -%}
                         <div class="ci-price" style="color:var(--indigo)">{{ item.original_price | money }} <span>p/m</span></div>
                         <span class="ci-badge">Abonnement</span>
-                        <span class="ci-note">Vandaag, {{ item.quantity }} maanden vooruit:</span>
                         {%- render 'zv-cart-line-price', item: item -%}
                       {%- else -%}
                         {%- render 'zv-cart-line-price', item: item -%}
