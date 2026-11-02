@@ -313,17 +313,36 @@
               </div>
             {%- endfor -%}
             {%- if show_nami_install -%}
-              <div class="cinstall-section" id="cinstall">
+              {%- capture cinstall_icon_geen -%}<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 5.5l13 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>{%- endcapture -%}
+              {%- capture cinstall_icon_telefonisch -%}<svg viewBox="0 0 24 24" fill="none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>{%- endcapture -%}
+              {%- capture cinstall_icon_huis -%}<svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-7 9 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>{%- endcapture -%}
+              {%- comment -%} Collapsed once an option is chosen (2026-11-02): only the chosen option shows, as a line-item row with "Wijzigen". The radio list stays in the DOM (hidden, the chosen radio still checked) so Wijzigen just swaps which of the two is visible and nothing is lost. Nothing chosen yet = the full list, as before. {%- endcomment -%}
+              {%- case selected_nami_install_id -%}
+                {%- when 'geen' -%}{%- assign cinstall_sel_icon = cinstall_icon_geen -%}{%- assign cinstall_sel_label = zv_nami_install_geen_label -%}{%- assign cinstall_sel_cents = zv_nami_install_geen_cents -%}
+                {%- when 'telefonisch' -%}{%- assign cinstall_sel_icon = cinstall_icon_telefonisch -%}{%- assign cinstall_sel_label = zv_nami_install_telefonisch_label -%}{%- assign cinstall_sel_cents = zv_nami_install_telefonisch_cents -%}
+                {%- when 'huis' -%}{%- assign cinstall_sel_icon = cinstall_icon_huis -%}{%- assign cinstall_sel_label = zv_nami_install_huis_label -%}{%- assign cinstall_sel_cents = zv_nami_install_huis_cents -%}
+              {%- endcase -%}
+              <div class="cinstall-section" id="cinstall" data-cart-install-section>
                 <span class="ci-line">Installatie</span>
-                <div class="cinstall-options" data-cart-install-options role="radiogroup" aria-label="Installatie">
+                {%- if selected_nami_install_id != nil -%}
+                  <div class="cinstall-summary" data-cart-install-summary>
+                    <span class="cinstall-icon" aria-hidden="true">{{ cinstall_sel_icon }}</span>
+                    <div>
+                      <div class="ci-name">{{ cinstall_sel_label }}</div>
+                      <div class="ci-actions">
+                        <button type="button" class="cinstall-change" data-cart-install-change aria-controls="cinstall-options" aria-expanded="false">Wijzigen</button>
+                      </div>
+                    </div>
+                    <div class="ci-price">{{ cinstall_sel_cents | money }}</div>
+                  </div>
+                {%- endif -%}
+                <div class="cinstall-options" id="cinstall-options" data-cart-install-options role="radiogroup" aria-label="Installatie"{% if selected_nami_install_id != nil %} hidden{% endif %}>
                   <label class="cinstall-opt">
                     <input type="radio" name="cart_install_option" required
                       data-install-variant-id="{{ nami_install_geen_variant_id }}"
                       data-install-cents="{{ zv_nami_install_geen_cents }}"
                       {%- if selected_nami_install_id == 'geen' %} checked{% endif %}>
-                    <span class="cinstall-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 5.5l13 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                    </span>
+                    <span class="cinstall-icon" aria-hidden="true">{{ cinstall_icon_geen }}</span>
                     <span class="cinstall-title">{{ zv_nami_install_geen_label }}</span>
                     <span class="cinstall-price">{{ zv_nami_install_geen_display }}</span>
                   </label>
@@ -332,9 +351,7 @@
                       data-install-variant-id="{{ nami_install_telefonisch_variant_id }}"
                       data-install-cents="{{ zv_nami_install_telefonisch_cents }}"
                       {%- if selected_nami_install_id == 'telefonisch' %} checked{% endif %}>
-                    <span class="cinstall-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </span>
+                    <span class="cinstall-icon" aria-hidden="true">{{ cinstall_icon_telefonisch }}</span>
                     <span class="cinstall-title">{{ zv_nami_install_telefonisch_label }}</span>
                     <span class="cinstall-price">{{ zv_nami_install_telefonisch_display }}</span>
                   </label>
@@ -343,12 +360,13 @@
                       data-install-variant-id="{{ nami_install_huis_variant_id }}"
                       data-install-cents="{{ zv_nami_install_huis_cents }}"
                       {%- if selected_nami_install_id == 'huis' %} checked{% endif %}>
-                    <span class="cinstall-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-7 9 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </span>
+                    <span class="cinstall-icon" aria-hidden="true">{{ cinstall_icon_huis }}</span>
                     <span class="cinstall-title">{{ zv_nami_install_huis_label }}</span>
                     <span class="cinstall-price">{{ zv_nami_install_huis_display }}</span>
                   </label>
+                  {%- if selected_nami_install_id != nil -%}
+                    <button type="button" class="cinstall-cancel" data-cart-install-cancel>Annuleren</button>
+                  {%- endif -%}
                 </div>
                 <div class="cinstall-err" data-cart-install-err hidden>Er ging iets mis bij het opslaan van uw keuze. Probeer het opnieuw.</div>
               </div>
@@ -484,6 +502,21 @@
               {{ nami_install_telefonisch_variant_id | json }},
               {{ nami_install_huis_variant_id | json }}
             ].filter(function (id) { return id != null; }).map(String);
+
+            // Collapsed state (a choice is already made): "Wijzigen" swaps the summary row for the
+            // full radio list (the chosen radio is still checked), "Annuleren" swaps it back.
+            var summary = document.querySelector('#cart-form [data-cart-install-summary]');
+            var changeBtn = document.querySelector('#cart-form [data-cart-install-change]');
+            var cancelBtn = document.querySelector('#cart-form [data-cart-install-cancel]');
+            function setExpanded(open) {
+              if (summary) summary.hidden = open;
+              options.hidden = !open;
+              if (changeBtn) changeBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+              var target = open ? (options.querySelector('input[type="radio"]:checked') || radios[0]) : changeBtn;
+              if (target) target.focus();
+            }
+            if (changeBtn) changeBtn.addEventListener('click', function () { setExpanded(true); });
+            if (cancelBtn) cancelBtn.addEventListener('click', function () { setExpanded(false); });
 
             radios.forEach(function (radio) {
               radio.addEventListener('change', function () {
@@ -625,6 +658,12 @@
 .zv-cart .cinstall-icon svg { width:30px; height:30px; }
 .zv-cart .cinstall-title { font-size:16px; font-weight:900; color:var(--indigo); }
 .zv-cart .cinstall-price { font-size:16px; font-weight:900; color:var(--ink); white-space:nowrap; }
+.zv-cart .cinstall-options[hidden], .zv-cart .cinstall-summary[hidden] { display:none; }
+.zv-cart .cinstall-summary { display:grid; grid-template-columns:64px 1fr auto; gap:16px; align-items:start; }
+.zv-cart .cinstall-summary .ci-price { font-size:19px; }
+.zv-cart .cinstall-change, .zv-cart .cinstall-cancel { background:none; border:none; padding:0; font:inherit; font-size:13px; font-weight:700; color:var(--indigo); text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
+.zv-cart .cinstall-change:hover, .zv-cart .cinstall-cancel:hover { color:var(--belt); }
+.zv-cart .cinstall-cancel { align-self:flex-start; color:var(--muted); }
 .zv-cart .cinstall-err { margin-top:10px; font-size:12.5px; font-weight:700; color:#c52e2f; }
 @media(max-width:480px){
   .zv-cart .cinstall-section { padding:18px; }
@@ -632,6 +671,8 @@
   .zv-cart .cinstall-icon { width:52px; height:52px; }
   .zv-cart .cinstall-icon svg { width:24px; height:24px; }
   .zv-cart .cinstall-price { grid-column:2 / 4; font-size:14px; }
+  .zv-cart .cinstall-summary { grid-template-columns:52px 1fr auto; gap:12px; }
+  .zv-cart .cinstall-summary .ci-price { font-size:16px; }
 }
 .zv-cart .c-guarantee { margin-top:18px; display:flex; flex-direction:column; gap:11px; }
 .zv-cart .c-guarantee div { display:flex; align-items:center; gap:11px; font-size:13px; font-weight:700; color:#5b5374; }
