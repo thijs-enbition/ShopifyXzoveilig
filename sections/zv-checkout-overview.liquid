@@ -777,9 +777,7 @@
                           {%- endif -%}
                         </div>
                         <div class="ovi-right">
-                          {%- comment -%} A package line's monthly figure is its UNIT price before the discount, never unit x quantity. {%- endcomment -%}
                           {%- if is_sub -%}
-                            <div class="ovi-price">{{ item.original_price | money }} <span>p/m</span></div>
                             {%- render 'zv-cart-line-price', item: item, price_class: 'ovi-price', note_class: 'ovi-meta' -%}
                             {%- if item.line_level_discount_allocations.size == 0 -%}<div class="ovi-meta">Loopt daarna door via SEPA-incasso.</div>{%- endif -%}
                           {%- else -%}
