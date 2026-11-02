@@ -12,7 +12,17 @@
   A pair whose lead or rider product doesn't resolve is left out, so nothing is ever synced
   against a half-known pair. Resolved by handle, never a hardcoded variant id.
 
+  Lead side (2026-11-02): by default the lead is resolved too, to its variant id
+  ('leadVariantId:riderVariantId:riderCents'), which Oplossingen matches against. With
+  lead_by: 'handle' the lead is NOT looked up: the entry is 'leadHandle:riderVariantId:riderCents'
+  and the consumer matches the cart line's own `handle` (Cart AJAX and cart.items carry it),
+  like zv_koop_fk_by_handle. That costs no all_products handle: /cart and Overzicht ran out of the
+  20-handle budget on the 5 package leads, the failed lookups kept the previous pair's lead
+  (ADC-750) and any Videodeurbel in the cart got all 5 "(maand)" riders. /cart, Overzicht and
+  zv-cart-guard rule 7 use 'handle'; Oplossingen keeps the default.
+
   Params: map - zv_addon_rider_by_lead (render scope can't see the caller's variables).
+          lead_by - optional, 'handle' (see above); anything else/absent = lead variant id.
   Usage: capture it, then `| strip | split: '|'`, and split each entry on ':'.
 {%- endcomment -%}
 {%- liquid
@@ -20,10 +30,19 @@
   assign ar_out = ''
   for kv in ar_pairs
     assign ar_kvp = kv | split: ':'
-    assign ar_lead = all_products[ar_kvp[0]].variants.first
+    assign ar_lead = nil
+    assign ar_rider = nil
+    if lead_by != 'handle'
+      assign ar_lead = all_products[ar_kvp[0]].variants.first
+    endif
     assign ar_rider = all_products[ar_kvp[1]].variants.first
-    if ar_lead.id != blank and ar_rider.id != blank
-      assign ar_entry = ar_lead.id | append: ':' | append: ar_rider.id | append: ':' | append: ar_rider.price
+    if lead_by == 'handle'
+      assign ar_lead_key = ar_kvp[0]
+    else
+      assign ar_lead_key = ar_lead.id
+    endif
+    if ar_lead_key != blank and ar_rider.id != blank
+      assign ar_entry = ar_lead_key | append: ':' | append: ar_rider.id | append: ':' | append: ar_rider.price
       if ar_out == ''
         assign ar_out = ar_entry
       else
