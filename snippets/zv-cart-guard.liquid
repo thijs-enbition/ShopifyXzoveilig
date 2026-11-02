@@ -42,7 +42,7 @@
      was every Climax line (Beschermd and Protect had no Woning from 2026-09-25 to 2026-10-27);
      today all five packages offer it, so the rule only acts if the config ever takes one out.
      A legacy Abonnement/Uitbreidingen property on it is left alone.
-  7. Riders (2026-10-27, rider_pairs 'leadVariant:riderVariant[:cents]|…', from zv-addon-riders):
+  7. Riders (2026-10-27, rider_pairs 'leadHandle:riderVariant[:cents]|…', from zv-addon-riders with lead_by: 'handle'):
      the camera subscription rides with ADC-750, the bought Videodeurbel. A cart with a
      lead line keeps exactly one rider line at quantity pkg_qty (added, set or merged); a cart
      without one has its rider lines removed (the customer removed the doorbell on /cart).
@@ -127,7 +127,7 @@
       };
     }).filter(function (wp) { return wp.id && wp.id !== '0'; });
   })();
-  // Rider pairs (rule 7): lead variant -> rider variant.
+  // Rider pairs (rule 7): lead product handle (a cart line's own `handle`, no lookup) -> rider variant.
   var RIDERS = String({{ rider_pairs | json }} || '').split('|').map(function (s) { return s.split(':'); })
     .filter(function (p) { return p[0] && p[1]; }).map(function (p) { return { lead: p[0], rider: p[1] }; });
   // Koop product handle -> finder_key; a Koop package line also carries Afname: Kopen.
@@ -273,7 +273,7 @@
     // 7. Riders: one rider line at quantity PKG_QTY while a lead line is in the cart, none otherwise.
     for (var r = 0; r < RIDERS.length; r++) {
       var rd = RIDERS[r];
-      var hasLead = items.some(function (it) { return String(it.variant_id) === rd.lead; });
+      var hasLead = items.some(function (it) { return it.handle === rd.lead; });
       var riderLines = items.filter(function (it) { return String(it.variant_id) === rd.rider; });
       var riderTarget = hasLead ? PKG_QTY : 0;
       if (riderLines.length > 1 || (riderLines.length === 1 && riderLines[0].quantity !== riderTarget)) {

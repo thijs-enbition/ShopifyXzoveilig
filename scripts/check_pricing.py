@@ -665,6 +665,28 @@ for tpl in ("zv-cart.liquid", "zv-checkout-overview.liquid"):
     check(re.search(r"render 'zv-addon-riders', map: zv_addon_rider_by_lead(?!\w)",
                     (ROOT / "sections" / tpl).read_text(encoding="utf-8")) is not None,
           f"sections/{tpl} still renders zv-addon-riders with the full map (rule 7 needs the package-level pairs)")
+# Lead by handle (2026-11-02): /cart and Overzicht looked up all 12 handles of the 6 pairs and ran out of
+# the 20-handle budget on the 5 package leads; a failed lookup kept the previous pair's lead (ADC-750), so
+# any Videodeurbel got all 5 "(maand)" riders and a Koop package never got its own. The lead side now
+# needs no lookup: zv-addon-riders emits the lead HANDLE (lead_by: 'handle') and rule 7 / Overzicht match
+# the cart line's own handle. Oplossingen keeps the variant-id default its ADDON_RIDERS matches on.
+rid_snip = (ROOT / "snippets" / "zv-addon-riders.liquid").read_text(encoding="utf-8")
+check("lead_by != 'handle'" in rid_snip and "all_products[ar_kvp[0]]" in rid_snip.split("lead_by != 'handle'", 1)[1].split("endif", 1)[0],
+      "zv-addon-riders looks the lead up only when lead_by is not 'handle'")
+check("assign ar_lead = nil" in rid_snip and "assign ar_rider = nil" in rid_snip,
+      "zv-addon-riders resets ar_lead/ar_rider each pair (a failed lookup must not keep the previous pair's value)")
+for tpl in ("zv-cart.liquid", "zv-checkout-overview.liquid"):
+    check(re.search(r"render 'zv-addon-riders', map: zv_addon_rider_by_lead, lead_by: 'handle'", (ROOT / "sections" / tpl).read_text(encoding="utf-8")) is not None,
+          f"sections/{tpl} renders zv-addon-riders with lead_by: 'handle'")
+check("lead_by" not in opl_riders_src, "sections/oplossingen.liquid still takes the variant-id lead (its ADDON_RIDERS matches variant ids)")
+guard_src = (ROOT / "snippets" / "zv-cart-guard.liquid").read_text(encoding="utf-8")
+check("it.handle === rd.lead" in guard_src and "variant_id) === rd.lead" not in guard_src,
+      "zv-cart-guard rule 7 matches a lead line by handle, not variant id")
+ovz_riders_src = (ROOT / "sections" / "zv-checkout-overview.liquid").read_text(encoding="utf-8")
+# Liquid line items have no `handle` (only the Cart AJAX JSON does): it is item.product.handle here.
+check("if item.product.handle == rpp[0]" in ovz_riders_src and "r_vid == rpp[0]" not in ovz_riders_src
+      and "item.handle == rpp[0]" not in ovz_riders_src,
+      "Overzicht's rider gate matches a lead line by item.product.handle, not variant id")
 # Every package's own koopProduct (the lead) is a real, resolvable rider lead; none of the 5
 # riders is also a one-time hardware koop_addon or carries Ontzorgpakket/koopEenmalig fields
 # (the same guard A102B gets below, applied to all 5).
