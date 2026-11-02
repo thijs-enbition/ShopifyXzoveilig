@@ -481,12 +481,12 @@
                         {%- endcapture -%}
                         {%- assign a_koop_seg = a_koop_seg | strip -%}
                         {%- comment -%}
-                          Quantity row (2026-10-29): a number input instead of the checkbox, plus the
+                          Quantity row (2026-10-29, a 0-5 dropdown since 2026-11-02): a select instead of the checkbox, plus the
                           unit prices in cents so the row's own price can follow the count (a rider
                           price is a compound string, so no Kopen cents then). Every other row keeps
                           the plain checkbox and no extra attributes.
                         {%- endcomment -%}
-                        {%- capture a_input -%}{% if a_qty %}<input type="number" min="0" step="1" value="0" inputmode="numeric" data-zv-qty aria-label="Aantal {{ a_name | escape }}">{% else %}<input type="checkbox">{% endif %}{%- endcapture -%}
+                        {%- capture a_input -%}{% if a_qty %}<select data-zv-qty aria-label="Aantal {{ a_name | escape }}"><option value="0" selected>0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>{% else %}<input type="checkbox">{% endif %}{%- endcapture -%}
                         {%- capture a_qty_attrs -%}{% if a_qty %} data-huur-cents="{{ a_product.price }}"{% unless a_rider_cents %} data-koop-cents="{{ a_kp.price }}"{% endunless %}{% endif %}{%- endcapture -%}
                         {%- if a_koop_only -%}
                           <label class="pcard__plus-opt is-koop{% if a_koop_variant == blank %} is-soon{% endif %}"><input type="checkbox"{% if a_koop_variant == blank %} disabled{% endif %}><span>{{ a_name }}</span><span class="pcard__plus-pr">{{ a_koop_price }}</span></label>
@@ -1075,7 +1075,7 @@
 .pcard__plus-opt { display: flex; align-items: center; gap: 9px; padding: 0 2px 12px; font-size: 13px; font-weight: 700; color: #4a4458; cursor: pointer; }
 .pcard__plus-opt input { width: 17px; height: 17px; accent-color: #322469; flex: none; cursor: pointer; }
 /* Quantity row (Afstandsbediening, 2026-10-29): a count instead of a checkbox. */
-.pcard__plus-opt input[data-zv-qty] { width: 46px; height: 28px; padding: 0 4px; border: 1.5px solid var(--line-2); border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-weight: 800; text-align: center; cursor: text; }
+.pcard__plus-opt [data-zv-qty] { width: 58px; height: 28px; padding: 0 4px; border: 1.5px solid var(--line-2); border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-weight: 800; text-align: center; }
 .pcard__plus-opt span:nth-of-type(1) { flex: 1; }
 .pcard__plus-pr { font-weight: 900; color: var(--belt); }
 .pcard__plus-hint { font-size: 12px; font-weight: 600; color: var(--muted-2); margin: -2px 2px 10px; }
@@ -1844,7 +1844,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
   // A quantity row's own price follows its count (the unit price in its text is replaced by unit x count). 0 and 1 show the unit price.
   // Only this row: the package card's /mnd banner stays add-on-free (recomputeCardPrice, 2026-10-22).
   function paintAddonPrice(opt) {
-    var inp = opt.querySelector('input[data-zv-qty]'), pr = opt.querySelector('.pcard__plus-pr');
+    var inp = opt.querySelector('[data-zv-qty]'), pr = opt.querySelector('.pcard__plus-pr');
     if (!inp || !pr) return;
     var koop = opt.classList.contains('is-koop');
     var base = opt.getAttribute(koop ? 'data-koop-pr' : 'data-huur-pr') || '';
@@ -1853,7 +1853,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     pr.textContent = n > 1 && cents > 0 ? base.replace(/€\s?[\d.]+,\d\d/, money(cents * n)) : base;
   }
   function setAddonMode(opt, koop) {
-    var inp = opt.querySelector('input'), pr = opt.querySelector('.pcard__plus-pr');
+    var inp = opt.querySelector('input, select'), pr = opt.querySelector('.pcard__plus-pr');
     var soon = koop && !opt.getAttribute('data-koop-variant');
     opt.classList.toggle('is-koop', koop);
     opt.classList.toggle('is-soon', soon);
@@ -1862,10 +1862,12 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     paintAddonPrice(opt);
   }
   // Live price for the quantity row, card and drawer alike (the drawer is portaled out of `page`).
-  document.addEventListener('input', function (e) {
-    var q = e.target.closest && e.target.closest('.pcard__plus-opt input[data-zv-qty]');
+  function repaintAddonQty(e) {
+    var q = e.target.closest && e.target.closest('.pcard__plus-opt [data-zv-qty]');
     if (q) paintAddonPrice(q.closest('.pcard__plus-opt'));
-  });
+  }
+  document.addEventListener('input', repaintAddonQty);
+  document.addEventListener('change', repaintAddonQty);   // a <select> may fire only 'change' in some browsers
   page.addEventListener('change', function (e) {
     var r = e.target.closest && e.target.closest('[data-zv-mode]');
     if (!r || !r.checked) return;
@@ -2273,7 +2275,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
           var base = o.querySelector('span') ? o.querySelector('span').textContent.trim() : '';
           setAddonMode(o, !!findAddon(names, base + KOOP_SUFFIX));
         });
-        wrap.querySelectorAll('.pcard__plus-opt input').forEach(function (inp) {
+        wrap.querySelectorAll('.pcard__plus-opt input, .pcard__plus-opt select').forEach(function (inp) {
           var opt = inp.closest('.pcard__plus-opt');
           var name = optName(opt);
           if (inp.hasAttribute('data-zv-qty')) {
@@ -2411,7 +2413,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
       }, syncWoningLine);
       return;
     }
-    var lineOpt = e.target.closest('.addcart__lineopts .pcard__plus-opt input');
+    var lineOpt = e.target.closest('.addcart__lineopts .pcard__plus-opt input, .addcart__lineopts .pcard__plus-opt select');
     if (lineOpt) {
       var wrap = e.target.closest('[data-cart-line]');
       var lkey = wrap.getAttribute('data-cart-line'), lon = lineOpt.checked;
@@ -2426,7 +2428,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
         var groupEl = wrap.querySelector('[data-cart-group="' + group + '"]');
         var names = [];
         if (groupEl) {
-          groupEl.querySelectorAll('.pcard__plus-opt input:checked, .pcard__plus-opt input[data-zv-qty]').forEach(function (inp) {
+          groupEl.querySelectorAll('.pcard__plus-opt input:checked, .pcard__plus-opt [data-zv-qty]').forEach(function (inp) {
             var name = optRecord(inp);
             if (name) names.push(name);
           });
@@ -2462,7 +2464,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     // doesn't matter here.
     card.querySelectorAll('.pcard__plus, .ltc__optgroup').forEach(function (det) {
       var group = det.getAttribute('data-group');
-      det.querySelectorAll('.pcard__plus-opt input:checked, .pcard__plus-opt input[data-zv-qty]').forEach(function (inp) {
+      det.querySelectorAll('.pcard__plus-opt input:checked, .pcard__plus-opt [data-zv-qty]').forEach(function (inp) {
         var name = optRecord(inp);   // '' for an unchecked option or a quantity row at 0
         if (!name) return;
         // Woning: the exact property value for the checked option's level, cards in
@@ -2483,7 +2485,7 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
 
   /* fire package_option_select on any option toggle (deduped by not firing on unchanged) */
   page.addEventListener('change', function (e) {
-    var inp = e.target.closest && e.target.closest('.pcard__plus-opt input');
+    var inp = e.target.closest && e.target.closest('.pcard__plus-opt input, .pcard__plus-opt select');
     if (!inp) return;
     // Woning is one choice: checking one option unchecks the other (a programmatic uncheck
     // fires no change event). Done first, because readCardOptions() and recomputeCardPrice()
