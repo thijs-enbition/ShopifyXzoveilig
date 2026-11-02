@@ -229,6 +229,7 @@
                       </div>
                       <div>
                         <div class="ci-name">Woning{% if woning_label != '' %}: {{ woning_label | escape }}{% endif %}</div>
+                        <div class="ci-meta">Eerste {{ zv_promo_months }} maanden vandaag, daarna in het maandbedrag van uw pakket.</div>
                       </div>
                       <div class="ci-right">
                         {%- render 'zv-cart-line-price', item: item, woning: true, pkg_qty: zv_promo_package_qty -%}

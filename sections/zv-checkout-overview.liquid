@@ -1,3 +1,4 @@
+```liquid
 {%- comment -%}
   Zo Veilig — Overzicht. Read-only final-review step inserted between Winkelwagen and
   the Shopify checkout: Winkelwagen -> Overzicht (this page, /cart?view=overzicht) -> Afrekenen.
@@ -648,254 +649,254 @@
   <noscript><div class="wrap"><p class="ovnoscript">Deze pagina werkt het beste met JavaScript ingeschakeld. <a href="{{ routes.cart_url }}">Ga terug naar de winkelwagen</a>.</p></div></noscript>
 
   {%- if cart.item_count > 0 -%}
+    {%- comment -%}
+      Layout 2026-11-02 (Robi): two cards on the left, "Maandelijkse kosten" (Huren) above "Eenmalige
+      kosten" (Kopen, with the NAMI installation choice), and on the right only "Wanneer betaalt u
+      wat?" followed straight by the consent and the checkout button. Presentation only: every gate,
+      every live figure (today_cents, true_month_cents, the cg_* subtotals) and the install/checkout
+      script hooks are unchanged. The one derived figure is a Huren row's monthly amount,
+      original_line_price / zv_promo_package_qty: a Huren line's quantity is pkg_qty (x floors for
+      Woning, x units for the add-ons), so that is its undiscounted unit price x floors/units, the same
+      amount zv-cart-line-price prints as "Loopt daarna door tegen …/mnd". A line whose quantity isn't
+      a multiple of pkg_qty (a cart zv-cart-guard is still fixing) falls back to zv-cart-line-price.
+    {%- endcomment -%}
+    {%- liquid
+      assign sorted_items = cart.items | sort: 'final_line_price' | reverse
+      assign cg_huren_keys = '|'
+      assign cg_kopen_keys = '|'
+      assign cg_huren_cents = 0
+      assign cg_kopen_cents = 0
+      assign ov_huren_all_discounted = true
+      assign ov_huren_orig_cents = 0
+      for item in sorted_items
+        capture cg_group
+          render 'zv-cart-line-group', item: item, sub_type: sub_type, sub_tag: sub_tag, woning_ids: woning_variant_id_list, ontzorg_ids: zv_ontzorg_variant_id_list, rider_ids: zv_rider_variant_id_list, addon_videodeurbel_id: zv_addon_videodeurbel_variant_id, addon_afstandsbediening_id: zv_addon_afstandsbediening_variant_id
+        endcapture
+        assign cg_group = cg_group | strip
+        if cg_group == 'huren'
+          assign cg_huren_keys = cg_huren_keys | append: item.key | append: '|'
+          assign cg_huren_cents = cg_huren_cents | plus: item.final_line_price
+          assign ov_huren_orig_cents = ov_huren_orig_cents | plus: item.original_line_price
+          if item.line_level_discount_allocations.size == 0
+            assign ov_huren_all_discounted = false
+          endif
+        else
+          assign cg_kopen_keys = cg_kopen_keys | append: item.key | append: '|'
+          assign cg_kopen_cents = cg_kopen_cents | plus: item.final_line_price
+        endif
+      endfor
+      assign cg_groups = 'huren,kopen' | split: ','
+      comment
+        Total intro discount, live from the cart: what the Huren lines would cost today without
+        Shopify's "Eerste 3 maanden" discount minus what they cost with it. Never a percentage here.
+      endcomment
+      assign ov_discount_cents = ov_huren_orig_cents | minus: cg_huren_cents
+      if ov_huren_all_discounted
+        assign ov_promo_label = zv_label_commitment | capitalize
+      else
+        assign ov_promo_label = zv_label_commitment_no_discount | capitalize
+      endif
+      assign ov_install_todo = false
+      if show_nami_install and selected_nami_install_id == nil
+        assign ov_install_todo = true
+      endif
+      assign ov_card_no = 0
+    -%}
     <section class="ovwrap">
       <div class="wrap">
         <div class="olayout">
           <div class="ov-left">
-            <div class="ovcard">
-              <div class="ovcard-head">
-                <h2>{{ section.settings.pkg_card_heading | default: 'Uw pakket en configuratie' | escape }}</h2>
-                <a class="ovedit" href="{{ routes.cart_url }}">{{ section.settings.pkg_card_link_label | default: 'Wijzig in winkelwagen' | escape }}</a>
-              </div>
-              {%- comment -%}
-                Huren/Kopen groups (2026-10-28, docs/cart-huur-koop-split-2026-10-28.md), the same as /cart:
-                snippets/zv-cart-line-group.liquid decides each line's group (its own billing cadence, never
-                the flow that added it), snippets/zv-cart-group-label.liquid has the copy. A group's
-                subtotal is its lines' final_line_price. The cost card on the right reuses these keys,
-                subtotals and sorted_items for its own breakdown (2026-10-29); its "Vandaag te betalen" and
-                "Daarna" still come from today_cents / true_month_cents above.
-              {%- endcomment -%}
-              {%- liquid
-                assign sorted_items = cart.items | sort: 'final_line_price' | reverse
-                assign cg_huren_keys = '|'
-                assign cg_kopen_keys = '|'
-                assign cg_huren_cents = 0
-                assign cg_kopen_cents = 0
-                for item in sorted_items
-                  capture cg_group
-                    render 'zv-cart-line-group', item: item, sub_type: sub_type, sub_tag: sub_tag, woning_ids: woning_variant_id_list, ontzorg_ids: zv_ontzorg_variant_id_list, rider_ids: zv_rider_variant_id_list, addon_videodeurbel_id: zv_addon_videodeurbel_variant_id, addon_afstandsbediening_id: zv_addon_afstandsbediening_variant_id
-                  endcapture
-                  assign cg_group = cg_group | strip
-                  if cg_group == 'huren'
-                    assign cg_huren_keys = cg_huren_keys | append: item.key | append: '|'
-                    assign cg_huren_cents = cg_huren_cents | plus: item.final_line_price
-                  else
-                    assign cg_kopen_keys = cg_kopen_keys | append: item.key | append: '|'
-                    assign cg_kopen_cents = cg_kopen_cents | plus: item.final_line_price
-                  endif
-                endfor
-                assign cg_groups = 'huren,kopen' | split: ','
-              -%}
-              <div class="ovitems">
-                {%- for cg in cg_groups -%}
+            {%- for cg in cg_groups -%}
+              {%- if cg == 'huren' -%}
+                {%- assign cg_keys = cg_huren_keys -%}{%- assign cg_cents = cg_huren_cents -%}
+                {%- if cg_keys == '|' -%}{%- continue -%}{%- endif -%}
+              {%- else -%}
+                {%- assign cg_keys = cg_kopen_keys -%}{%- assign cg_cents = cg_kopen_cents -%}
+                {%- if cg_keys == '|' -%}{%- continue -%}{%- endif -%}
+              {%- endif -%}
+              {%- assign ov_card_no = ov_card_no | plus: 1 -%}
+              <div class="ovcard ovgroup ovgroup--{{ cg }}">
+                <div class="ovcard-head">
                   {%- if cg == 'huren' -%}
-                    {%- assign cg_keys = cg_huren_keys -%}{%- assign cg_cents = cg_huren_cents -%}
+                    <h2>{{ ov_card_no }}. Maandelijkse kosten</h2>
+                    <span class="ovbadge">{{ ov_promo_label }}</span>
                   {%- else -%}
-                    {%- assign cg_keys = cg_kopen_keys -%}{%- assign cg_cents = cg_kopen_cents -%}
+                    <h2>{{ ov_card_no }}. Eenmalige kosten</h2>
+                    <span class="ovcard-hint">U betaalt dit één keer, vandaag</span>
                   {%- endif -%}
-                  {%- if cg_keys == '|' -%}{%- continue -%}{%- endif -%}
-                  <div class="ovgroup ovgroup--{{ cg }}">
-                    <h3 class="ovg-head">{% render 'zv-cart-group-label', group: cg %}</h3>
-                    {%- for item in sorted_items -%}
-                      {%- assign cg_key = '|' | append: item.key | append: '|' -%}
-                      {%- unless cg_keys contains cg_key -%}{%- continue -%}{%- endunless -%}
-                      {%- assign item_vid = item.variant_id | append: '' -%}
-                      {%- if woning_variant_id_list contains item_vid -%}
-                        {%- comment -%} A Woning line: one non-editable row, "Woning: <option value>" from its own package lines' Woning values (zv-woning-label, never the product title), at its real final_line_price. {%- endcomment -%}
-                        {%- capture woning_label -%}{%- render 'zv-woning-label', variant_id: item_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
-                        {%- assign woning_label = woning_label | strip -%}
-                        <div class="ovitem ovitem--woning">
-                          <div class="ovi-thumb">
-                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11l9-7 9 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                          </div>
-                          <div>
-                            <div class="ovi-name">Woning{% if woning_label != '' %}: {{ woning_label | escape }}{% endif %}</div>
-                          </div>
-                          <div class="ovi-right">
-                            {%- render 'zv-cart-line-price', item: item, woning: true, pkg_qty: zv_promo_package_qty, price_class: 'ovi-price', note_class: 'ovi-meta' -%}
-                          </div>
-                        </div>
-                        {%- continue -%}
+                </div>
+                <div class="ovitems">
+                  {%- for item in sorted_items -%}
+                    {%- assign cg_key = '|' | append: item.key | append: '|' -%}
+                    {%- unless cg_keys contains cg_key -%}{%- continue -%}{%- endunless -%}
+                    {%- assign item_vid = item.variant_id | append: '' -%}
+                    {%- assign ovi_is_install = false -%}
+                    {%- if item.variant_id == activation_variant_id or item.variant_id == nami_install_geen_variant_id or item.variant_id == nami_install_telefonisch_variant_id or item.variant_id == nami_install_huis_variant_id -%}{%- assign ovi_is_install = true -%}{%- endif -%}
+                    {%- assign ovi_monthly_ok = false -%}
+                    {%- if cg == 'huren' and zv_promo_package_qty > 0 -%}
+                      {%- assign ovi_mod = item.quantity | modulo: zv_promo_package_qty -%}
+                      {%- if ovi_mod == 0 -%}
+                        {%- assign ovi_monthly_ok = true -%}
+                        {%- assign ovi_monthly_cents = item.original_line_price | divided_by: zv_promo_package_qty -%}
+                        {%- assign ovi_units = item.quantity | divided_by: zv_promo_package_qty -%}
                       {%- endif -%}
-                      {%- capture ovi_koop_fk -%}{%- render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle -%}{%- endcapture -%}
-                      {%- assign ovi_koop_fk = ovi_koop_fk | strip -%}
-                      {%- assign ovi_is_koop = false -%}
-                      {%- if ovi_koop_fk != blank and ovi_koop_fk != 'invalid' -%}{%- assign ovi_is_koop = true -%}{%- endif -%}
-                      {%- assign is_sub = false -%}
-                      {%- if item.product.type == sub_type or item.product.tags contains sub_tag -%}{%- assign is_sub = true -%}{%- endif -%}
-                      {%- if ovi_is_koop -%}{%- assign is_sub = false -%}{%- endif -%}
-                      {%- comment -%} Package and installation lines show their pricing.config.json name (package via finder_key, installation via handle), never the Shopify product title. A Koop line shows its package's name. {%- endcomment -%}
-                      {%- assign item_name = item.product.title -%}
-                      {%- if is_sub -%}
-                        {%- capture cfg_name -%}{%- render 'zv-package-name', finder_key: item.product.metafields.custom.finder_key.value, names: zv_package_names_by_fk -%}{%- endcapture -%}
-                      {%- elsif ovi_is_koop -%}
-                        {%- capture cfg_name -%}{%- render 'zv-package-name', finder_key: ovi_koop_fk, names: zv_package_names_by_fk -%}{%- endcapture -%}
-                      {%- elsif item.variant_id == zv_koop_addon_videodeurbel_variant_id -%}
-                        {%- assign cfg_name = 'Videodeurbel (kopen)' -%}
-                      {%- elsif item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}
-                        {%- assign cfg_name = 'Afstandsbediening (kopen)' -%}
-                      {%- else -%}
-                        {%- capture cfg_name -%}{%- render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle -%}{%- endcapture -%}
-                      {%- endif -%}
-                      {%- assign cfg_name = cfg_name | strip -%}
-                      {%- if cfg_name != blank -%}{%- assign item_name = cfg_name -%}{%- endif -%}
-                      <div class="ovitem">
+                    {%- endif -%}
+                    {%- if woning_variant_id_list contains item_vid -%}
+                      {%- capture woning_label -%}{%- render 'zv-woning-label', variant_id: item_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
+                      {%- assign woning_label = woning_label | strip -%}
+                      <div class="ovitem ovitem--woning">
                         <div class="ovi-thumb">
-                          {%- if item.image -%}
-                            <img src="{{ item.image | image_url: width: 176 }}" alt="{{ item_name | escape }}" width="88" height="88" loading="lazy">
-                          {%- else -%}
-                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8l9-4 9 4-9 4-9-4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 8v8l9 4 9-4V8M12 12v8" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-                          {%- endif -%}
+                          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11l9-7 9 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </div>
                         <div>
-                          {%- comment -%} Installation lines (CL003 and the 3 NAMI options) always read "Installatie": Odoo sets their product type (e.g. "All"), which isn't customer copy. {%- endcomment -%}
-                          {%- assign ovi_is_install = false -%}
-                          {%- if item.variant_id == activation_variant_id or item.variant_id == nami_install_geen_variant_id or item.variant_id == nami_install_telefonisch_variant_id or item.variant_id == nami_install_huis_variant_id -%}{%- assign ovi_is_install = true -%}{%- endif -%}
-                          {%- assign ovi_is_addon = false -%}{%- if zv_rider_variant_id_list contains item_vid -%}{%- assign ovi_is_addon = true -%}{%- endif -%}
-                          {%- if item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or zv_ontzorg_variant_id_list contains item_vid or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}{%- assign ovi_is_addon = true -%}{%- endif -%}
-                          {%- if ovi_is_install -%}<span class="ovi-line">Installatie</span>{%- elsif ovi_is_koop -%}<span class="ovi-line">Kopen</span>{%- elsif ovi_is_addon -%}<span class="ovi-line">Uitbreiding</span>{%- elsif item.product.type != blank -%}<span class="ovi-line">{{ item.product.type | escape }}</span>{%- endif -%}
-                          <div class="ovi-name">{{ item_name | escape }}</div>
-                          {%- unless item.variant.title contains 'Default' -%}<div class="ovi-meta">{{ item.variant.title | escape }}</div>{%- endunless -%}
-                          {%- if is_sub -%}
-                          {%- elsif ovi_is_koop -%}
-                            {%- comment -%} A bought package: the apparatuur once, no looptijd. Woning on a bought package is its property only, billed by Odoo with the service fee, never a line here. {%- endcomment -%}
-                            <div class="ovi-meta">Apparatuur, eenmalig</div>
-                          {%- elsif zv_rider_variant_id_list contains item_vid -%}
-                            <div class="ovi-meta">Hoort bij uw gekochte videodeurbel</div>
-                          {%- else -%}
-                          {%- endif -%}
+                          <div class="ovi-name">Woning{% if woning_label != '' %}: {{ woning_label | escape }}{% endif %}</div>
+                          <div class="ovi-meta">Uitbreiding van uw pakket</div>
                         </div>
                         <div class="ovi-right">
-                          {%- if is_sub -%}
-                            {%- render 'zv-cart-line-price', item: item, price_class: 'ovi-price', note_class: 'ovi-meta' -%}
+                          {%- if ovi_monthly_ok -%}
+                            <div class="ovi-price">{{ ovi_monthly_cents | money }} <span>p/m</span></div>
                           {%- else -%}
-                            {%- render 'zv-cart-line-price', item: item, price_class: 'ovi-price', note_class: 'ovi-meta' -%}
+                            {%- render 'zv-cart-line-price', item: item, woning: true, pkg_qty: zv_promo_package_qty, price_class: 'ovi-price', note_class: 'ovi-meta' -%}
                           {%- endif -%}
                         </div>
                       </div>
-                    {%- endfor -%}
-                    <div class="ovg-sub"><span>{% render 'zv-cart-group-label', group: cg, part: 'subtotal' %}</span><b>{{ cg_cents | money }}</b></div>
-                  </div>
-                {%- endfor -%}
-              </div>
-              {%- if show_nami_install -%}
-                <div class="ovinstall-section">
-                  <span class="ovi-line">Installatie</span>
-                  <div class="ovinstall-options" data-ov-install-options role="radiogroup" aria-label="Installatie">
-                    <label class="ovinstall-opt">
-                      <input type="radio" name="ov_install_option" required
-                        data-install-variant-id="{{ nami_install_geen_variant_id }}"
-                        data-install-cents="{{ zv_nami_install_geen_cents }}"
-                        {%- if selected_nami_install_id == 'geen' %} checked{% endif %}>
-                      <span class="ovinstall-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 5.5l13 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                      </span>
-                      <span class="ovinstall-title">{{ zv_nami_install_geen_label }}</span>
-                      <span class="ovinstall-price">{{ zv_nami_install_geen_display }}</span>
-                    </label>
-                    <label class="ovinstall-opt">
-                      <input type="radio" name="ov_install_option" required
-                        data-install-variant-id="{{ nami_install_telefonisch_variant_id }}"
-                        data-install-cents="{{ zv_nami_install_telefonisch_cents }}"
-                        {%- if selected_nami_install_id == 'telefonisch' %} checked{% endif %}>
-                      <span class="ovinstall-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                      </span>
-                      <span class="ovinstall-title">{{ zv_nami_install_telefonisch_label }}</span>
-                      <span class="ovinstall-price">{{ zv_nami_install_telefonisch_display }}</span>
-                    </label>
-                    <label class="ovinstall-opt">
-                      <input type="radio" name="ov_install_option" required
-                        data-install-variant-id="{{ nami_install_huis_variant_id }}"
-                        data-install-cents="{{ zv_nami_install_huis_cents }}"
-                        {%- if selected_nami_install_id == 'huis' %} checked{% endif %}>
-                      <span class="ovinstall-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-7 9 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                      </span>
-                      <span class="ovinstall-title">{{ zv_nami_install_huis_label }}</span>
-                      <span class="ovinstall-price">{{ zv_nami_install_huis_display }}</span>
-                    </label>
-                  </div>
-                  <div class="ovinstall-err" data-ov-install-err hidden>Er ging iets mis bij het opslaan van uw keuze. Probeer het opnieuw.</div>
+                      {%- continue -%}
+                    {%- endif -%}
+                    {%- capture ovi_koop_fk -%}{%- render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle -%}{%- endcapture -%}
+                    {%- assign ovi_koop_fk = ovi_koop_fk | strip -%}
+                    {%- assign ovi_is_koop = false -%}
+                    {%- if ovi_koop_fk != blank and ovi_koop_fk != 'invalid' -%}{%- assign ovi_is_koop = true -%}{%- endif -%}
+                    {%- assign is_sub = false -%}
+                    {%- if item.product.type == sub_type or item.product.tags contains sub_tag -%}{%- assign is_sub = true -%}{%- endif -%}
+                    {%- if ovi_is_koop -%}{%- assign is_sub = false -%}{%- endif -%}
+                    {%- comment -%} Package and installation lines show their pricing.config.json name (package via finder_key, installation via handle), never the Shopify product title. A Koop line shows its package's name. {%- endcomment -%}
+                    {%- assign item_name = item.product.title -%}
+                    {%- if is_sub -%}
+                      {%- capture cfg_name -%}{%- render 'zv-package-name', finder_key: item.product.metafields.custom.finder_key.value, names: zv_package_names_by_fk -%}{%- endcapture -%}
+                    {%- elsif ovi_is_koop -%}
+                      {%- capture cfg_name -%}{%- render 'zv-package-name', finder_key: ovi_koop_fk, names: zv_package_names_by_fk -%}{%- endcapture -%}
+                    {%- elsif item.variant_id == zv_koop_addon_videodeurbel_variant_id -%}
+                      {%- assign cfg_name = 'Videodeurbel (kopen)' -%}
+                    {%- elsif item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}
+                      {%- assign cfg_name = 'Afstandsbediening (kopen)' -%}
+                    {%- else -%}
+                      {%- capture cfg_name -%}{%- render 'zv-install-name', handle: item.product.handle, names: zv_install_names_by_handle -%}{%- endcapture -%}
+                    {%- endif -%}
+                    {%- assign cfg_name = cfg_name | strip -%}
+                    {%- if cfg_name != blank -%}{%- assign item_name = cfg_name -%}{%- endif -%}
+                    {%- if ovi_is_install -%}{%- assign item_name = 'Installatie' -%}{%- if cfg_name != blank -%}{%- assign item_name = cfg_name -%}{%- endif -%}{%- endif -%}
+                    <div class="ovitem">
+                      <div class="ovi-thumb">
+                        {%- if item.image -%}
+                          <img src="{{ item.image | image_url: width: 176 }}" alt="{{ item_name | escape }}" width="88" height="88" loading="lazy">
+                        {%- else -%}
+                          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8l9-4 9 4-9 4-9-4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 8v8l9 4 9-4V8M12 12v8" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                        {%- endif -%}
+                      </div>
+                      <div>
+                        <div class="ovi-name">{{ item_name | escape }}</div>
+                        {%- unless item.variant.title contains 'Default' -%}<div class="ovi-meta">{{ item.variant.title | escape }}</div>{%- endunless -%}
+                        {%- if is_sub -%}
+                          {%- comment -%} Package description (Robi, 2026-11-02): app packages and Securitas-meldkamer packages, by finder_key. {%- endcomment -%}
+                          {%- assign ovi_fk = item.product.metafields.custom.finder_key.value -%}
+                          {%- if ovi_fk == 'aware' or ovi_fk == 'aware_plus' or ovi_fk == 'secure' -%}
+                            <div class="ovi-meta">Gebruik van de beveiligde app en ontvang meldingen</div>
+                          {%- elsif ovi_fk == 'care' or ovi_fk == 'guard' -%}
+                            <div class="ovi-meta">24/7 meldkameropvolging, gebruik van de beveiligde app en ontvang meldingen</div>
+                          {%- endif -%}
+                          {%- comment -%} Woning meta on a package line only while there is no Woning line of its own in the cart (then it has its own row above/below). {%- endcomment -%}
+                          {%- assign ovi_wf = 0 -%}
+                          {%- if woning_applies_list contains item.product.handle -%}
+                            {%- capture ovi_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
+                          {%- endif -%}
+                          {%- assign ovi_wf = ovi_wf | strip | plus: 0 -%}
+                          {%- if ovi_wf > 0 and woning_line_log == '' -%}
+                            {%- if ovi_wf == 2 -%}{%- assign ovi_wl = zv_woning_2_value -%}{%- else -%}{%- assign ovi_wl = zv_woning_1_value -%}{%- endif -%}
+                            {%- assign ovi_wc = zv_woning_unit_cents | times: ovi_wf -%}
+                            <div class="ovi-meta">Woning: {{ ovi_wl | escape }} (+{{ ovi_wc | money_without_trailing_zeros }}/mnd)</div>
+                          {%- endif -%}
+                        {%- elsif ovi_is_koop -%}
+                          <div class="ovi-meta">Apparatuur, wordt uw eigendom</div>
+                          {%- assign ovi_wf = 0 -%}
+                          {%- if woning_applies_fk_list contains ovi_koop_fk -%}
+                            {%- capture ovi_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
+                          {%- endif -%}
+                          {%- assign ovi_wf = ovi_wf | strip | plus: 0 -%}
+                          {%- if ovi_wf > 0 -%}
+                            {%- if ovi_wf == 2 -%}{%- assign ovi_wl = zv_woning_2_value -%}{%- else -%}{%- assign ovi_wl = zv_woning_1_value -%}{%- endif -%}
+                            <div class="ovi-meta">Woning: {{ ovi_wl | escape }}</div>
+                          {%- endif -%}
+                        {%- elsif zv_rider_variant_id_list contains item_vid -%}
+                          <div class="ovi-meta">Opslag en live beelden bekijken</div>
+                        {%- elsif zv_ontzorg_variant_id_list contains item_vid -%}
+                          <div class="ovi-meta">Onderhoud en vervanging bij defect</div>
+                        {%- elsif item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id -%}
+                          <div class="ovi-meta">Makkelijk het alarmsysteem aan- en uitzetten</div>
+                          {%- if cg == 'huren' and ovi_monthly_ok and ovi_units > 1 -%}<div class="ovi-meta">Aantal: {{ ovi_units }}</div>{%- elsif cg == 'kopen' and item.quantity > 1 -%}<div class="ovi-meta">Aantal: {{ item.quantity }}</div>{%- endif -%}
+                        {%- elsif cg == 'huren' -%}
+                          {%- if ovi_monthly_ok and ovi_units > 1 -%}<div class="ovi-meta">Aantal: {{ ovi_units }}</div>{%- endif -%}
+                        {%- elsif ovi_is_install -%}
+                          {%- if item.variant_id == nami_install_geen_variant_id -%}<div class="ovi-meta">U installeert zelf</div>
+                          {%- elsif item.variant_id == nami_install_telefonisch_variant_id -%}<div class="ovi-meta">Wij begeleiden u telefonisch</div>
+                          {%- else -%}<div class="ovi-meta">Onze monteur installeert alles</div>{%- endif -%}
+                        {%- elsif item.quantity > 1 -%}
+                          <div class="ovi-meta">Aantal: {{ item.quantity }}</div>
+                        {%- endif -%}
+                      </div>
+                      <div class="ovi-right">
+                        {%- if ovi_monthly_ok -%}
+                          <div class="ovi-price">{{ ovi_monthly_cents | money }} <span>p/m</span></div>
+                        {%- else -%}
+                          {%- render 'zv-cart-line-price', item: item, price_class: 'ovi-price', note_class: 'ovi-meta' -%}
+                        {%- endif -%}
+                      </div>
+                    </div>
+                  {%- endfor -%}
                 </div>
-              {%- endif -%}
-            </div>
+
+                <div class="ovtot">
+                  {%- if cg == 'huren' -%}
+                    {%- if true_month_cents > 0 -%}
+                      <div class="ovtot-main"><span>Normaal maandbedrag</span><b>{{ true_month_cents | money }} <small>p/m</small></b></div>
+                    {%- endif -%}
+                    {%- if ov_discount_cents > 0 -%}
+                      <div class="ovtot-calc">
+                        <div><span>Eerste {{ zv_promo_months }} maanden zonder korting</span><span>{{ ov_huren_orig_cents | money }}</span></div>
+                        <div class="ovtot-disc"><span>Uw korting</span><span>− {{ ov_discount_cents | money }}</span></div>
+                      </div>
+                    {%- endif -%}
+                    <div class="ovtot-promo"><span>Eerste {{ zv_promo_months }} maanden, vandaag vooruit</span><b>{{ cg_cents | money }}</b></div>
+                  {%- else -%}
+                    <div class="ovtot-main"><span>Totaal eenmalig</span><b>{{ cg_cents | money }}</b></div>
+                  {%- endif -%}
+                </div>
+                {%- if forloop.first -%}<a class="ovedit" href="{{ routes.cart_url }}">{{ section.settings.pkg_card_link_label | default: 'Wijzig in winkelwagen' | escape }}</a>{%- endif -%}
+              </div>
+            {%- endfor -%}
           </div>
 
           <div class="ov-right">
+            {%- comment -%}
+              "Wanneer betaalt u wat?" alone in the dark card: Vandaag is today_cents, split into the Huren
+              subtotal (the prepaid months) and the Kopen subtotal (one-off) only when both exist and no
+              cart-level discount sits between them and today_cents. Months 1 to zv_promo_months cost
+              nothing more; from the month after, true_month_cents. Without a "Daarna" figure the month
+              steps go, same rules as before.
+            {%- endcomment -%}
             <div class="ovcard ovcost ovcost--dark">
-              <h2>{{ section.settings.cost_card_heading | default: 'Uw kosten in het kort' | escape }}</h2>
-              {%- if section.settings.cost_card_sub != blank -%}<p class="ovcost-sub">{{ section.settings.cost_card_sub | escape }}</p>{%- endif -%}
-
-              {%- comment -%}
-                Itemized, never a single collapsed number: every row is read straight off
-                the live cart line it describes (item.final_line_price, after Shopify's own
-                discount allocation), so the breakdown always equals what Shopify charges -
-                nothing is recomputed here. The installation row is whichever install option
-                is really in the cart (the Climax line for climax, one of the 3 nami options
-                for nami) at its full price - installation is never discounted. The package
-                row is the package line itself: quantity 3, with Shopify's automatic 50%
-                "Eerste 3 maanden" discount already taken off. Their sum is today_cents.
-                "Daarna" is each package line's unit price before the discount.
-                Huren/Kopen (2026-10-29, docs/overzicht-cost-card-timeline-2026-10-29.md): the rows come in
-                the same two groups and the same order as the item list on the left (its cg_* keys and
-                subtotals and sorted_items, not recomputed), each group closed by its "Subtotaal vandaag".
-                "Vandaag te betalen" and "Daarna" follow both groups, unchanged. Each row is labelled with
-                the line's bare name from snippets/zv-cart-row-name.liquid (shared with /cart's summary):
-                no "× 3 — eerste 3 maanden (…)" or "— kopen, eenmalig" suffix, the group heading says it.
-              {%- endcomment -%}
-              <div class="ovblock">
-                <span class="ovblock-eb">{{ zv_label_breakdown_intro }}</span>
-                {%- if section.settings.due_today_text != blank -%}<p>{{ section.settings.due_today_text | escape }}</p>{%- endif -%}
-                {%- comment -%}
-                  One row per live cart line, so the rows always add up to the total below
-                  - including the rare cart holding two packages at once. An unrecognized
-                  line falls back to its own product title, same degraded-but-honest
-                  convention used elsewhere.
-                {%- endcomment -%}
-                {%- for cg in cg_groups -%}
-                  {%- if cg == 'huren' -%}
-                    {%- assign cg_keys = cg_huren_keys -%}{%- assign cg_cents = cg_huren_cents -%}
-                  {%- else -%}
-                    {%- assign cg_keys = cg_kopen_keys -%}{%- assign cg_cents = cg_kopen_cents -%}
-                  {%- endif -%}
-                  {%- if cg_keys == '|' -%}{%- continue -%}{%- endif -%}
-                  <div class="ovbreakdown-group">
-                    <h3 class="ovg-head">{% render 'zv-cart-group-label', group: cg %}</h3>
-                    <dl class="ovdl ovbreakdown">
-                      {%- for item in sorted_items -%}
-                        {%- assign cg_key = '|' | append: item.key | append: '|' -%}
-                        {%- unless cg_keys contains cg_key -%}{%- continue -%}{%- endunless -%}
-                        {%- capture row_label -%}{%- render 'zv-cart-row-name', item: item, sub_type: sub_type, sub_tag: sub_tag, zv_package_names_by_fk: zv_package_names_by_fk, zv_install_names_by_handle: zv_install_names_by_handle, zv_koop_fk_by_handle: zv_koop_fk_by_handle, zv_addon_videodeurbel_variant_id: zv_addon_videodeurbel_variant_id, zv_addon_afstandsbediening_variant_id: zv_addon_afstandsbediening_variant_id, zv_koop_addon_videodeurbel_variant_id: zv_koop_addon_videodeurbel_variant_id, zv_koop_addon_afstandsbediening_variant_id: zv_koop_addon_afstandsbediening_variant_id, zv_rider_variant_id_list: zv_rider_variant_id_list, zv_ontzorg_variant_id_list: zv_ontzorg_variant_id_list, woning_variant_id_list: woning_variant_id_list, woning_variant_ids: woning_variant_ids, zv_woning_applies_by_product: zv_woning_applies_by_product, zv_woning_1_value: zv_woning_1_value, zv_woning_2_value: zv_woning_2_value, zv_woning_legacy_prefix: zv_woning_legacy_prefix, activation_variant_id: activation_variant_id, nami_install_geen_variant_id: nami_install_geen_variant_id, nami_install_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_install_huis_variant_id: nami_install_huis_variant_id -%}{%- endcapture -%}
-                        <div><dt>{{ row_label | strip | escape }}</dt><dd>{{ item.final_line_price | money }}</dd></div>
-                      {%- endfor -%}
-                      <div class="ovbreakdown-sub"><dt>{% render 'zv-cart-group-label', group: cg, part: 'subtotal' %}</dt><dd>{{ cg_cents | money }}</dd></div>
-                    </dl>
-                  </div>
-                {%- endfor -%}
-                <dl class="ovdl ovbreakdown">
-                  <div class="ovbreakdown-total"><dt>{{ zv_label_due_today }}</dt><dd class="strong">{{ today_cents | money }}</dd></div>
-                </dl>
-              </div>
-
-              {%- comment -%}
-                "Wanneer betaalt u wat?" (2026-10-29, docs/overzicht-cost-card-timeline-2026-10-29.md): the
-                breakdown's own figures laid out in time, nothing new computed. Vandaag is today_cents, with
-                the Huren subtotal (the prepaid months) and the Kopen subtotal (one-off) under it. Months 1
-                to zv_promo_months cost nothing more (prepaid); from the month after, the customer pays
-                true_month_cents, the same figure as "Daarna". Without a "Daarna" figure the month steps go.
-                Only a cart where nothing recurs (no Huren line and no bought package, whose service fee
-                Odoo bills monthly) says there are no monthly costs; any other cart without a "Daarna"
-                figure (a bought package without a monthly line) shows the Vandaag step alone. Since
-                2026-11-02 the Huren add-ons and the camera-subscription rider count in "Daarna" (Odoo's month-4
-                billing stays open: unresolved.ODOO_ADDON_BILLING).
-              {%- endcomment -%}
-              <section class="ovtimeline" aria-labelledby="ovtimeline-title">
-                <h3 class="ovtimeline-title" id="ovtimeline-title">Wanneer betaalt u wat?</h3>
+              <section class="ovtimeline ovtimeline--solo" aria-labelledby="ovtimeline-title">
+                <h2 class="ovtimeline-title" id="ovtimeline-title">Wanneer betaalt u wat?</h2>
                 <ol class="ovtimeline-steps">
                   <li class="ovtimeline-step ovtimeline-step--today">
-                    <span class="ovtimeline-label">Vandaag</span>
+                    <span class="ovtimeline-label">{{ zv_label_due_today }}</span>
                     <span class="ovtimeline-amt">{{ today_cents | money }}</span>
+                    {%- if ov_discount_cents > 0 -%}<span class="ovsave">U bespaart {{ ov_discount_cents | money }}</span>{%- endif -%}
+                    {%- if cg_huren_keys != '|' and cg_kopen_keys != '|' and cart.cart_level_discount_applications.size == 0 -%}
+                      <dl class="ovtimeline-parts">
+                        <div><dt>{{ ov_promo_label }}</dt><dd>{{ cg_huren_cents | money }}</dd></div>
+                        <div><dt>Eenmalige kosten</dt><dd>{{ cg_kopen_cents | money }}</dd></div>
+                      </dl>
+                    {%- endif -%}
                   </li>
                   {%- if true_month_cents > 0 -%}
                     <li class="ovtimeline-step ovtimeline-step--prepaid">
@@ -915,64 +916,11 @@
               </section>
             </div>
 
-            <div class="ovcard ovcost-details">
-              {%- if pkg_available -%}
-                <div class="ovblock">
-                  <span class="ovblock-eb">Contract</span>
-                  <p>Looptijd {{ pkg_term }} maanden.</p>
-                </div>
-              {%- endif -%}
-
-              {%- if pkg_line_item != nil and section.settings.before_explainer != blank -%}<p class="ovcost-note">{{ section.settings.before_explainer | escape }}</p>{%- endif -%}
-
-              <dl class="ovdl">
-                <div><dt>Maandelijkse betaling</dt><dd>SEPA-incasso</dd></div>
-                {%- unless koop_only -%}<div><dt>Opzeggen</dt><dd>Maandelijks, na afloop van de contractduur</dd></div>{%- endunless -%}
-                <div><dt>Bedenktijd</dt><dd>14 dagen (<a href="{{ herroeping_url }}" target="_blank" rel="noopener">Herroepen</a>)</dd></div>
-                {%- if show_nami_install -%}
-                  <div>
-                    <dt>Installatie</dt>
-                    <dd>
-                      {%- if selected_nami_install_id == 'geen' -%}
-                        {{ zv_nami_install_geen_label }} · {{ zv_nami_install_geen_display }}
-                      {%- elsif selected_nami_install_id == 'telefonisch' -%}
-                        {{ zv_nami_install_telefonisch_label }} · {{ zv_nami_install_telefonisch_display }}
-                      {%- elsif selected_nami_install_id == 'huis' -%}
-                        {{ zv_nami_install_huis_label }} · {{ zv_nami_install_huis_display }}
-                      {%- else -%}
-                        Kies uw installatie hiernaast
-                      {%- endif -%}
-                    </dd>
-                  </div>
-                {%- else -%}
-                  <div><dt>Installatie</dt><dd>Binnen 14 dagen, op afspraak</dd></div>
-                {%- endif -%}
-              </dl>
-
-              <div class="ovdelivery">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7h11v9H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 10h4l3 3v3h-7z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="7" cy="18" r="1.8" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="18" r="1.8" stroke="currentColor" stroke-width="2"/></svg>
-                {%- if show_nami_install and selected_nami_install_id == 'geen' -%}
-                  <p>Uw pakket wordt na uw bestelling bij u thuisbezorgd.</p>
-                {%- elsif show_nami_install and selected_nami_install_id == 'telefonisch' -%}
-                  <p>Uw pakket wordt bezorgd. Onze klantenservice belt u om de installatie telefonisch te begeleiden.</p>
-                {%- else -%}
-                  <p>Onze monteur neemt na uw bestelling contact op om de installatie in te plannen.</p>
-                {%- endif -%}
-              </div>
-            </div>
-
-            <div class="ovtrust">
-              <span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="2"/></svg>Beveiligde betaling</span>
-              <span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 8.2-7 9.5C8 19.2 5 15.4 5 11V6l7-3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>SSL-versleuteld</span>
-              {%- if pkg_available and pkg_meldkamer -%}
-                <span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L14 14l5 2v3a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Securitas-meldkamer</span>
-              {%- endif -%}
-              <span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12l5 5 11-11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>14 dagen retour</span>
-            </div>
-
             <div class="ovcard ovconsent">
               {%- if cart_pkg_undiscounted or cart_woning_bad or cart_koop_bad -%}
                 <div class="ovconsent-err" data-ov-needs-activation role="alert">Er ging iets mis met uw bestelling. Neem contact op via 088 122 11 11.</div>
+              {%- elsif cart_needs_activation and ov_install_todo -%}
+                <div class="ovconsent-msg" data-ov-needs-activation role="status">U heeft nog geen installatie gekozen. <a href="{{ routes.cart_url }}">Kies uw installatie in de winkelwagen</a>, daarna kunt u afrekenen.</div>
               {%- elsif cart_needs_activation -%}
                 <div class="ovconsent-err" data-ov-needs-activation role="alert">Er ontbreekt een onderdeel van uw bestelling (activatie en installatie). We herstellen dit automatisch — ververs de pagina als dit blijft staan.</div>
               {%- elsif cart_needs_fix -%}
@@ -984,12 +932,46 @@
               </label>
               <div class="ovconsent-err" data-ov-err hidden></div>
               <button type="button" class="btn btn--gold ovcta" id="ovCheckoutBtn" disabled aria-disabled="true">
-                {{ section.settings.checkout_button_label | default: 'Verder naar veilig afrekenen' | escape }}
+                <span>{{ section.settings.checkout_button_label | default: 'Verder naar veilig afrekenen' | escape }} <span class="ovcta-amt"><span class="ovcta-dot">· </span>{{ today_cents | money }}</span></span>
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
               {%- if section.settings.closing_text != blank -%}<p class="ovclosing">{{ section.settings.closing_text | escape }}</p>{%- endif -%}
-              <a class="btn btn--ghost ovback2" href="{{ routes.cart_url }}">{{ section.settings.continue_shopping_label | default: '← Verder winkelen' | escape }}</a>
             </div>
+
+            <div class="ovcard ovcost-details">
+              <h2 class="ovdetails-title">Uw contract</h2>
+              <dl class="ovdl">
+                {%- if pkg_available -%}<div><dt>Looptijd</dt><dd>{{ pkg_term }} maanden</dd></div>{%- endif -%}
+                {%- unless koop_only -%}<div><dt>Daarna</dt><dd>Maandelijks opzegbaar</dd></div>{%- endunless -%}
+                <div><dt>Maandelijkse betaling</dt><dd>SEPA-incasso</dd></div>
+                <div><dt>Bedenktijd</dt><dd>14 dagen (<a href="{{ herroeping_url }}" target="_blank" rel="noopener">Herroepen</a>)</dd></div>
+                {%- unless show_nami_install -%}<div><dt>Installatie</dt><dd>Binnen 14 dagen, op afspraak</dd></div>{%- endunless -%}
+              </dl>
+              <p class="ovcost-note">Alle bedragen zijn inclusief btw.</p>
+              {%- unless ov_install_todo -%}
+                <div class="ovdelivery">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7h11v9H3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 10h4l3 3v3h-7z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="7" cy="18" r="1.8" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="18" r="1.8" stroke="currentColor" stroke-width="2"/></svg>
+                  {%- if show_nami_install and selected_nami_install_id == 'geen' -%}
+                    <p>Uw pakket wordt na uw bestelling bij u thuisbezorgd.</p>
+                  {%- elsif show_nami_install and selected_nami_install_id == 'telefonisch' -%}
+                    <p>Uw pakket wordt bezorgd. Onze klantenservice belt u om de installatie telefonisch te begeleiden.</p>
+                  {%- else -%}
+                    <p>Onze monteur neemt na uw bestelling contact op om de installatie in te plannen.</p>
+                  {%- endif -%}
+                </div>
+              {%- endunless -%}
+            </div>
+
+            <div class="ovtrust">
+              <span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="2"/></svg>Beveiligde betaling</span>
+              <span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 8.2-7 9.5C8 19.2 5 15.4 5 11V6l7-3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>SSL-versleuteld</span>
+              {%- if pkg_available and pkg_meldkamer -%}
+                <span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L14 14l5 2v3a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Securitas-meldkamer</span>
+              {%- endif -%}
+              <span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12l5 5 11-11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>14 dagen retour</span>
+            </div>
+
+            <a class="btn btn--ghost ovback2" href="{{ routes.cart_url }}">{{ section.settings.continue_shopping_label | default: '← Verder winkelen' | escape }}</a>
           </div>
         </div>
       </div>
@@ -1299,6 +1281,102 @@
 .zv-overzicht .ovcta { margin-top:16px; }
 .zv-overzicht .ovclosing { font-size:12.5px; font-weight:600; color:var(--muted); line-height:1.5; margin-top:14px; text-align:center; }
 .zv-overzicht .ovback2 { margin-top:10px; }
+/* Layout 2026-11-02: monthly and one-off cards on the left, timeline + checkout on the right. */
+.zv-overzicht .ovgroup + .ovgroup { margin-top:0; }
+.zv-overzicht .ovcard-head { align-items:center; margin-bottom:4px; }
+.zv-overzicht .ovcard-head h2 { font-size:20px; }
+.zv-overzicht .ovbadge { margin-left:auto; font-size:12.5px; font-weight:800; color:#5a3d00; background:#fdeccb; border-radius:999px; padding:5px 12px; }
+.zv-overzicht .ovcard-hint { margin-left:auto; font-size:13.5px; font-weight:600; color:var(--muted); }
+.zv-overzicht .ovitem { grid-template-columns:52px 1fr auto; padding:14px 0; }
+.zv-overzicht .ovitem:last-child { border-bottom:1px solid var(--line); padding-bottom:14px; }
+.zv-overzicht .ovi-thumb { width:52px; height:52px; }
+.zv-overzicht .ovi-thumb svg { width:26px; height:26px; }
+.zv-overzicht .ovi-name { font-size:16px; margin-top:0; }
+.zv-overzicht .ovtot { margin-top:14px; padding-top:14px; border-top:2px solid var(--indigo); display:flex; flex-direction:column; gap:6px; }
+.zv-overzicht .ovtot > div { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+.zv-overzicht .ovtot-main span { font-size:16px; font-weight:900; color:var(--indigo); }
+.zv-overzicht .ovtot-main b { font-size:18px; font-weight:900; color:var(--indigo); white-space:nowrap; }
+.zv-overzicht .ovtot-main small { font-size:13px; font-weight:700; color:var(--muted); }
+.zv-overzicht .ovtot-promo span, .zv-overzicht .ovtot-promo b { font-size:14px; font-weight:700; color:var(--belt); }
+.zv-overzicht .ovtot-promo b { white-space:nowrap; }
+.zv-overzicht .ovgroup .ovedit { display:inline-block; margin-top:14px; }
+.zv-overzicht .ovinstall-section { margin-top:4px; padding-top:16px; border-top:none; }
+.zv-overzicht .ovinstall-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+.zv-overzicht .ovinstall-label { font-size:16px; font-weight:900; color:var(--indigo); }
+.zv-overzicht .ovinstall-todo { font-size:13px; font-weight:800; color:var(--belt); }
+.zv-overzicht .ovinstall-options { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; }
+.zv-overzicht .ovinstall-opt { grid-template-columns:auto 1fr; grid-template-areas:"radio icon" "title title" "price price"; gap:8px 10px; align-items:center; padding:14px; border-radius:14px; }
+.zv-overzicht .ovinstall-opt input { grid-area:radio; }
+.zv-overzicht .ovinstall-icon { grid-area:icon; width:40px; height:40px; border-radius:10px; justify-self:end; }
+.zv-overzicht .ovinstall-icon svg { width:22px; height:22px; }
+.zv-overzicht .ovinstall-title { grid-area:title; font-size:15px; line-height:1.3; }
+.zv-overzicht .ovinstall-price { grid-area:price; font-size:16px; }
+.zv-overzicht .ovinstall-opt:has(input:checked) { border-color:var(--gold); background:#fff6e2; }
+.zv-overzicht .ovinstall-section--todo .ovinstall-opt { border-color:var(--gold-lt); }
+@media(max-width:480px){
+  .zv-overzicht .ovitem { grid-template-columns:52px 1fr auto; }
+  .zv-overzicht .ovi-right { grid-column:auto; text-align:right; margin-top:0; padding-top:0; border-top:none; }
+  .zv-overzicht .ovinstall-opt { grid-template-columns:auto 1fr auto; grid-template-areas:"radio title price"; }
+  .zv-overzicht .ovinstall-icon { display:none; }
+  .zv-overzicht .ovinstall-price { grid-column:auto; font-size:15px; }
+}
+.zv-overzicht .ovtimeline--solo { margin-top:0; padding-top:0; border-top:none; }
+.zv-overzicht .ovtimeline--solo .ovtimeline-title { font-size:20px; margin-bottom:20px; }
+.zv-overzicht .ovtimeline-parts { margin-top:8px; }
+.zv-overzicht .ovconsent-msg { margin-bottom:12px; padding:10px 12px; border-radius:10px; background:#fdeccb; font-size:13.5px; font-weight:700; color:#5a3d00; }
+.zv-overzicht .ovconsent-msg a { color:inherit; }
+.zv-overzicht .ovconsent .ovconsent-err[data-ov-needs-activation] { margin:0 0 12px; }
+.zv-overzicht .ovcta { font-size:16px; }
+.zv-overzicht .ovcta-amt { font-weight:900; white-space:nowrap; }
+.zv-overzicht .ovdetails-title { font-size:16px !important; margin-bottom:2px; }
+.zv-overzicht .ovcost-details .ovdl { margin-top:6px; }
+.zv-overzicht .ovcost-details .ovcost-note { margin-top:8px; }
+/* Mobile: first what you order (incl. the installation choice), then when you pay and the button. */
+@media(max-width:920px){
+  .zv-overzicht .ov-left { order:1; }
+  .zv-overzicht .ov-right { order:2; }
+}
+/* 2026-11-02 (2): discount rows, savings pill, mobile polish. */
+.zv-overzicht .ovtot > .ovtot-calc { display:flex; flex-direction:column; justify-content:flex-start; align-items:stretch; gap:4px; padding:6px 0 8px; border-bottom:1px dashed var(--line-2); }
+.zv-overzicht .ovtot-calc > div { display:flex; justify-content:space-between; gap:12px; font-size:14px; font-weight:600; color:#5b5374; }
+.zv-overzicht .ovtot-calc span:last-child { white-space:nowrap; font-weight:700; }
+.zv-overzicht .ovtot-disc { color:#1f7a45 !important; }
+.zv-overzicht .ovtot-disc span { font-weight:800 !important; }
+.zv-overzicht .ovtot-promo span, .zv-overzicht .ovtot-promo b { font-size:15px; font-weight:800; color:var(--indigo); }
+.zv-overzicht .ovsave { align-self:flex-start; margin-top:4px; font-size:13px; font-weight:800; color:#3a2a06; background:var(--gold-lt); border-radius:999px; padding:4px 12px; }
+@media(max-width:600px){
+  .zv-overzicht .wrap { padding:0 14px; }
+  .zv-overzicht .ovwrap { padding:18px 0 60px; }
+  .zv-overzicht .ov-left, .zv-overzicht .ov-right { gap:14px; }
+  .zv-overzicht .olayout { gap:14px; }
+  .zv-overzicht .ovcard { padding:18px 16px; border-radius:16px; }
+  .zv-overzicht .ovcard-head { flex-direction:column; align-items:flex-start; gap:6px; }
+  .zv-overzicht .ovcard-head h2 { font-size:18px; }
+  .zv-overzicht .ovbadge, .zv-overzicht .ovcard-hint { margin-left:0; }
+  .zv-overzicht .ovitem { grid-template-columns:40px 1fr auto; gap:12px; padding:12px 0; align-items:start; }
+  .zv-overzicht .ovitem:last-child { padding-bottom:12px; }
+  .zv-overzicht .ovi-thumb { width:40px; height:40px; border-radius:10px; }
+  .zv-overzicht .ovi-thumb svg { width:20px; height:20px; }
+  .zv-overzicht .ovi-name { font-size:15px; line-height:1.3; }
+  .zv-overzicht .ovi-meta { font-size:12.5px; line-height:1.4; }
+  .zv-overzicht .ovi-price { font-size:15px; }
+  .zv-overzicht .ovtot-main span { font-size:15px; }
+  .zv-overzicht .ovtot-main b { font-size:16px; }
+  .zv-overzicht .ovtot-calc > div, .zv-overzicht .ovtot-promo span, .zv-overzicht .ovtot-promo b { font-size:13.5px; }
+  .zv-overzicht .ovtimeline--solo .ovtimeline-title { font-size:18px; margin-bottom:16px; }
+  .zv-overzicht .ovtimeline-amt:not(.ovtimeline-amt--sm):not(.ovtimeline-amt--md) { font-size:28px; }
+  .zv-overzicht .ovtimeline-parts > div { font-size:13px; }
+  .zv-overzicht .ovcta { flex-wrap:wrap; text-align:center; padding:14px 16px; }
+  .zv-overzicht .ovcta-amt { display:block; font-size:18px; }
+  .zv-overzicht .ovcta-dot { display:none; }
+  .zv-overzicht .ovcheck span { font-size:13px; }
+  .zv-overzicht .ovdl > div { font-size:13.5px; }
+  .zv-overzicht .ovtrust { padding:8px 2px; gap:8px 14px; }
+  .zv-overzicht .ovbar { padding:16px 0 14px; }
+  .zv-overzicht .ovsteps { gap:10px; margin-top:12px; }
+  .zv-overzicht .ovsteps li:not(.active) { font-size:0; gap:0; }
+  .zv-overzicht .ovsteps .n { width:24px; height:24px; font-size:12px; }
+}
 {% endstylesheet %}
 
 {% schema %}
@@ -1325,3 +1403,5 @@
   ]
 }
 {% endschema %}
+```
+
