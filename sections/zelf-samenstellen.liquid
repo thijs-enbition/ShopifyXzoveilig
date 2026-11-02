@@ -16,6 +16,11 @@
   product per package) and the Woning lines belong to a package line, so the cart
   guard would remove it. See docs/zelf-samenstellen-2026-11-02.md.
 
+  Matcher (sections/zelf-samenstellen-matcher.liquid, above this section): each row has a slug `m`
+  (rendered as data-match); the matcher's `zv-match:apply` event marks the recommended rows (.zv-match-hit
+  + "Aanbevolen · Nx" badge), dims the rest and fills the hidden #ccDescription of the callback form, which
+  the lead sends as `description`. See docs/zelf-samenstellen-matcher-2026-11-02.md.
+
   Filter chips (data-filter) match a row's `cat`; a chip that matches no row is hidden.
   Trust strip: one `trust` block per item (template JSON), a label plus an optional zv-route
   key for the page that backs it.
@@ -72,6 +77,10 @@
       <button type="button" class="ch-chip" data-filter="deurbel" aria-pressed="false">Videodeurbel <span class="n"></span></button>
       <button type="button" class="ch-chip" data-filter="bediening" aria-pressed="false">Bediening <span class="n"></span></button>
     </div>
+    <div class="zv-match-note" id="zvMatchNote" role="status" tabindex="-1" hidden>
+      <span id="zvMatchNoteT"></span>
+      <button type="button" id="zvMatchClear">Toon alles</button>
+    </div>
     <div class="rows" id="rows"></div>
   </section>
 
@@ -97,6 +106,7 @@
     </div>
     <form class="cam-contact" id="camContact" data-consent-error="{% render 'zv-form-copy', key: 'consent_error' %}">
       <div class="cam-contact-h">Of laat ons u terugbellen</div>
+      <input type="hidden" id="ccDescription" name="description">
       <input type="text" id="ccName" placeholder="Naam" required>
       <input type="tel" id="ccPhone" placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}" aria-label="Telefoonnummer" required>
       <input type="email" id="ccEmail" placeholder="E-mailadres (optioneel)">
@@ -138,23 +148,23 @@
 (function(){
   var scope = document.querySelector('.zv-zelf'); if(!scope || !document.getElementById('rows')) return;
   var HW=[
-    {cat:'sensoren', kh:'koop-magneetcontact', hh:'huur-magneetcontact-dc-23', n:'Magneetcontact (DC-23)', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0001', k:'magneetcontact_dc23', sku:'CL001'},
-    {cat:'sensoren', kh:'koop-pir-bewegingsdetector', hh:'huur-pir-bewegingsdetector', n:'PIR Bewegingsdetector', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0003', k:'pir_bewegingsdetector', sku:'CL002', desc:[
+    {cat:'sensoren', kh:'koop-magneetcontact', hh:'huur-magneetcontact-dc-23', n:'Magneetcontact (DC-23)', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0001', k:'magneetcontact_dc23', m:'magneetcontact', sku:'CL001'},
+    {cat:'sensoren', kh:'koop-pir-bewegingsdetector', hh:'huur-pir-bewegingsdetector', n:'PIR Bewegingsdetector', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0003', k:'pir_bewegingsdetector', m:'pir', sku:'CL002', desc:[
       'Nadat de sensor beweging heeft waargenomen, wordt er een melding doorgestuurd naar de centrale. Zodra het alarmsysteem ingeschakeld is en er wordt beweging waargenomen, dan gaat het alarm af en wordt er een melding gestuurd naar uw telefoon en, indien u bent aangesloten op de meldkamer van Securitas, dan worden zij ook gealarmeerd en komen zij in actie volgens het protocol.'
     ]},
-    {cat:'sensoren', kh:'koop-rookmelder', hh:'huur-rookmelder', n:'Rookmelder', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0011', k:'rookmelder', sku:'CL005', desc:[
+    {cat:'sensoren', kh:'koop-rookmelder', hh:'huur-rookmelder', n:'Rookmelder', type:'Sensor', koop:60.00, huur:1.92, huurSku:'H0011', k:'rookmelder', m:'rookmelder', sku:'CL005', desc:[
       'Wij leveren het alarmsysteem altijd met één rookmelder. De rookmelder is gekoppeld aan de centrale en geeft bij het detecteren van rook of warmte, een zeer luid geluidssignaal van 95 dB af en tegelijk wordt de ingebouwde sirene in de centrale in werking gesteld. U ontvangt dan direct een melding op uw telefoon. Dit zorgt ervoor dat ook als u niet thuis bent, u snel in actie kan komen, om zodoende de schade zoveel mogelijk beperkt te houden.',
       'Als u heeft gekozen dat uw alarmsysteem gekoppeld wordt aan de meldkamer van Securitas, dan komt Securitas direct in actie bij een alarmsituatie.'
     ]},
-    {cat:'sensoren', kh:'koop-watersensor', hh:'huur-watersensor', n:'Watersensor', type:'Sensor', koop:45.00, huur:1.44, huurSku:'H0014', k:'watersensor', sku:'CL020'},
-    {cat:'camera', kh:'koop-binnencamera-516', hh:'huur-binnencamera', n:'Binnencamera 516', type:'Binnen', koop:175.00, huur:5.59, huurSku:'H515', k:'cam_516', sku:'ADC-516', desc:[
+    {cat:'sensoren', kh:'koop-watersensor', hh:'huur-watersensor', n:'Watersensor', type:'Sensor', koop:45.00, huur:1.44, huurSku:'H0014', k:'watersensor', m:'watersensor', sku:'CL020'},
+    {cat:'camera', kh:'koop-binnencamera-516', hh:'huur-binnencamera', n:'Binnencamera 516', type:'Binnen', koop:175.00, huur:5.59, huurSku:'H515', k:'cam_516', m:'binnencamera', sku:'ADC-516', desc:[
       'De ADC-V516 is een binnencamera die werkt via wifi en is gekoppeld aan het Alarm.com platform. Via de app kunt u live meekijken, meldingen ontvangen en beelden terugkijken.',
       'De camera maakt gebruik van wifi (draadloze verbinding) en wordt aangesloten op netstroom (230V via adapter). De camera wordt binnenshuis geplaatst en kan eenvoudig op een vlakke ondergrond worden neergezet of gemonteerd.',
       'De camera werkt met cloudopslag (gebeurtenissen): Cloud: opslag van bewegingen, ca. 30 dagen terugkijken. In de app ziet u een overzicht van gebeurtenissen en kunt u filteren op basis van beweging.',
       'De camera beschikt over bewegingsdetectie en beeldkwaliteit in HD. Daarnaast is tweeweg-audio beschikbaar (spreken en luisteren) en beschikt de camera over infrarood nachtzicht voor gebruik in het donker.',
       'De camera is geschikt voor gebruik binnenshuis, bijvoorbeeld voor het monitoren van een ruimte, entree of huisdieren.'
     ]},
-    {cat:'camera', kh:'koop-730-buitencamera-met-spotlight', hh:null, n:'730 Buitencamera met spotlight', type:'Buiten', koop:325.00, huur:null, huurSku:null, k:'cam_730_adc', sku:'ADC-730', model:'Alarm.com ADC-V730', specs:[
+    {cat:'camera', kh:'koop-730-buitencamera-met-spotlight', hh:null, n:'730 Buitencamera met spotlight', type:'Buiten', koop:325.00, huur:null, huurSku:null, k:'cam_730_adc', m:'buitencamera730', sku:'ADC-730', model:'Alarm.com ADC-V730', specs:[
       ['Resolutie','4MP, max 2688×1520, 1/3" HDR-sensor'],
       ['Beeldhoek','129° horizontaal, 68° verticaal, 153° diagonaal'],
       ['Nachtzicht','IR + kleuren-spotlightmodus; IR-bereik ~49 ft (15m)'],
@@ -171,9 +181,9 @@
       'De camera kan worden uitgebreid met een Alarm.com recorder (SVR) voor continue opname en langere opslag van meerdere camera\'s.',
       'Vereisten: Cloudabonnement; stabiele internetverbinding (min. 2 Mbps upload per camera); voldoende wifi-signaal op de montageplek (2,4 &amp; 5 GHz); stroompunt in de buurt. Installatie wordt verzorgd door de monteur, inclusief afwerking van de bekabeling.'
     ]},
-    {cat:'camera', kh:'koop-buitencamera-bedraad-dome-826', hh:'huur-dome-camera', n:'Buitencamera bedraad Dome 826', type:'Buiten', koop:199.00, huur:12.75, huurSku:'H067', k:'cam_dome_826', sku:'ADC826'},
-    {cat:'camera', kh:'koop-729-wifi-camera-floodlight-mickey', hh:'huur-729-wifi-camera-floodlight-mickey', n:'729 WiFi Camera Floodlight (Mickey)', type:'Camera', koop:475.00, huur:15.17, huurSku:'H729', k:'cam_adc_mm', sku:'ADC-MM'},
-    {cat:'deurbel', kh:'koop-video-deurbel-750', hh:'huur-video-deurbel-750', n:'Video Deurbel 750', type:'Deurbel', koop:299.00, huur:9.55, huurSku:'H750', k:'vdb_750_adc', sku:'ADC-750', model:'Alarm.com ADC-VDB750', specs:[
+    {cat:'camera', kh:'koop-buitencamera-bedraad-dome-826', hh:'huur-dome-camera', n:'Buitencamera bedraad Dome 826', type:'Buiten', koop:199.00, huur:12.75, huurSku:'H067', k:'cam_dome_826', m:'dome826', sku:'ADC826'},
+    {cat:'camera', kh:'koop-729-wifi-camera-floodlight-mickey', hh:'huur-729-wifi-camera-floodlight-mickey', n:'729 WiFi Camera Floodlight (Mickey)', type:'Camera', koop:475.00, huur:15.17, huurSku:'H729', k:'cam_adc_mm', m:'floodlight729', sku:'ADC-MM'},
+    {cat:'deurbel', kh:'koop-video-deurbel-750', hh:'huur-video-deurbel-750', n:'Video Deurbel 750', type:'Deurbel', koop:299.00, huur:9.55, huurSku:'H750', k:'vdb_750_adc', m:'videodeurbel750', sku:'ADC-750', model:'Alarm.com ADC-VDB750', specs:[
       ['Resolutie','max 1440×1440 (2MP, 1/2.4" HDR-sensor)'],
       ['Beeldhoek','165° horizontaal, 145° verticaal'],
       ['Tweerichtingsaudio','ja, full-duplex'],
@@ -189,7 +199,7 @@
       'Wij leveren onze deurbellen altijd met een chime, die een geluidssignaal in huis afgeeft als er wordt aangebeld, draadloos verbindt met de deurbel en het wifi-signaal rond de deurbel versterkt; deze wordt geplaatst in een stopcontact binnen (meestal in de woonkamer).',
       'Installatie: wordt aangesloten op bestaande deurbelbedrading. In de meeste gevallen geen extra voeding nodig.'
     ]},
-    {cat:'deurbel', kh:'koop-video-deurbel-780', hh:'huur-video-deurbel-780-accu', n:'Video Deurbel 780 (accu)', type:'Deurbel', koop:425.00, huur:13.58, huurSku:'H780', k:'vdb_780_adc', sku:'ADC-780', model:'Alarm.com ADC-VDB780B', specs:[
+    {cat:'deurbel', kh:'koop-video-deurbel-780', hh:'huur-video-deurbel-780-accu', n:'Video Deurbel 780 (accu)', type:'Deurbel', koop:425.00, huur:13.58, huurSku:'H780', k:'vdb_780_adc', m:'videodeurbel780', sku:'ADC-780', model:'Alarm.com ADC-VDB780B', specs:[
       ['Resolutie','1920×1080, 2.12MP Sony IMX323-sensor'],
       ['Beeldhoek','160° horizontaal, 90° verticaal, 175° diagonaal'],
       ['Tweerichtingsaudio','ja; 1W/8Ω speaker, omnidirectionele microfoon'],
@@ -205,12 +215,15 @@
       'Wij leveren onze deurbellen altijd met een chime, die een geluidssignaal in huis afgeeft als er wordt aangebeld, draadloos verbindt met de deurbel en het wifi-signaal rond de deurbel versterkt; deze wordt geplaatst in een stopcontact binnen (meestal in de woonkamer).',
       'Installatie: wordt draadloos geplaatst en werkt op batterij. Voor gebruik is een Alarm.com chime (gong) nodig voor het ontvangen van de bel binnen (werkt niet op een bestaande bekabelde gong).'
     ]},
-    {cat:'bediening', kh:'koop-afstandsbediening', hh:'huur-afstandsbediening', n:'Afstandsbediening', type:'Accessoire', koop:40.00, huur:0.80, huurSku:'H0010', k:'afstandsbediening', sku:'CL004', desc:[
+    {cat:'bediening', kh:'koop-afstandsbediening', hh:'huur-afstandsbediening', n:'Afstandsbediening', type:'Accessoire', koop:40.00, huur:0.80, huurSku:'H0010', k:'afstandsbediening', m:'afstandsbediening', sku:'CL004', desc:[
       'Met deze afstandsbediening kunt u uw alarmsysteem in- en uitschakelen. De afstandsbediening kan gemakkelijk aan uw sleutelbos gehangen worden.',
       'De afstandsbediening telt vier knoppen, om uw alarmsysteem geheel of gedeeltelijk in- of uit te schakelen. Ze is voorzien van een ring en een beschermklep om te verhinderen dat de knopjes per ongeluk worden ingeduwd. Via de afstandsbediening kunt u ook een panieksignaal versturen. Activeer uw alarmsysteem of doof zeer eenvoudig automatisch uw verlichting.'
     ]}
   ];
-  var state={ lines:{}, filter:'', open:{} };
+  /* `match` is the matcher's {slug: qty} map (sections/zelf-samenstellen-matcher.liquid, row field
+     `m`), null while no recommendation is active. It lives here, not on the DOM, because
+     renderRows() rebuilds every card on each Koop/Huur click. */
+  var state={ lines:{}, filter:'', open:{}, match:null };
   function euro(n){ return '€ '+Number(n).toFixed(2).replace('.',','); }
 
   var SRC=['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid'];
@@ -276,9 +289,12 @@
     var key=h.specs?'<dl class="hw-key">'+h.specs.slice(0,3).map(function(s){ return '<div><dt>'+s[0]+'</dt><dd>'+s[1]+'</dd></div>'; }).join('')+'</dl>':'';
     var specBtn=hasInfo?'<button type="button" class="hw-spec-btn" aria-expanded="'+(open?'true':'false')+'" aria-controls="'+specsId+'">'+(h.specs?'Alle specificaties':'Meer info')+'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>':'';
     var specPanel=hasInfo?'<div class="hw-specs" id="'+specsId+'" role="region"'+(open?' style="max-height:none"':'')+'><div class="hw-specs-in">'+specHtml(h)+'</div></div>':'';
-    var el=document.createElement('article'); el.className='hw'+(q>0?' has':'')+(open?' specs-open':''); el.setAttribute('data-k',h.k);
+    var rec=state.match?(state.match[h.m]||0):0;
+    var el=document.createElement('article');
+    el.className='hw'+(q>0?' has':'')+(open?' specs-open':'')+(state.match?(rec?' zv-match-hit':' zv-match-dim'):'');
+    el.setAttribute('data-k',h.k); el.setAttribute('data-match',h.m);
     el.innerHTML=
-      '<div class="hw-media" aria-hidden="true">'+iconFor(h)+'<span class="hw-type">'+h.type.replace('+',' / ')+'</span></div>'+
+      '<div class="hw-media">'+(rec?'<span class="zv-match-badge">Aanbevolen &middot; '+rec+'x</span>':'')+iconFor(h).replace('<svg ','<svg aria-hidden="true" ')+'<span class="hw-type" aria-hidden="true">'+h.type.replace('+',' / ')+'</span></div>'+
       '<h3 class="hw-name">'+h.n+'</h3>'+
       (h.model?'<div class="hw-model">'+h.model+'</div>':'')+
       key+specBtn+specPanel+
@@ -333,14 +349,38 @@
     b.querySelector('.n').textContent=n;
     if(!n) b.hidden=true;
   });
+  function syncChips(){
+    filters.querySelectorAll('[data-filter]').forEach(function(x){
+      var on=x.getAttribute('data-filter')===state.filter; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on?'true':'false');
+    });
+  }
   filters.addEventListener('click',function(e){
     var b=e.target.closest('[data-filter]'); if(!b) return;
     state.filter=b.getAttribute('data-filter');
-    filters.querySelectorAll('[data-filter]').forEach(function(x){
-      var on=x===b; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on?'true':'false');
-    });
+    syncChips();
     renderRows();
   });
+
+  /* The matcher section above hands over its answers: {qty:{slug:n}, description:'Offerteformulier: ...'}.
+     Cards in `qty` are marked (.zv-match-hit + badge in rowEl), the rest dimmed, never hidden. The category
+     filter is reset so no hit is filtered out of view. `description` goes into #ccDescription, which the
+     callback form below sends along. "Toon alles" clears both, so a dismissed recommendation can't
+     reach a lead. */
+  var matchNote=document.getElementById('zvMatchNote'), ccDesc=document.getElementById('ccDescription');
+  function applyMatch(d){
+    var n=Object.keys(d.qty).length; if(!n) return clearMatch();
+    state.match=d.qty; state.filter=''; syncChips();
+    ccDesc.value=d.description||'';
+    document.getElementById('zvMatchNoteT').textContent='Gemarkeerd: '+(n===1?'1 product dat bij':n+' producten die bij')+' uw antwoorden '+(n===1?'past':'passen')+'.';
+    matchNote.hidden=false;
+    renderRows();
+  }
+  function clearMatch(){
+    state.match=null; ccDesc.value=''; matchNote.hidden=true;
+    renderRows();
+  }
+  document.addEventListener('zv-match:apply',function(e){ applyMatch(e.detail||{qty:{}}); });
+  document.getElementById('zvMatchClear').addEventListener('click',clearMatch);
 
   function renderSummary(){
     var list=document.getElementById('sumList'), keys=Object.keys(state.lines);
@@ -400,7 +440,8 @@
     });
     var payload={ lead_type:'camerahardware', source_page:'zelf-samenstellen', name:name, phone:phone, email:email||null,
       consent:consent, cta_location:'zelf_samenstellen_page', source:captureSource(),
-      item_name:setup.length?setup.join(', '):null, one_time_price:koop?euro(koop):null, monthly_price:huur?euro(huur):null };
+      item_name:setup.length?setup.join(', '):null, one_time_price:koop?euro(koop):null, monthly_price:huur?euro(huur):null,
+      description:ccDesc.value||null };
     if (window.ZVLeadWebhook) { window.ZVLeadWebhook.send(payload, 'zelf_samenstellen'); }
     try{ var leads=JSON.parse(localStorage.getItem('zv_leads')||'[]'); leads.push(payload); localStorage.setItem('zv_leads', JSON.stringify(leads)); }catch(ex){}
     /* #ccDone sits inside the form, so hide the fields, not the form, or the thank-you never shows. */
@@ -531,6 +572,16 @@
 .zv-zelf .ch-bar-t b { font-weight:900; }
 .zv-zelf .ch-bar a { flex:none; font-size:13.5px; font-weight:800; color:var(--ink); background:var(--gold); border-radius:999px; padding:9px 15px; text-decoration:none; }
 @media(max-width:620px){ .zv-zelf .ch-bar-in { gap:10px; padding-left:14px; } .zv-zelf .ch-bar-t { font-size:12.5px; } }
+
+/* Matcher result (sections/zelf-samenstellen-matcher.liquid): recommended cards marked, the rest dimmed. */
+.zv-zelf .zv-match-note { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; margin:-6px 0 20px; padding:11px 16px; background:#fbf1e0; border:1.5px solid var(--gold); border-radius:12px; font-size:13.5px; font-weight:700; color:var(--ink); }
+.zv-zelf .zv-match-note[hidden] { display:none; }
+.zv-zelf .zv-match-note button { font-family:inherit; font-size:13.5px; font-weight:800; color:var(--indigo); background:none; border:none; padding:2px 0; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+.zv-zelf .hw.zv-match-hit { border-color:var(--gold); box-shadow:0 10px 26px -18px rgba(180,126,10,.7); }
+.zv-zelf .hw.zv-match-hit.has { border-color:var(--indigo); }
+.zv-zelf .hw.zv-match-dim:not(.has) { opacity:.5; transition:opacity .14s,border-color .14s,box-shadow .14s; }
+.zv-zelf .hw.zv-match-dim:not(.has):hover, .zv-zelf .hw.zv-match-dim:not(.has):focus-within { opacity:1; }
+.zv-zelf .zv-match-badge { position:absolute; top:10px; right:10px; font-size:11px; font-weight:800; letter-spacing:.02em; color:var(--ink); background:var(--gold); border-radius:999px; padding:4px 10px; }
 
 /* Uw set: summary + callback */
 .zv-zelf .ch-setup { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); gap:20px; align-items:start; padding-top:clamp(28px,3.4vw,40px); scroll-margin-top:132px; }
