@@ -1,5 +1,6 @@
 {
   "sections": {
+    "matcher": { "type": "zelf-samenstellen-matcher", "settings": {} },
     "main": {
       "type": "zelf-samenstellen",
       "blocks": {
@@ -10,5 +11,5 @@
       "settings": {}
     }
   },
-  "order": ["main"]
+  "order": ["matcher", "main"]
 }

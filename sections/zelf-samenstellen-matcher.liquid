@@ -1,0 +1,267 @@
+{%- comment -%}
+  Zo Veilig — vragenhulp boven de Zelf samenstellen-grid (2026-11-02). A short question flow that
+  narrows down which products the visitor needs. It does NOT show or compute a price: it builds a
+  {slug: qty} map from the answers and hands it to sections/zelf-samenstellen.liquid with a
+  `zv-match:apply` event on document ({qty, description}). The grid owns the rest (it re-renders its
+  cards on every Koop/Huur click, so the marking has to live in its state): `data-match` on every card,
+  `.zv-match-hit` + "Aanbevolen · Nx" badge on the recommended ones, the others dimmed, a "Toon alles"
+  link, and the plain-text description in the callback form's hidden #ccDescription.
+
+  Slugs (the grid's HW rows carry them as `m`): magneetcontact, pir, rookmelder, watersensor,
+  binnencamera, dome826, floodlight729, buitencamera730, videodeurbel750, videodeurbel780,
+  afstandsbediening. Quantities per answer are in the script below. Not here, deliberately: no
+  Huren/Kopen question, no Ontzorgpakket, no hub/paneel (no such product is purchasable standalone).
+  See docs/zelf-samenstellen-matcher-2026-11-02.md.
+{%- endcomment -%}
+
+<div class="zv-match">
+  <div class="wrap">
+    <form class="zvm-card" id="zvmForm" novalidate aria-labelledby="zvm-q1">
+
+      <fieldset class="zvm-q" id="zvmQ1">
+        <legend id="zvm-q1">Wat wilt u toevoegen aan uw beveiliging?</legend>
+        <div class="zvm-opts">
+          <label class="zvm-opt"><input type="checkbox" name="want" value="inbraak"><span>Inbraakbeveiliging</span></label>
+          <label class="zvm-opt"><input type="checkbox" name="want" value="rookwater"><span>Rook- en waterdetectie</span></label>
+          <label class="zvm-opt"><input type="checkbox" name="want" value="camera"><span>Camera's</span></label>
+          <label class="zvm-opt"><input type="checkbox" name="want" value="deurbel"><span>Videodeurbel</span></label>
+          <label class="zvm-opt"><input type="checkbox" name="want" value="afstand"><span>Afstandsbediening</span></label>
+        </div>
+      </fieldset>
+
+      <div class="zvm-block" data-block="inbraak" hidden>
+        <fieldset class="zvm-q">
+          <legend>Wat voor type woning is het?</legend>
+          <div class="zvm-opts">
+            <label class="zvm-opt"><input type="radio" name="woning" value="appartement"><span>Appartement</span></label>
+            <label class="zvm-opt"><input type="radio" name="woning" value="rijtjeswoning"><span>Rijtjeswoning</span></label>
+            <label class="zvm-opt"><input type="radio" name="woning" value="vrijstaand"><span>Vrijstaand/anders</span></label>
+          </div>
+        </fieldset>
+        <fieldset class="zvm-q">
+          <legend>Hoeveel verdiepingen heeft de woning?</legend>
+          <div class="zvm-opts">
+            <label class="zvm-opt"><input type="radio" name="etages" value="1"><span>1 etage</span></label>
+            <label class="zvm-opt"><input type="radio" name="etages" value="2"><span>2 etages</span></label>
+            <label class="zvm-opt"><input type="radio" name="etages" value="3"><span>3 etages</span></label>
+            <label class="zvm-opt"><input type="radio" name="etages" value="4"><span>4 etages</span></label>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="zvm-block" data-block="rookwater" hidden>
+        <div class="zvm-q">
+          <label class="zvm-ql" for="zvmRook">Hoeveel rookmelders heeft u nodig?</label>
+          <div class="zvm-step">
+            <button type="button" data-d="-1" aria-label="Eén rookmelder minder">−</button>
+            <input type="number" id="zvmRook" min="1" step="1" value="1" inputmode="numeric" data-min="1">
+            <button type="button" data-d="1" aria-label="Eén rookmelder meer">+</button>
+          </div>
+        </div>
+        <div class="zvm-q">
+          <label class="zvm-ql" for="zvmWater">Waar wilt u een watersensor plaatsen? (bijv. wasmachine, cv-ketel, kelder)</label>
+          <div class="zvm-step">
+            <button type="button" data-d="-1" aria-label="Eén watersensor minder">−</button>
+            <input type="number" id="zvmWater" min="0" step="1" value="1" inputmode="numeric" data-min="0">
+            <button type="button" data-d="1" aria-label="Eén watersensor meer">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="zvm-block" data-block="camera" hidden>
+        <fieldset class="zvm-q">
+          <legend>Binnen of buiten?</legend>
+          <div class="zvm-opts">
+            <label class="zvm-opt"><input type="checkbox" name="where" value="binnen"><span>Binnen</span></label>
+            <label class="zvm-opt"><input type="checkbox" name="where" value="buiten"><span>Buiten</span></label>
+          </div>
+        </fieldset>
+        <fieldset class="zvm-q" data-block="buiten" hidden>
+          <legend>Heeft u vaste stroom bij de camera, of liever geen bekabeling?</legend>
+          <div class="zvm-opts">
+            <label class="zvm-opt"><input type="radio" name="campower" value="dome826"><span>Vaste stroom</span></label>
+            <label class="zvm-opt"><input type="radio" name="campower" value="floodlight729"><span>Liever draadloos</span></label>
+            <label class="zvm-opt"><input type="radio" name="campower" value="buitencamera730"><span>Premium met spotlight</span></label>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="zvm-block" data-block="deurbel" hidden>
+        <fieldset class="zvm-q">
+          <legend>Heeft u stroom bij de voordeur, of liever op accu?</legend>
+          <div class="zvm-opts">
+            <label class="zvm-opt"><input type="radio" name="bel" value="videodeurbel750"><span>Vaste stroom</span></label>
+            <label class="zvm-opt"><input type="radio" name="bel" value="videodeurbel780"><span>Liever op accu</span></label>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="zvm-block" data-block="afstand" hidden>
+        <div class="zvm-q">
+          <label class="zvm-ql" for="zvmAfst">Hoeveel afstandsbedieningen heeft u nodig?</label>
+          <div class="zvm-step">
+            <button type="button" data-d="-1" aria-label="Eén afstandsbediening minder">−</button>
+            <input type="number" id="zvmAfst" min="1" step="1" value="1" inputmode="numeric" data-min="1">
+            <button type="button" data-d="1" aria-label="Eén afstandsbediening meer">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="zvm-err" id="zvmErr" role="alert" hidden></div>
+      <button type="submit" class="zvm-go">Bekijk mijn aanbevolen producten<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </form>
+  </div>
+</div>
+
+<script>
+(function(){
+  var scope = document.querySelector('.zv-match'); if(!scope) return;
+  var form = scope.querySelector('#zvmForm'), err = scope.querySelector('#zvmErr');
+
+  /* Names for the plain-text description only (the lead's "Offerteformulier: ..." line), in this order. */
+  var ORDER = ['magneetcontact','pir','rookmelder','watersensor','binnencamera','dome826','floodlight729','buitencamera730','videodeurbel750','videodeurbel780','afstandsbediening'];
+  var LABEL = {
+    magneetcontact:'Magneetcontact', pir:'PIR bewegingsdetector', rookmelder:'Rookmelder', watersensor:'Watersensor',
+    binnencamera:'Binnencamera', dome826:'Buitencamera Dome 826', floodlight729:'Floodlight camera 729',
+    buitencamera730:'Buitencamera 730 met spotlight', videodeurbel750:'Videodeurbel 750', videodeurbel780:'Videodeurbel 780',
+    afstandsbediening:'Afstandsbediening'
+  };
+  var MAGNEET = { appartement:2, rijtjeswoning:3, vrijstaand:4 };   // woning type -> magneetcontact qty
+  var PIR = { '1':0, '2':1, '3':2, '4':3 };                          // etages -> pir qty (0 = not added)
+
+  function one(sel){ return scope.querySelector(sel); }
+  function val(name){ var el=form.querySelector('input[name="'+name+'"]:checked'); return el?el.value:null; }
+  function has(name,v){ var el=form.querySelector('input[name="'+name+'"][value="'+v+'"]'); return !!(el&&el.checked); }
+  function stepInput(el){ var n=parseInt(el.value,10), min=parseInt(el.getAttribute('data-min'),10); return (isNaN(n)||n<min)?min:n; }
+
+  /* Rookmelder defaults to the number of etages once that is answered, until the visitor edits it. */
+  var rook = one('#zvmRook'), rookTouched = false;
+  function syncRook(){ if(!rookTouched) rook.value = val('etages') || 1; }
+
+  function syncBlocks(){
+    ['inbraak','rookwater','camera','deurbel','afstand'].forEach(function(c){
+      one('.zvm-block[data-block="'+c+'"]').hidden = !has('want',c);
+    });
+    one('[data-block="buiten"]').hidden = !(has('want','camera') && has('where','buiten'));
+    syncRook();
+  }
+  form.addEventListener('change',function(e){
+    if(e.target.name==='etages') syncRook();
+    syncBlocks(); clearMissing();
+  });
+
+  form.addEventListener('click',function(e){
+    var b=e.target.closest('.zvm-step button'); if(!b) return;
+    var inp=b.parentNode.querySelector('input');
+    inp.value=Math.max(parseInt(inp.getAttribute('data-min'),10), stepInput(inp)+parseInt(b.getAttribute('data-d'),10));
+    if(inp===rook) rookTouched=true;
+  });
+  rook.addEventListener('input',function(){ rookTouched=true; });
+  form.querySelectorAll('.zvm-step input').forEach(function(inp){
+    inp.addEventListener('change',function(){ inp.value=stepInput(inp); });
+  });
+
+  function clearMissing(){
+    err.hidden=true;
+    form.querySelectorAll('.is-missing').forEach(function(f){ f.classList.remove('is-missing'); });
+  }
+  /* Required answers of every revealed block; returns the first fieldset that is still open. */
+  function firstMissing(){
+    var miss=[];
+    if(!form.querySelector('input[name="want"]:checked')) miss.push(one('#zvmQ1'));
+    if(has('want','inbraak')){
+      if(!val('woning')) miss.push(form.querySelector('input[name="woning"]').closest('fieldset'));
+      if(!val('etages')) miss.push(form.querySelector('input[name="etages"]').closest('fieldset'));
+    }
+    if(has('want','camera')){
+      if(!form.querySelector('input[name="where"]:checked')) miss.push(form.querySelector('input[name="where"]').closest('fieldset'));
+      else if(has('where','buiten') && !val('campower')) miss.push(one('[data-block="buiten"]'));
+    }
+    if(has('want','deurbel') && !val('bel')) miss.push(form.querySelector('input[name="bel"]').closest('fieldset'));
+    return miss;
+  }
+
+  /* Answers -> {slug: qty}. Only blocks that are revealed count; a qty of 0 is left out. */
+  function compute(){
+    var q={};
+    function add(slug,n){ if(n>0) q[slug]=(q[slug]||0)+n; }
+    if(has('want','inbraak')){ add('magneetcontact', MAGNEET[val('woning')]); add('pir', PIR[val('etages')]); }
+    if(has('want','rookwater')){ add('rookmelder', stepInput(rook)); add('watersensor', stepInput(one('#zvmWater'))); }
+    if(has('want','camera')){
+      if(has('where','binnen')) add('binnencamera',1);
+      if(has('where','buiten')) add(val('campower'),1);
+    }
+    if(has('want','deurbel')) add(val('bel'),1);
+    if(has('want','afstand')) add('afstandsbediening', stepInput(one('#zvmAfst')));
+    return q;
+  }
+
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var miss=firstMissing();
+    if(miss.length){
+      miss.forEach(function(f){ f.classList.add('is-missing'); });
+      err.textContent = miss[0].id==='zvmQ1' ? 'Kies minstens één onderdeel.' : 'Beantwoord nog de gemarkeerde vragen.';
+      err.hidden=false;
+      var first=miss[0].querySelector('input'); if(first) first.focus();
+      return;
+    }
+    clearMissing();
+    var qty=compute();
+    var description='Offerteformulier: '+ORDER.filter(function(s){ return qty[s]; }).map(function(s){ return qty[s]+'x '+LABEL[s]; }).join(', ');
+    document.dispatchEvent(new CustomEvent('zv-match:apply',{detail:{qty:qty,description:description}}));
+    var grid=document.getElementById('winkel');
+    if(grid){
+      var still=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      grid.scrollIntoView({behavior:still?'auto':'smooth',block:'start'});
+      var note=document.getElementById('zvMatchNote'); if(note) note.focus({preventScroll:true});
+    }
+  });
+
+  syncBlocks();
+})();
+</script>
+
+{% stylesheet %}
+.zv-match {
+  --ink:#1a1230; --indigo:#322469; --indigo-2:#473a86; --indigo-soft:#efecf7;
+  --cream:#fdfaf2; --paper:#fffdf8; --gold:#e4a311; --belt:#9c6c08;
+  --red:#e24b4a; --rood:#c52e2f; --line:#e8e0cd; --line-2:#ded6c0; --muted:#6f6786;
+  color:var(--ink); line-height:1.5; background:#fbf5e9;
+}
+.zv-match .wrap { max-width:1180px; margin:0 auto; padding:clamp(24px,3.4vw,44px) clamp(16px,3.4vw,48px); }
+.zv-match .zvm-card { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:clamp(18px,2.6vw,30px); box-shadow:0 26px 56px -42px rgba(26,18,48,.5); display:flex; flex-direction:column; gap:22px; max-width:860px; }
+.zv-match fieldset { border:0; margin:0; padding:0; min-width:0; }
+.zv-match legend, .zv-match .zvm-ql { display:block; padding:0; font-size:clamp(16px,1.8vw,18px); font-weight:900; color:var(--indigo); letter-spacing:-.01em; line-height:1.3; margin-bottom:10px; }
+.zv-match #zvm-q1 { font-size:clamp(20px,2.4vw,26px); }
+.zv-match .zvm-block { display:flex; flex-direction:column; gap:20px; padding-top:20px; border-top:1px solid var(--line); }
+.zv-match .zvm-block[hidden], .zv-match [data-block][hidden], .zv-match .zvm-err[hidden] { display:none; }
+.zv-match .zvm-opts { display:flex; flex-wrap:wrap; gap:10px; }
+.zv-match .zvm-opt { display:inline-flex; align-items:center; gap:9px; font-size:14.5px; font-weight:800; color:var(--indigo); background:#fff; border:1.5px solid var(--line-2); border-radius:12px; padding:11px 15px; cursor:pointer; transition:border-color .14s,background .14s; }
+.zv-match .zvm-opt:hover { border-color:var(--indigo); }
+.zv-match .zvm-opt input { width:18px; height:18px; margin:0; flex:none; accent-color:var(--indigo); }
+.zv-match .zvm-opt:has(input:checked) { border-color:var(--indigo); background:var(--indigo-soft); }
+.zv-match .zvm-opt:has(input:focus-visible) { outline:2px solid var(--indigo); outline-offset:3px; }
+.zv-match .is-missing legend, .zv-match .is-missing .zvm-ql { color:var(--rood); }
+.zv-match .is-missing .zvm-opt { border-color:var(--red); }
+.zv-match .zvm-step { display:inline-flex; align-items:center; border:1.5px solid var(--line-2); border-radius:11px; overflow:hidden; background:#fff; }
+.zv-match .zvm-step button { width:42px; height:44px; border:none; background:#fff; color:var(--indigo); font-family:inherit; font-size:20px; font-weight:800; line-height:1; cursor:pointer; }
+.zv-match .zvm-step button:hover { background:var(--indigo-soft); }
+.zv-match .zvm-step input { width:56px; height:44px; border:none; border-left:1.5px solid var(--line); border-right:1.5px solid var(--line); text-align:center; font-family:inherit; font-size:16px; font-weight:900; color:var(--ink); background:#fff; -moz-appearance:textfield; appearance:textfield; }
+.zv-match .zvm-step input::-webkit-outer-spin-button, .zv-match .zvm-step input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+.zv-match .zvm-step button:focus-visible, .zv-match .zvm-step input:focus-visible, .zv-match .zvm-go:focus-visible { outline:2px solid var(--indigo); outline-offset:3px; }
+.zv-match .zvm-err { font-size:13.5px; font-weight:700; color:var(--rood); }
+.zv-match .zvm-go { align-self:flex-start; display:inline-flex; align-items:center; gap:9px; font-family:inherit; font-size:15.5px; font-weight:800; color:var(--ink); background:var(--gold); border:none; border-radius:13px; padding:15px 22px; box-shadow:0 2px 0 var(--belt); cursor:pointer; transition:transform .14s,box-shadow .14s; }
+.zv-match .zvm-go:hover { transform:translateY(-1px); box-shadow:0 4px 0 var(--belt),0 12px 24px -12px rgba(180,126,10,.7); }
+.zv-match .zvm-go svg { width:18px; height:18px; }
+@media(max-width:520px){ .zv-match .zvm-go { align-self:stretch; justify-content:center; } .zv-match .zvm-opt { flex:1 1 100%; } }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Zelf samenstellen vragen",
+  "tag": "section",
+  "settings": [],
+  "presets": [{ "name": "Zelf samenstellen vragen" }]
+}
+{% endschema %}
