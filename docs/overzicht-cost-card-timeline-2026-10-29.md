@@ -78,8 +78,11 @@ maanden (50% korting)", "Ontzorgpakket × 3 — eerste 3 maanden" and "Protect �
 
 ## Timeline ("Wanneer betaalt u wat?")
 
-An indigo panel (`.ovtimeline-*`, only the section's existing colour variables) between the breakdown
-and the Contract block: a dot-and-line timeline with uppercase gold step labels and a large amount per
+Since 2026-11-02 the timeline is no longer a separate box: the breakdown and the timeline share one
+indigo card (`.ovcard.ovcost.ovcost--dark`, the timeline continuing the same surface below a hairline),
+and the Contract / Maandelijkse betaling / Installatie / Bezorging rows sit in their own light card
+(`.ovcard.ovcost-details`) under it. Colours are the section's existing variables only. The timeline
+(`.ovtimeline-*`) is a dot-and-line timeline with uppercase gold step labels and a large amount per
 step. N = `zv_promo_months` (3); no number of months or amount is written into the file.
 
 | Step | Shown when | Figure | Source |
