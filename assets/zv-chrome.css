@@ -67,7 +67,11 @@
 .util .u-r a:hover { color: #fff; }
 .util .u-r .ph { color: #fff; display: flex; align-items: center; gap: 7px; }
 .util .u-r .ph svg { width: 14px; height: 14px; }
-@media (max-width: 720px) { .util .u-l span.long { display: none; } .util .u-r .hideph { display: none; } }
+@media (max-width: 720px) {
+  .util .u-l span.long { display: none; }
+  .util .u-r .hideph { display: none; }
+  .util .wrap { height: auto; min-height: 38px; flex-wrap: wrap; row-gap: 4px; padding-top: 8px; padding-bottom: 8px; }
+}
 
 /* Sticky header.
    Dawn wraps the zv-header section in a .shopify-section-group-header-group grid item
