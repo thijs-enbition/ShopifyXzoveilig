@@ -35,3 +35,32 @@ CTA. Climax-only (Beschermd): no picker, active CTA (guard adds CL003). Mixed NA
 CTA; picking removes CL003, the guard re-adds it once, no loop (same as Overzicht today).
 `check_pricing.py` passes; `shopify theme check`: 0 errors, +11 warnings vs main (546 -> 557), all
 `UndefinedObject` for `zv-pricing` globals / `activation_variant_id` that the checker can't see across files.
+
+## Follow-up, same day: Oplossingen bypassed /cart entirely
+The above shipped with `sections/zv-cart.liquid` as the only edited theme file, which missed that
+Oplossingen's own three checkout entry points (the post-add-to-cart drawer's "Naar afrekenen",
+`sections/oplossingen.liquid` line ~2353, and both `mode === 'checkout'` branches in `addToCart()`,
+~2121/2126 — the "Direct afrekenen" path) all linked straight to `/cart?view=overzicht` via a shared
+`overzichtUrl` variable, never touching `/cart`. Not a checkout-safety gap — Overzicht's own
+fallback gate still blocked a NAMI cart with no install line from reaching Shopify's real
+checkout — but it meant the picker was invisible to anyone using Oplossingen's own CTAs, which is
+most real traffic: they'd never see it, only the pre-existing Overzicht fallback, exactly as before
+this feature existed.
+
+Fixed by renaming `overzichtUrl` to `checkoutNextUrl` and pointing it at `/cart` instead of
+`/cart?view=overzicht` — one variable, so all 3 call sites are fixed together. `/cart`'s own "Naar
+afrekenen" still goes on to Overzicht, so Overzicht is still never skipped, just reached one stop
+later, the same route the header cart icon already uses. Applied uniformly (NAMI and Climax
+packages alike now stop at `/cart` first) rather than branching per package type (the two
+"Direct afrekenen" call sites already have `isClimax` in scope cheaply, but the drawer's CTA
+reflects the live cart's full contents on every render, not just the item last added, and giving
+it its own NAMI-detection would be a 3rd copy of that logic — the exact case this doc's
+Duplication section above flagged as worth revisiting). Means a Climax-only add now takes one
+extra click through `/cart` it didn't strictly need; no safety or pricing effect either way.
+CLAUDE.md's "every checkout entry point" paragraph updated to match.
+
+**Verified 2026-11-02** (disposable theme, real Chrome, from Oplossingen): the drawer's "Naar afrekenen" href is
+`/cart` for an Inzicht add and a Beschermd add; clicking it, and "Direct afrekenen" from the detail modal
+(`aware`, `care`), all land on `/cart`. Inzicht: picker shown, CTA a disabled button. Beschermd: no picker,
+active CTA, which goes on to `/cart?view=overzicht`. `sections/betaling-mislukt.liquid` still links
+straight to Overzicht ("Probeer opnieuw te betalen"): left as is, that cart already has its install line.

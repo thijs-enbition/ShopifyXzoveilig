@@ -32,15 +32,21 @@ can't both be represented by a single set of rows, and showing either alone woul
 not just incomplete. The "Daarna" total is unaffected by this restriction — it's just a sum
 of each package line's own unit price, so it stays correct across multiple packages.
 
-**Every checkout entry point must land on `/cart?view=overzicht` first, never straight on
+**Every checkout entry point must eventually reach `/cart?view=overzicht`, never straight on
 Shopify's own `/checkout`** — Overzicht is where `av_akkoord` consent is captured, so
 skipping it is a compliance gap, not a UX inconsistency. This bit a real bug once (confirmed
 2026-09-09): the Oplossingen page's post-add-to-cart drawer ("Naar afrekenen") and its detail
-modal's "Direct afrekenen" button both linked straight to `/checkout`. Both now resolve a
-`data-cart-url` (from `routes.cart_url`) into `overzichtUrl` and use that instead — see
-`sections/oplossingen.liquid`'s `addToCart()`. If you add a new checkout entry point anywhere
-in the theme, it must go through Overzicht the same way; grep for a literal `/checkout` string
-outside `sections/zv-checkout-overview.liquid` itself as a quick regression check.
+modal's "Direct afrekenen" button both linked straight to `/checkout`. Both were fixed to resolve
+a `data-cart-url` (from `routes.cart_url`) into one shared variable and use that instead — see
+`sections/oplossingen.liquid`'s `addToCart()`. **Since 2026-11-02** (the NAMI installation choice
+moving to `/cart`, `docs/install-choice-to-cart-2026-11-02.md`), that variable is `checkoutNextUrl`
+and points at `/cart` itself rather than `/cart?view=overzicht` directly: `/cart`'s own "Naar
+afrekenen" still goes on to Overzicht, so Overzicht is never skipped, just reached one stop
+later, through the same route the main cart icon already uses. If you add a new checkout entry
+point anywhere in the theme, it must resolve through `/cart` (or, for something that provably
+never needs the install picker, straight to `/cart?view=overzicht`) the same way; grep for a
+literal `/checkout` string outside `sections/zv-checkout-overview.liquid` itself as a quick
+regression check.
 
 **A package must never reach checkout in any shape other than "package × 3 + one installation
 line"**, plus, for a package with a Woning choice, its platform's Woning line at 3 x the floors
