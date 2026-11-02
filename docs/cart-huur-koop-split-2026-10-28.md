@@ -184,6 +184,7 @@ the "Woning: <option>" meta line under a package, Overzicht's "Aantal: N" line) 
 - `sections/zv-cart.liquid`: no Woning meta under a package line, no plain SEPA span.
 - `sections/zv-checkout-overview.liquid`: no Woning meta, no "Aantal", no plain SEPA line.
   "Apparatuur, eenmalig" (bought package) and "Hoort bij uw gekochte videodeurbel" stay.
-- Untouched: the Woning row itself ("Woning: <option>" as the line's own name), the Woning line's
-  "Eerste 3 maanden vandaag, daarna in het maandbedrag van uw pakket." note, "Daarna" totals.
+- Follow-up, same day: the Woning row's own note ("Eerste 3 maanden vandaag, daarna in het maandbedrag
+  van uw pakket.", Overzicht's "... vooruit, ..." variant) is gone from both pages too.
+- Untouched: the Woning row itself ("Woning: <option>" as the line's own name, price and badge), "Daarna" totals.
 
