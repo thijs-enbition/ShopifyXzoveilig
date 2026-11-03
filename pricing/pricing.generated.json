@@ -786,6 +786,8 @@
         "installGroup": "nami",
         "handle": "extra-etage-of-100m2",
         "sku": "N0008",
+        "koopHandle": "koop-extra-etage-of-100m2",
+        "koopSku": "K009.N",
         "appliesTo": [
           "nami-langer-thuis-inzicht",
           "nami-langer-thuis-zeker",
@@ -802,6 +804,8 @@
         "installGroup": "climax",
         "handle": "extra-etage-of-100m2-climax",
         "sku": "E001",
+        "koopHandle": "koop-extra-etage-of-100m2-climax",
+        "koopSku": "K009.C",
         "appliesTo": [
           "langer-thuis-beschermd",
           "mijn-thuis-protect"
@@ -827,7 +831,9 @@
       "guard"
     ],
     "cartQuantityPerFloor": 3,
-    "todayCentsPerFloor": 600
+    "todayCentsPerFloor": 600,
+    "koopUnitCents": 10000,
+    "koopUnitDisplay": "€ 100,00"
   },
   "bundles": [
     {

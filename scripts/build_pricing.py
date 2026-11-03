@@ -245,6 +245,7 @@ def build():
     etage = next(s for s in cfg["surcharges"] if s["id"] == "extra-etage")
     woning_cfg = etage["woning"]
     woning_unit_cents = etage["price"]["amountCents"]
+    woning_koop_unit_cents = (etage.get("koop") or {}).get("price", {}).get("amountCents")
     pkg_by_handle = {pkg.get("productHandle"): pkg for line in cfg["lines"] for pkg in line["packages"]}
     woning_entries = [s for s in cfg["surcharges"] if s.get("shopify")]
     if sum(1 for s in woning_entries if s.get("woning")) != 1:
@@ -258,6 +259,16 @@ def build():
         if s["price"]["amountCents"] != woning_unit_cents:
             raise SystemExit(f"surcharges[{s['id']}]: unit {s['price']['amountCents']} differs from extra-etage's "
                              f"{woning_unit_cents}; the theme shows one price per Woning option")
+        # The one-time Woning line of a BOUGHT package (2026-11-03: K009.N nami, K009.C climax). Flat
+        # price x floors once; never run through promo maths, so a promo field is refused.
+        koop = s.get("koop") or {}
+        if not koop.get("productHandle") or not koop.get("sku"):
+            raise SystemExit(f"surcharges[{s['id']}]: a Woning product needs a koop block with productHandle and sku")
+        if any("promo" in k.lower() for k in list(koop) + list(koop.get("price") or {})):
+            raise SystemExit(f"surcharges[{s['id']}].koop: the intro promo is Huren only, no promo field")
+        if (koop.get("price") or {}).get("amountCents") != woning_koop_unit_cents:
+            raise SystemExit(f"surcharges[{s['id']}].koop: unit {(koop.get('price') or {}).get('amountCents')} differs "
+                             f"from extra-etage's {woning_koop_unit_cents}; the theme shows one eenmalig price per option")
         for h in s.get("appliesTo") or []:
             if (pkg_by_handle.get(h) or {}).get("installGroup") != group:
                 raise SystemExit(f"surcharges[{s['id']}] appliesTo {h!r} is not a {group} package")
@@ -268,6 +279,8 @@ def build():
             "installGroup": group,
             "handle": s["shopify"].get("handle"),
             "sku": s["shopify"].get("sku"),
+            "koopHandle": koop["productHandle"],
+            "koopSku": koop["sku"],
             "appliesTo": list(s.get("appliesTo") or []),
             "appliesToFinderKeys": [pkg_by_handle[h].get("finderKey") for h in s.get("appliesTo") or []],
         })
@@ -303,6 +316,10 @@ def build():
         # Woning cart quantity per floor (one unit per prepaid month) and what that costs today.
         "cartQuantityPerFloor": promo_months if promo_enabled else 0,
         "todayCentsPerFloor": woning_today_per_floor_cents,
+        # A bought package's floors ride the products' koop lines (products[].koopHandle/koopSku):
+        # quantity = floors, one-time, flat unit, no discount, nothing recurring.
+        "koopUnitCents": woning_koop_unit_cents,
+        "koopUnitDisplay": eur(woning_koop_unit_cents),
     }
 
     out = {
@@ -585,6 +602,11 @@ def build():
         f"{{%- assign zv_woning_applies_fks_by_product = '{'|'.join(','.join(p['appliesToFinderKeys']) for p in woning['products'])}' -%}}",
         f"{{%- assign zv_woning_applies_handles = '{'|'.join(woning['appliesTo'])}' -%}}",
         f"{{%- assign zv_woning_applies_fks = '{'|'.join(woning['appliesToFinderKeys'])}' -%}}",
+        # Koop Woning (2026-11-03): the one-time line of a BOUGHT package, parallel to zv_woning_handles.
+        # Flat unit, never promo maths; quantity = floors, no PKG_QTY.
+        f"{{%- assign zv_woning_koop_handles = '{'|'.join(p['koopHandle'] for p in woning['products'])}' -%}}",
+        f"{{%- assign zv_woning_koop_skus = '{'|'.join(p['koopSku'] for p in woning['products'])}' -%}}",
+        f"{{%- assign zv_woning_koop_unit_cents = {woning['koopUnitCents']} -%}}",
     ]
     for o in woning["options"]:
         lines += [
@@ -717,6 +739,9 @@ def build():
     # Woning products, one per installGroup (N0008, E001), in config order.
     ph += _ph_branch("woning", "|".join(p["handle"] for p in woning["products"]),
                      "|".join(p["sku"] for p in woning["products"]), "Woning")
+    # Koop Woning products (K009.N, K009.C; 2026-11-03), parallel to 'woning'.
+    ph += _ph_branch("woning-koop", "|".join(p["koopHandle"] for p in woning["products"]),
+                     "|".join(p["koopSku"] for p in woning["products"]), "Woning (koop)")
     # Rider add-ons (A102B, 2026-10-27), for the header count and /cart (zv-hidden-cart-lines).
     ph += _ph_branch("rider", "|".join(r["productHandle"] for r in riders),
                      "|".join(r["sku"] for r in riders), "")
@@ -745,6 +770,7 @@ def build():
           + f" (unit {woning['unitDisplay']}, today {eur(woning_today_per_floor_cents)} per floor)")
     for wp in woning["products"]:
         print(f"      {wp['installGroup']}: {wp['surchargeId']} {wp['sku']} {wp['handle']}"
+              f" (koop {wp['koopSku']} {wp['koopHandle']} {woning['koopUnitDisplay']} eenmalig)"
               f" applies to {', '.join(wp['appliesTo'])}")
     for p in priced:
         due_today_breakdown = ", ".join(f"{oid}={opt['display']}" for oid, opt in p["dueToday"].items())

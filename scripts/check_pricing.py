@@ -17,7 +17,8 @@ Covers:
  11 commercial pricing status
  12 package display order
  13 Woning surcharge: unit, property values, monthly amounts, contract value, the products
-    it is collected by (N0008 nami, E001 climax) and no theme file naming those products itself
+    it is collected by (N0008 nami, E001 climax; K009.N / K009.C one-time for a bought package,
+    2026-11-03) and no theme file naming those products itself
  14 packages by handle
  15 Huren/Kopen: koop figures per package and hardware add-on, never a promo figure
  16 Ontzorgpakket per package
@@ -501,6 +502,58 @@ for _, w_handle, w_sku, _ in exp_products:
                 and f.name not in GENERATED_THEME_FILES
                 and needle in f.read_text(encoding="utf-8", errors="ignore")]
         check(not hits, f"no theme file hardcodes the Woning product {label} ({needle})", f"found in {hits}")
+
+# Koop Woning (2026-11-03): the ONE-TIME line a bought package's floors ride (K009.N nami, K009.C
+# climax), replacing the 2026-10-28 stopgap that put them on the monthly N0008/E001 line. Created in
+# Shopify Admin, never from this repo. Same rigor as the Huren side: one per Woning product, one
+# equal flat price, resolved by handle + SKU, never promo maths, quantity = floors (no PKG_QTY).
+EXPECTED_WONING_KOOP = {
+    "nami": ("koop-extra-etage-of-100m2", "K009.N"),
+    "climax": ("koop-extra-etage-of-100m2-climax", "K009.C"),
+}
+EXPECTED_WONING_KOOP_UNIT_CENTS = 10000
+koop_by_group = {s.get("installGroup"): ((s.get("koop") or {}).get("productHandle"), (s.get("koop") or {}).get("sku"))
+                 for s in woning_entries}
+check(koop_by_group == EXPECTED_WONING_KOOP,
+      "Woning koop products: K009.N for Inzicht/Zeker/Alert (nami), K009.C for Beschermd/Protect (climax)",
+      f"got {koop_by_group}")
+koop_prices = [(s.get("koop") or {}).get("price", {}).get("amountCents") for s in woning_entries]
+check(len(set(koop_prices)) == 1 and koop_prices[0] == EXPECTED_WONING_KOOP_UNIT_CENTS,
+      "both Woning koop products carry the same flat price, EUR 100,00 eenmalig", f"got {koop_prices}")
+for s in woning_entries:
+    k = s.get("koop") or {}
+    check(not any("promo" in key.lower() for key in list(k) + list(k.get("price") or {})),
+          f"surcharges[{s['id']}].koop carries no promo field")
+    check(k.get("price", {}).get("per") == "eenmalig", f"surcharges[{s['id']}].koop is priced eenmalig",
+          f"got {k.get('price', {}).get('per')!r}")
+    check(k.get("productHandle") != (s.get("shopify") or {}).get("handle") and k.get("sku") != (s.get("shopify") or {}).get("sku"),
+          f"surcharges[{s['id']}].koop is a different product than its Huren Woning line")
+check(woning.get("koopUnitCents") == EXPECTED_WONING_KOOP_UNIT_CENTS,
+      "generated woning.koopUnitCents is 10000 (flat, never promo-discounted)", f"got {woning.get('koopUnitCents')}")
+check([(p.get("installGroup"), p.get("koopHandle"), p.get("koopSku")) for p in woning.get("products", [])]
+      == [(g, *v) for g, v in EXPECTED_WONING_KOOP.items()],
+      "generated woning.products carry the koop handle and SKU, in config order")
+check(snippet_int("zv_woning_koop_unit_cents") == EXPECTED_WONING_KOOP_UNIT_CENTS,
+      "zv_woning_koop_unit_cents = 10000", f"got {snippet_int('zv_woning_koop_unit_cents')}")
+exp_koop = list(EXPECTED_WONING_KOOP.values())
+check(snippet_str("zv_woning_koop_handles") == "|".join(h for h, _ in exp_koop),
+      "zv_woning_koop_handles lists K009.N's then K009.C's handle, parallel to zv_woning_handles",
+      f"got {snippet_str('zv_woning_koop_handles')!r}")
+check(snippet_str("zv_woning_koop_skus") == "|".join(s for _, s in exp_koop),
+      "zv_woning_koop_skus is K009.N|K009.C, parallel to zv_woning_koop_handles",
+      f"got {snippet_str('zv_woning_koop_skus')!r}")
+check(not re.search(r"zv_woning_koop_\w*(promo|icv|monthly|mnd)\w*", snippet_text),
+      "no promo, ICV or monthly figure is emitted for the koop Woning line")
+blk_koop = ph_text.split("when 'woning-koop'", 1)[1].split("when '", 1)[0] if "when 'woning-koop'" in ph_text else ""
+check(f"echo '{snippet_str('zv_woning_koop_handles')}'" in blk_koop and f"echo '{snippet_str('zv_woning_koop_skus')}'" in blk_koop,
+      "zv-package-handles.liquid 'woning-koop' lists both koop Woning products")
+for w_handle, w_sku in exp_koop:
+    for label, needle in (("SKU", w_sku), ("handle", w_handle)):
+        hits = [str(f.relative_to(ROOT)) for d in THEME_DIRS for f in (ROOT / d).rglob("*")
+                if f.is_file() and f.suffix in {".liquid", ".json", ".css", ".js"}
+                and f.name not in GENERATED_THEME_FILES
+                and needle in f.read_text(encoding="utf-8", errors="ignore")]
+        check(not hits, f"no theme file hardcodes the koop Woning product {label} ({needle})", f"found in {hits}")
 
 print("\n14. Packages by handle (pricing.config.json, never a tagged collection)")
 # The theme renders package cards, the pakket-matcher's product map and the homepage finder's
