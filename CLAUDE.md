@@ -50,7 +50,9 @@ regression check.
 
 **A package must never reach checkout in any shape other than "package × 3 + one installation
 line"**, plus, for a package with a Woning choice, its platform's Woning line at 3 x the floors
-(N0008 for NAMI, E001 for Climax since 2026-10-27; see **Pricing pipeline** below). Enforced twice, since nothing stops a line being changed
+(N0008 for NAMI, E001 for Climax since 2026-10-27; see **Pricing pipeline** below). A **bought**
+package (Koop) has no monthly Woning line: its floors ride the platform's one-time Koop Woning
+line instead, at quantity = floors, no discount (K009.N NAMI, K009.C Climax since 2026-11-03). Enforced twice, since nothing stops a line being changed
 after the fact or a package reaching the cart through an unexpected route:
 - **Client-side:** `snippets/zv-cart-guard.liquid` (rendered on `/cart` and `/cart?view=overzicht`)
   checks the live cart on load, fixes one thing and reloads:
@@ -62,7 +64,10 @@ after the fact or a package reaching the cart through an unexpected route:
   - (lowest priority, since 2026-09-25; per platform since 2026-10-27) each **Woning line**
     (N0008 NAMI, E001 Climax, see **Pricing pipeline**) is kept at `pkg_qty` x the floors over
     its OWN platform's package lines' `Woning` properties: several lines are merged into one, a
-    wrong quantity is set, target 0 removes it, and a cart with Woning but no line gets it added;
+    wrong quantity is set, target 0 removes it, and a cart with Woning but no line gets it added.
+    Only RENTED packages' floors count there; a bought package's floors are kept on the platform's
+    one-time Koop Woning line at quantity = floors (2026-11-03; no pkg_qty), which the guard
+    recognises by handle and adds with the variant id it fetches from `/products/<handle>.js`;
   - a package line whose package doesn't offer Woning but carries a `Woning` property has it
     deleted via `/cart/change.js`, quantity kept (no package today; until 2026-10-27 this was
     every Climax line). A legacy `Abonnement` property is left alone;
@@ -92,6 +97,9 @@ after the fact or a package reaching the cart through an unexpected route:
     quantity isn't `pkg_qty` x its own platform's floors, it carries no discount, or its unit
     `original_price` isn't `zv_woning_unit_cents`. Never overcharge for Woning. **E001 is not in
     the discount yet (2026-10-27), so every Climax Woning checkout is blocked until it is.**
+    The same gate covers the Koop Woning lines (2026-11-03): quantity must be exactly the floors of
+    the bought packages of that platform, on one line, with NO discount and unit
+    `zv_woning_koop_unit_cents`; floors without a line block too.
 
 **Known limitation: both checks run in the theme, so any route to Shopify checkout that skips
 Overzicht bypasses them.** A cart permalink (`/cart/<variant>:<qty>`) and typing or bookmarking
@@ -129,6 +137,8 @@ none of them carry `abonnement`:
 | Extra etage of >100m2 (the NAMI Woning line, not a package) | `extra-etage-of-100m2` | NAMI_abonnementen | — | — | N0008 |
 | Extra etage of >100m2 Climax (the Climax Woning line, 2026-10-27) | `extra-etage-of-100m2-climax` | NAMI_abonnementen | — | — | E001 |
 | Camera abonnement Videodeurbel 1200 clips (rides with ADC-750, 2026-10-27) | `camera-abonnement-videodeurbel-1200-clips` | ADC Camera ABO | — | — | A102B |
+| Extra etage of >100m2 Nami (Koop) (one-time Woning line of a bought NAMI package, 2026-11-03) | `koop-extra-etage-of-100m2` | NAMI_abonnementen | — | — | K009.N |
+| Extra etage of >100m2 Climax (Koop) (same, Climax, 2026-11-03) | `koop-extra-etage-of-100m2-climax` | NAMI_abonnementen | — | — | K009.C |
 
 **SKU switch (Thijs, 2026-10-23): Inzicht/Zeker/Alert sell as A0071/A0072/A0073**, handles
 `nami-langer-thuis-inzicht`, `nami-langer-thuis-zeker`, `nami-mijn-thuis-alert`. N0001/N0002/N0003
@@ -155,6 +165,13 @@ Store. E001 (€4,00) is the Climax Woning line, resolved by `surcharges[extra-e
 scope read live on 2026-10-28 includes it**. A102B (€3,50) rides with ADC-750 (`addonNames[].ridesWith`);
 it was outside the discount on 2026-10-27 and is in it since 2026-10-28 (15 products live). See
 `docs/a102b-e001-climax-woning-2026-10-27.md`.
+
+K009.N and K009.C (created in Shopify Admin by Thijs, 2026-11-03 07:02 UTC, confirmed by ID via the Admin
+API: ACTIVE, EUR 100,00, one variant each, inventory untracked, published to the Online Store): the
+one-time Woning line of a **bought** package, resolved by `surcharges[].koop` handle + SKU. They must
+stay OUT of the "Eerste 3 maanden" discount (Overzicht blocks a discounted one). A first `sku:K009*`
+search on 2026-11-03 found nothing; a later one found both (whether that was before they existed or a
+search-index lag is not known), so for a just-created product look it up by ID or handle.
 
 Installation products (2026-09-23): NAMI `geen-installatie-nami` N0006 €0,
 `telefonische-ondersteuning-installatie-nami` N0005 €35, `installatie-nami` N0004 €99 (customer
@@ -252,7 +269,7 @@ file carries an independent literal price or duration; CI runs both on every pus
 
 **HARD RULE (Thijs, 2026-09-23): never create products.** The only products sold on this site
 are the 5 packages and their installation products listed in `docs/prepay-qty3-2026-09-23.md`,
-plus the Woning lines N0008 and E001, the add-ons in `addonNames` (H750, ADC-750, H0010, the
+plus the Woning lines N0008 and E001 (and K009.N / K009.C for a bought package), the add-ons in `addonNames` (H750, ADC-750, H0010, the
 Ontzorgpakket products) and A102B, all created in Shopify Admin, never from here.
 Odoo's contract automation keys off these products, and every new Shopify product becomes a stub
 product in Odoo (the retired PROMO-* products left a `PROMO-ZEK` stub there). Never create
@@ -332,6 +349,22 @@ and Overzicht gate show/check one price per option; a different Climax price nee
   betalen", while "Daarna" and the ICV keep counting the surcharge from the property only (never
   the line too).
 - No theme file outside the generated snippets names N0008, E001 or their handles (`check_pricing.py`).
+- **Koop Woning (2026-11-03, `docs/woning-koop-k009-2026-11-03.md`).** A BOUGHT package's floors no longer
+  ride the monthly N0008/E001 line (2026-10-28 to 2026-11-02 they did: 3 prepaid months at a discount for
+  something bought). Each Woning product has a `koop` block in `pricing.config.json` (`productHandle`,
+  `sku`, `price.amountCents` = 10000 on both, no promo field: `build_pricing.py` and `check_pricing.py`
+  refuse one) emitted as `zv_woning_koop_handles` / `_skus` (parallel to `zv_woning_handles`),
+  `zv_woning_koop_unit_cents` and the `woning-koop` branch of `zv-package-handles`. The line is quantity =
+  floors (one-time, never `pkg_qty`), full price. **It is never looked up with `all_products`**: Oplossingen,
+  the header's `zv-hidden-cart-lines` and /cart are at Shopify's 20-unique-handle limit, so two more
+  lookups would come back blank. Server side it is read off the cart by handle + SKU
+  (`snippets/zv-woning-koop-lines.liquid`, `woning_koop_variant_id_list`); scripts recognise it by
+  `it.handle` and, to ADD it, fetch `/products/<handle>.js` and check the first variant's SKU
+  (`woningKoopVariantId()`, guard `resolveKoopWoningIds()`). The package cards show "+€100 eenmalig" per
+  option (floors x the flat unit) in Kopen mode, "+€4/mnd" in Huren (`.ltc__huur-only` /
+  `.ltc__koop-only`, same CSS swap as the package price). The Meer-informatie modal only adds Huren, so
+  it keeps "/mnd". A Koop line sits in the Kopen group on /cart and Overzicht as a non-editable
+  "Woning: <option value>" row (`zv-woning-label` with `koop_variant_ids`), and is not in the item count.
 
 **Climax packages (Beschermd, Protect) have the same Uitbreidingen panel as NAMI since 2026-10-27**:
 Woning + the add-ons group (Videodeurbel and Afstandsbediening, Ontzorgpakket OHC012). From
@@ -493,9 +526,10 @@ two blocks checkout (`cart_koop_bad`). It is quantity 1 (the guard resets it, ne
 full price with no discount (`cart_koop_bad` if one reaches it), never a huur package for the
 promo, "Daarna", looptijd or ICV, and takes the same installation as huur by installGroup
 (`has_nami_pkg` → the radio group, now shown via `show_nami_install`; `has_climax_pkg` → CL003,
-added by `addKoopToCart()` and the guard). **Woning on a bought package is the property only: no
-Woning line** (Thijs, 2026-10-24, for NAMI; Climax mirrors it since 2026-10-27); Odoo bills it. No
-monthly service-fee line ever.
+added by `addKoopToCart()` and the guard). **Woning on a bought package is the property plus its own
+one-time Koop Woning line (K009.N / K009.C, quantity = floors, 2026-11-03)**; it was property-only
+(Thijs, 2026-10-24 NAMI / 2026-10-27 Climax), then rode the monthly line (2026-10-28 to 2026-11-02).
+How Odoo bills a bought Woning is not decided here.
 
 Ontzorgpakket is the exception to "no monthly service-fee line": on any bought package it
 still syncs to PKG_QTY, exactly as on a rented one (Thijs, 2026-10-26) — this

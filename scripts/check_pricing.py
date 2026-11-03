@@ -555,6 +555,40 @@ for w_handle, w_sku in exp_koop:
                 and needle in f.read_text(encoding="utf-8", errors="ignore")]
         check(not hits, f"no theme file hardcodes the koop Woning product {label} ({needle})", f"found in {hits}")
 
+# How the theme uses the koop Woning products (2026-11-03). The pages that need them are at Shopify's
+# 20-unique-handle limit per page (all_products), so NO theme file may look them up by handle: they are
+# read off the cart (zv-woning-koop-lines) or fetched from /products/<handle>.js and checked against the
+# config SKU. A bought package's floors ride them at quantity = floors, never through the monthly line.
+def theme_text(rel):
+    return (ROOT / rel).read_text(encoding="utf-8")
+lookups = [str(f.relative_to(ROOT)) for d in THEME_DIRS for f in (ROOT / d).rglob("*.liquid")
+           if re.search(r"render 'zv-woning-variants'[^\n]*zv_woning_koop|all_products\[[^\n]*koop_handles", f.read_text(encoding="utf-8", errors="ignore"))]
+check(not lookups, "no theme file resolves the koop Woning products with the all_products budget",
+      f"found in {lookups}")
+guard_txt = theme_text("snippets/zv-cart-guard.liquid")
+check("resolveKoopWoningIds" in guard_txt and "v.sku === wp.koopSku" in guard_txt,
+      "zv-cart-guard fetches a missing koop Woning variant and checks its SKU")
+check("var koopTarget = koopWoningFloors(items, wp);" in guard_txt,
+      "zv-cart-guard rule 5: the koop Woning target is the floors, no pkg_qty multiplier")
+check("koopLines.forEach(function (it) {\n        if (wp.appliesFks" not in guard_txt,
+      "zv-cart-guard: a bought package's floors no longer count towards the monthly Woning line")
+opl_txt = theme_text("sections/oplossingen.liquid")
+fn_koop = opl_txt.split("function woningKoopTargetQty", 1)[1].split("function woningKoopVariantId", 1)[0] if "function woningKoopTargetQty" in opl_txt else ""
+check(bool(fn_koop) and "PKG_QTY" not in fn_koop and "Afname" in fn_koop,
+      "oplossingen woningKoopTargetQty: bought packages only (Afname: Kopen), quantity = floors, no PKG_QTY")
+fn_huur = opl_txt.split("function woningTargetQty", 1)[1].split("// Target quantity of one Woning product's one-time KOOP line", 1)[0] if "function woningTargetQty" in opl_txt else ""
+check(bool(fn_huur) and "cardsBySku" not in fn_huur and "PKG_QTY" in fn_huur,
+      "oplossingen woningTargetQty: monthly line, rented packages by handle only (a bought package's floors are not in it)")
+check("v.sku === wp.koopSku" in opl_txt and "/products/' + encodeURIComponent(wp.koopHandle)" in opl_txt,
+      "oplossingen resolves the koop Woning variant from /products/<handle>.js and checks its SKU")
+ovz_txt = theme_text("sections/zv-checkout-overview.liquid")
+check(re.search(r"assign woning_floor_log = woning_floor_log \| append: forloop.index0 \| append: ':' \| append: item_koop_woning_floors", ovz_txt) is None
+      and "assign woning_koop_floor_log" in ovz_txt and "woning_koop_line_discounted" in ovz_txt,
+      "Overzicht: a bought package's floors feed the koop Woning gate (quantity = floors, no discount), not the monthly one")
+woning_markup = opl_txt.split('data-group="woning"', 1)[1].split("ltc_addons_group_html", 1)[0] if 'data-group="woning"' in opl_txt else ""
+check(woning_markup.count("ltc__koop-only") == 2 and woning_markup.count("eenmalig") == 2 and woning_markup.count("/mnd") == 2,
+      "the card's Woning options show '+€X/mnd' in Huren and '+€X eenmalig' in Kopen (one of each per option)")
+
 print("\n14. Packages by handle (pricing.config.json, never a tagged collection)")
 # The theme renders package cards, the pakket-matcher's product map and the homepage finder's
 # product map by looping these handles with all_products[handle] (fix/packages-by-handle,
