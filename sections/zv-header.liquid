@@ -30,7 +30,7 @@
   <div class="wrap">
     <div class="u-l">
       <span class="pulse" aria-hidden="true"></span>
-      <span>{{ section.settings.util_message }}</span>
+      <span>{{ section.settings.util_message }}</span
     </div>
     <div class="u-r">
       {%- if section.settings.utility_menu != blank -%}
@@ -40,7 +40,7 @@
       {%- else -%}
         {%- comment -%} Fallback to the design's utility links so the top bar matches the design
           even before a "Utility-menu" link list is assigned in the Theme Editor. {%- endcomment -%}
-        <a href="{% render 'zv-route', key: 'Oplossingen' %}">oplossingen</a>
+        <a href="{% render 'zv-route', key: 'Oplossingen' %}">Oplossingen</a>
         <a href="{% render 'zv-route', key: 'klantenservice' %}">Klantenservice</a>
       {%- endif -%}
       {%- if section.settings.phone != blank -%}
