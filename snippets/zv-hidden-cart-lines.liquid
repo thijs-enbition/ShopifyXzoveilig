@@ -37,6 +37,21 @@
 {%- capture woning_variant_ids -%}{%- render 'zv-woning-variants', handles: zv_hidden_woning_handles, skus: zv_hidden_woning_skus -%}{%- endcapture -%}
 {%- assign woning_variant_ids = woning_variant_ids | strip -%}
 {%- assign woning_variant_id_list = woning_variant_ids | split: '|' -%}
+{%- comment -%}
+  Koop Woning lines (2026-11-03, one-time, a bought package's floors): the ids of the ones IN THE
+  CART, read off the cart itself (zv-woning-koop-lines), never looked up: this page is at the
+  20-handle limit. woning_koop_variant_ids is parallel to woning_variant_ids (0 = no such line);
+  woning_koop_variant_id_list is for `contains item_vid` checks. They are hidden from the item
+  count like the Huren Woning line. The header's script counts by handle instead
+  (data-woning-koop-handles), since an id read at page load goes stale when the drawer adds one.
+{%- endcomment -%}
+{%- capture zv_woning_koop_handles_list -%}{% render 'zv-package-handles', line: 'woning-koop', what: 'handles' %}{%- endcapture -%}
+{%- capture zv_woning_koop_skus_list -%}{% render 'zv-package-handles', line: 'woning-koop', what: 'skus' %}{%- endcapture -%}
+{%- assign zv_woning_koop_handles_list = zv_woning_koop_handles_list | strip -%}
+{%- assign zv_woning_koop_skus_list = zv_woning_koop_skus_list | strip -%}
+{%- capture woning_koop_variant_ids -%}{%- render 'zv-woning-koop-lines', handles: zv_woning_koop_handles_list, skus: zv_woning_koop_skus_list -%}{%- endcapture -%}
+{%- assign woning_koop_variant_ids = woning_koop_variant_ids | strip -%}
+{%- assign woning_koop_variant_id_list = woning_koop_variant_ids | split: '|' -%}
 {%- assign zv_addon_videodeurbel_variant_id = all_products['huur-video-deurbel-750'].variants.first.id -%}
 {%- assign zv_addon_afstandsbediening_variant_id = all_products['huur-afstandsbediening'].variants.first.id -%}
 {%- comment -%}

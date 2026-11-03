@@ -32,6 +32,8 @@
     zv_ontzorg_variant_id_list                   - Ontzorgpakket variant ids, as strings
     woning_variant_id_list                       - Woning variant ids, as strings
     woning_variant_ids                           - zv-woning-variants' output, for zv-woning-label
+    woning_koop_variant_id_list, woning_koop_variant_ids - the one-time (Koop) Woning lines IN THE CART (zv-woning-koop-lines), as strings / pipe string
+    zv_woning_applies_fks_by_product             - for zv-woning-label's Koop line
     zv_woning_applies_by_product                 - for zv-woning-label
     zv_woning_1_value, zv_woning_2_value, zv_woning_legacy_prefix - for zv-woning-label
     activation_variant_id                        - Climax installation (CL003)
@@ -44,9 +46,9 @@
     render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: zv_koop_fk_by_handle
   endcapture
   assign rn_koop_fk = rn_koop_fk | strip
-  if woning_variant_id_list contains rn_vid
+  if woning_variant_id_list contains rn_vid or woning_koop_variant_id_list contains rn_vid
     capture rn_woning
-      render 'zv-woning-label', variant_id: rn_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix
+      render 'zv-woning-label', variant_id: rn_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix, koop_variant_ids: woning_koop_variant_ids, applies_fks_by_product: zv_woning_applies_fks_by_product, koop_map: zv_koop_fk_by_handle
     endcapture
     assign rn_woning = rn_woning | strip
     assign rn_name = 'Woning'

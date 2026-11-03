@@ -41,6 +41,14 @@
       else
         echo 'extra-etage-of-100m2|extra-etage-of-100m2-climax'
       endif
+    when 'woning-koop'
+      if what == 'skus'
+        echo 'K009.N|K009.C'
+      elsif what == 'name'
+        echo 'Woning (koop)'
+      else
+        echo 'koop-extra-etage-of-100m2|koop-extra-etage-of-100m2-climax'
+      endif
     when 'rider'
       if what == 'skus'
         echo 'A102B|K001.1|K002.1|K003.1|K004.1|K005.1'

@@ -397,6 +397,16 @@
         "handle": "extra-etage-of-100m2",
         "sku": "N0008"
       },
+      "koop": {
+        "productHandle": "koop-extra-etage-of-100m2",
+        "sku": "K009.N",
+        "price": {
+          "amountCents": 10000,
+          "display": "€100",
+          "per": "eenmalig"
+        },
+        "note": "One-time Woning line for a BOUGHT NAMI package (Thijs, 2026-11-03; created in Shopify Admin, ACTIVE, published to the Online Store, EUR 100,00, one variant, inventory untracked; never created or edited from this repo). Floors x price.amountCents once, quantity = floors (never promo.months x floors), no 'Eerste 3 maanden' discount, never run through promo maths. Supersedes the 2026-10-28 stopgap that put a bought package's floors on the monthly N0008 line. price.amountCents must equal across both platforms (build_pricing.py refuses otherwise); check_pricing.py fails if this block carries a promo field."
+      },
       "appliesTo": [
         "nami-langer-thuis-inzicht",
         "nami-langer-thuis-zeker",
@@ -434,6 +444,16 @@
       "shopify": {
         "handle": "extra-etage-of-100m2-climax",
         "sku": "E001"
+      },
+      "koop": {
+        "productHandle": "koop-extra-etage-of-100m2-climax",
+        "sku": "K009.C",
+        "price": {
+          "amountCents": 10000,
+          "display": "€100",
+          "per": "eenmalig"
+        },
+        "note": "One-time Woning line for a BOUGHT Climax package (Thijs, 2026-11-03; created in Shopify Admin, ACTIVE, published to the Online Store, EUR 100,00, one variant, inventory untracked; never created or edited from this repo). Floors x price.amountCents once, quantity = floors (never promo.months x floors), no 'Eerste 3 maanden' discount, never run through promo maths. Supersedes the 2026-10-28 stopgap that put a bought package's floors on the monthly E001 line. price.amountCents must equal across both platforms (build_pricing.py refuses otherwise); check_pricing.py fails if this block carries a promo field."
       },
       "appliesTo": [
         "langer-thuis-beschermd",
