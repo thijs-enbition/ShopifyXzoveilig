@@ -11,6 +11,12 @@
     variant_ids        - zv-woning-variants' output, parallel to applies_by_product
     applies_by_product - zv_woning_applies_by_product
     v1, v2, legacy     - zv_woning_1_value, zv_woning_2_value, zv_woning_legacy_prefix
+
+  Koop Woning line (2026-11-03, the one-time line of a BOUGHT package): pass koop_variant_ids
+  (zv-woning-koop-lines' output, parallel to the same products), applies_fks_by_product
+  (zv_woning_applies_fks_by_product) and koop_map (zv_koop_fk_by_handle). That line's label is built
+  from the BOUGHT packages' Woning values instead (a Koop line is matched by finder_key, since its
+  handle isn't in applies_by_product). Omit them for a Huren line.
 {%- endcomment -%}
 {%- liquid
   assign wl_ids = variant_ids | split: '|'
@@ -21,9 +27,32 @@
       assign wl_applies = wl_applies_all[forloop.index0] | split: ','
     endif
   endfor
+  assign wl_koop_ids = koop_variant_ids | split: '|'
+  assign wl_koop_fks = ''
+  for kid in wl_koop_ids
+    if kid == variant_id and kid != '0'
+      assign wl_koop_fks = applies_fks_by_product | split: '|'
+      assign wl_koop_fks = wl_koop_fks[forloop.index0] | split: ','
+    endif
+  endfor
+  if wl_koop_fks != ''
+    assign wl_applies = ''
+  endif
   assign wl_out = ''
   for item in cart.items
+    assign wl_item_in = false
     if wl_applies contains item.product.handle
+      assign wl_item_in = true
+    elsif wl_koop_fks != ''
+      capture wl_fk
+        render 'zv-koop-fk', handle: item.product.handle, afname: item.properties['Afname'], map: koop_map
+      endcapture
+      assign wl_fk = wl_fk | strip
+      if wl_fk != '' and wl_fk != 'invalid' and wl_koop_fks contains wl_fk
+        assign wl_item_in = true
+      endif
+    endif
+    if wl_item_in
       capture wl_f
         render 'zv-woning-floors', value: item.properties['Woning'], v1: v1, v2: v2, legacy: legacy
       endcapture

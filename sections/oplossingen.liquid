@@ -41,6 +41,9 @@
   woning_variant_ids is parallel to #zv-pricing-config's woning.products; an unresolved product is
   0 and its packages fall back to the Woning property alone (no line), with one console.warn.
   woning_applies_list is every package that offers Woning, on either platform.
+  The one-time Koop Woning line of a BOUGHT package (2026-11-03) is deliberately NOT resolved here:
+  this page is at the 20-unique-handle limit (see the Ontzorgpakket note below), so the script reads
+  its handle/SKU from the config island and fetches its variant id from /products/<handle>.js.
 {%- endcomment -%}
 {%- capture woning_variant_ids -%}{%- render 'zv-woning-variants', handles: zv_woning_handles, skus: zv_woning_skus -%}{%- endcapture -%}
 {%- assign woning_variant_ids = woning_variant_ids | strip -%}
@@ -636,12 +639,16 @@
                               one clears it, from the keyboard too. Heading, option values (also the
                               exact Woning property value) and amounts come from pricing.config.json
                               surcharges[extra-etage] via zv-pricing; data-woning-floors is what
-                              readCardOptions() maps to the value.
+                              readCardOptions() maps to the value. Huren/Kopen (2026-11-03): in Kopen
+                              mode the card shows the one-time price per option ("+€100 eenmalig", floors
+                              x the Koop Woning product's flat unit) instead of "+€4/mnd", the same
+                              CSS swap as the package price (.ltc__huur-only / .ltc__koop-only on the
+                              article's .is-koop), since a bought package's floors are billed once.
                             {%- endcomment -%}
                             <div class="ltc__optgroup" data-group="woning" role="group" aria-labelledby="woning-h-{{ anchor }}-{{ p.id }}">
                               <p class="ltc__optgroup-h" id="woning-h-{{ anchor }}-{{ p.id }}">{{ zv_woning_heading | escape }}</p>
-                              <label class="pcard__plus-opt"><input type="checkbox" data-woning-floors="1"><span>{{ zv_woning_1_value | escape }}</span><span class="pcard__plus-pr">+{{ zv_woning_1_cents | money_without_trailing_zeros }}/mnd</span></label>
-                              <label class="pcard__plus-opt"><input type="checkbox" data-woning-floors="2"><span>{{ zv_woning_2_value | escape }}</span><span class="pcard__plus-pr">+{{ zv_woning_2_cents | money_without_trailing_zeros }}/mnd</span></label>
+                              <label class="pcard__plus-opt"><input type="checkbox" data-woning-floors="1"><span>{{ zv_woning_1_value | escape }}</span><span class="pcard__plus-pr"><span class="ltc__huur-only">+{{ zv_woning_1_cents | money_without_trailing_zeros }}/mnd</span><span class="ltc__koop-only">+{% assign wk_1_cents = zv_woning_koop_unit_cents | times: 1 %}{{ wk_1_cents | money_without_trailing_zeros }} eenmalig</span></span></label>
+                              <label class="pcard__plus-opt"><input type="checkbox" data-woning-floors="2"><span>{{ zv_woning_2_value | escape }}</span><span class="pcard__plus-pr"><span class="ltc__huur-only">+{{ zv_woning_2_cents | money_without_trailing_zeros }}/mnd</span><span class="ltc__koop-only">+{% assign wk_2_cents = zv_woning_koop_unit_cents | times: 2 %}{{ wk_2_cents | money_without_trailing_zeros }} eenmalig</span></span></label>
                             </div>
                             {{ ltc_addons_group_html }}
                             {%- comment -%}
@@ -753,7 +760,7 @@
                 {%- render 'zv-package-name', finder_key: fn_fk, names: zv_package_names_by_fk -%}
               {%- endfor -%}
             {%- endcapture -%}
-            <p class="ltc__footnote">Bij {{ fn_names | strip }}: +{{ zv_woning_unit_cents | money_without_trailing_zeros }}/mnd per extra verdieping of per 100 m² extra woonoppervlak. Apparatuur zit in uw maandbedrag (lease) of koopt u los. U hebt 14 dagen bedenktijd na levering.</p>
+            <p class="ltc__footnote">Bij {{ fn_names | strip }}: +{{ zv_woning_unit_cents | money_without_trailing_zeros }}/mnd per extra verdieping of per 100 m² extra woonoppervlak; bij kopen eenmalig {{ zv_woning_koop_unit_cents | money_without_trailing_zeros }} per extra verdieping of per 100 m². Apparatuur zit in uw maandbedrag (lease) of koopt u los. U hebt 14 dagen bedenktijd na levering.</p>
           {%- endif -%}
         {%- elsif request.design_mode -%}
           <p class="ph-sub" style="text-align:center;">Koppel de collectie "{{ b.settings.collection }}".</p>
@@ -1214,6 +1221,7 @@
 @container (min-width: 262px) { .ltc__mode--seg span { font-size: 12px; } }
 @container (max-width: 244px) { .ltc__mode--seg { grid-template-columns: minmax(0, 1fr); } }
 .pcard--ltc:not(.is-koop) .ltc__koop-only { display: none; }
+.pcard--ltc.is-koop .ltc__huur-only { display: none; }
 .pcard--ltc.is-koop > .pcard__price, .pcard--ltc.is-koop > .ltc__term, .pcard--ltc.is-koop .ltc__buy[data-zv-add] { display: none; }
 .ltc__koopprice { display: flex; align-items: baseline; gap: 7px; }
 .ltc__koopprice .amt { font-size: 27px; font-weight: 900; color: var(--ink); letter-spacing: -0.01em; }
@@ -1759,7 +1767,13 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
      by handle + SKU into data-woning-variant-ids, parallel to WONING.products, never a hardcoded id)
      at PKG_QTY x the floors over that product's package lines only: 1 floor = 3, 2 floors = 6,
      none = no line. A package's floors never count towards another platform's product. A product
-     without a resolved variant keeps the property-only behaviour for its packages: no line. */
+     without a resolved variant keeps the property-only behaviour for its packages: no line.
+     A BOUGHT package's floors (Afname: Kopen) never ride that monthly line (2026-11-03): each product
+     also has a one-time Koop line (koopHandle/koopSku from the config island, parallel to
+     WONING.products) at quantity = those floors, no PKG_QTY multiplier, no discount. Its variant id
+     is NOT resolved server-side: this page already looks up 20 unique handles, Shopify's limit, so
+     two more would come back blank. The line is recognised by its handle in Cart AJAX data and
+     added with the id from /products/<handle>.js (woningKoopVariantId(), SKU-checked). */
   var WONING_APPLIES = WONING.appliesTo || [];
   var WONING_APPLIES_FK = WONING.appliesToFinderKeys || [];
   var WONING_PRODUCTS = (function () {
@@ -1767,7 +1781,8 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     return (WONING.products || []).map(function (p, i) {
       var id = ids[i] && ids[i] !== '0' ? ids[i] : null;
       if (!id) { try { console.warn('zv: Woning product ' + (p.sku || i) + ' not resolved (handle or SKU); Woning stays a line property only for ' + (p.installGroup || 'its packages') + ', without its priced line.'); } catch (e) {} }
-      return { variantId: id, appliesTo: p.appliesTo || [], appliesToFk: p.appliesToFinderKeys || [] };
+      return { variantId: id, appliesTo: p.appliesTo || [], appliesToFk: p.appliesToFinderKeys || [],
+               koopHandle: p.koopHandle || null, koopSku: p.koopSku || null, koopId: null, koopIdPromise: null };
     });
   })();
   function woningAppliesHandle(handle) { return WONING_APPLIES.indexOf(handle) !== -1; }
@@ -1778,26 +1793,53 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     return null;
   }
   function isWoningLine(it) {
-    return WONING_PRODUCTS.some(function (wp) { return !!wp.variantId && String(it.variant_id) === String(wp.variantId); });
+    return WONING_PRODUCTS.some(function (wp) {
+      return (!!wp.variantId && String(it.variant_id) === String(wp.variantId)) || (!!wp.koopHandle && it.handle === wp.koopHandle);
+    });
   }
-  // Target quantity of one Woning product's line: PKG_QTY x the floors over its own package
-  // lines — a Huren line by its handle (wp.appliesTo), a Koop line (2026-10-28) by its
-  // finder_key (wp.appliesToFk) instead, since its handle is a different product; resolved via
-  // its SKU property through cardsBySku, the same lookup addonTargets() uses for Ontzorgpakket
-  // (defined further down, but already populated by the time any add/sync runs).
+  // Target quantity of one Woning product's MONTHLY line: PKG_QTY x the floors over its own RENTED
+  // package lines (matched by handle, wp.appliesTo). A bought package's floors are not in it
+  // (2026-11-03): they ride the one-time Koop line, see woningKoopTargetQty().
   function woningTargetQty(items, wp) {
     var floors = 0;
     (items || []).forEach(function (it) {
-      var p = it.properties || {};
-      var inScope = wp.appliesTo.indexOf(it.handle) !== -1;
-      if (!inScope) {
-        var card = cardsBySku[p['SKU'] || ''];
-        var fk = card && card.getAttribute('data-finder-key');
-        inScope = !!fk && wp.appliesToFk.indexOf(fk) !== -1;
-      }
-      if (inScope) floors += woningFloors(p['Woning']);
+      if (wp.appliesTo.indexOf(it.handle) !== -1) floors += woningFloors((it.properties || {})['Woning']);
     });
     return PKG_QTY * floors;
+  }
+  // Target quantity of one Woning product's one-time KOOP line: the floors over its own BOUGHT package
+  // lines, no PKG_QTY multiplier. A Koop line (Afname: Kopen) has its own product handle, so it is
+  // matched by finder_key, found via its SKU property through cardsBySku (the lookup addonTargets()
+  // uses for Ontzorgpakket; defined further down, but already populated by the time any add/sync runs).
+  function woningKoopTargetQty(items, wp) {
+    var floors = 0;
+    (items || []).forEach(function (it) {
+      var p = it.properties || {};
+      if (p['Afname'] !== 'Kopen') return;
+      var card = cardsBySku[p['SKU'] || ''];
+      var fk = card && card.getAttribute('data-finder-key');
+      if (fk && wp.appliesToFk.indexOf(fk) !== -1) floors += woningFloors(p['Woning']);
+    });
+    return floors;
+  }
+  // The Koop Woning line's variant id, from /products/<handle>.js (never a theme lookup: see above).
+  // Cached per product; a product that doesn't resolve (404, or its first variant's SKU isn't the
+  // config's) gives null and keeps the bought package's Woning as a property only, with one warning.
+  function woningKoopVariantId(wp) {
+    if (wp.koopId) return Promise.resolve(wp.koopId);
+    if (!wp.koopHandle) return Promise.resolve(null);
+    if (!wp.koopIdPromise) {
+      wp.koopIdPromise = window.fetch('/products/' + encodeURIComponent(wp.koopHandle) + '.js')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (prod) {
+          var v = prod && prod.variants && prod.variants[0];
+          if (v && v.sku === wp.koopSku) { wp.koopId = String(v.id); return wp.koopId; }
+          try { console.warn('zv: Koop Woning product ' + (wp.koopSku || wp.koopHandle) + ' not resolved (handle or SKU); a bought package keeps Woning as a line property only.'); } catch (e) {}
+          return null;
+        })
+        .catch(function () { wp.koopIdPromise = null; return null; });   // a network blip: try again next time
+    }
+    return wp.koopIdPromise;
   }
   /* The one request that brings one Woning product's line to its target, or null when it's
      right: several lines -> merged into one at the target (update.js by line key); none ->
@@ -1816,24 +1858,46 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
     if (lines[0].quantity !== target) return { url: '/cart/change.js', body: { id: lines[0].key, quantity: target } };
     return null;
   }
+  /* The same for the one-time Koop line (2026-11-03), as a promise because adding it needs the
+     variant id from /products/<handle>.js. Recognised by handle; target = the floors of the bought
+     package lines (woningKoopTargetQty), so a removed Koop package removes its line too. */
+  function woningKoopLinePlan(cart, wp) {
+    if (!wp.koopHandle) return Promise.resolve(null);
+    var items = (cart && cart.items) || [];
+    var target = woningKoopTargetQty(items, wp);
+    var lines = items.filter(function (it) { return it.handle === wp.koopHandle; });
+    if (lines.length > 1) {
+      var merge = {};
+      lines.forEach(function (it, i) { merge[it.key] = i === 0 ? target : 0; });
+      return Promise.resolve({ url: '/cart/update.js', body: { updates: merge } });
+    }
+    if (lines.length === 1) return Promise.resolve(lines[0].quantity !== target ? { url: '/cart/change.js', body: { id: lines[0].key, quantity: target } } : null);
+    if (target <= 0) return Promise.resolve(null);
+    return woningKoopVariantId(wp).then(function (id) {
+      return id ? { url: '/cart/add.js', body: { items: [{ id: id, quantity: target }] } } : null;
+    });
+  }
+  function applyWoningPlan(cart, plan) {
+    if (!plan) return cart;
+    return window.fetch(plan.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(plan.body) })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (res) {
+        // add.js answers with the added items, change.js and update.js with the whole cart.
+        return plan.url === '/cart/add.js' ? window.fetch('/cart.js').then(function (r) { return r.json(); }) : res;
+      })
+      .catch(function () { return cart; });
+  }
   /* Shared by the card add, the modal add/buy, the drawer's Woning choice and the drawer's
-     remove: apply woningLinePlan() for each Woning product in turn, threading the fresh cart
-     through (so two products never race in one request), and resolve with the last cart. A
-     failed write keeps the cart as it was and still lets the next product's plan run; the cart
-     guard on /cart and Overzicht corrects it, and Overzicht blocks checkout until it's right. */
+     remove: apply woningLinePlan() (the monthly line) and then woningKoopLinePlan() (the one-time
+     line) for each Woning product in turn, threading the fresh cart through (so two lines never
+     race in one request), and resolve with the last cart. A failed write keeps the cart as it was
+     and still lets the next plan run; the cart guard on /cart and Overzicht corrects it, and
+     Overzicht blocks checkout until it's right. */
   function syncWoningLine(cart) {
     return WONING_PRODUCTS.reduce(function (prev, wp) {
-      return prev.then(function (cart) {
-        var plan = woningLinePlan(cart, wp);
-        if (!plan) return cart;
-        return window.fetch(plan.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(plan.body) })
-          .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-          .then(function (res) {
-            // add.js answers with the added items, change.js and update.js with the whole cart.
-            return plan.url === '/cart/add.js' ? window.fetch('/cart.js').then(function (r) { return r.json(); }) : res;
-          })
-          .catch(function () { return cart; });
-      });
+      return prev
+        .then(function (cart) { return applyWoningPlan(cart, woningLinePlan(cart, wp)); })
+        .then(function (cart) { return woningKoopLinePlan(cart, wp).then(function (plan) { return applyWoningPlan(cart, plan); }); });
     }, Promise.resolve(cart));
   }
 
@@ -2560,9 +2624,10 @@ body.zv-drawer-open { position: fixed; left: 0; right: 0; width: 100%; overflow:
      (quantity 1) with the same properties as a huur add plus Afname: Kopen, which is how /cart,
      Overzicht and zv-cart-guard recognise it. A bought package's Woning choice now follows the
      same path as its Ontzorgpakket add-on (2026-10-28): syncWoningLine() runs right after the
-     add, same as a huur add, and woningTargetQty() recognises the Koop line by finder_key (was
-     property-only, nothing charged, from 2026-10-24 NAMI / 2026-10-27 Climax — see git history
-     if that ever needs reverting). Installation is the same as for a
+     add, same as a huur add; woningKoopTargetQty() recognises the Koop line by finder_key and puts its
+     floors on the platform's one-time Koop Woning line (2026-11-03, quantity = floors, no PKG_QTY, no
+     discount). From 2026-10-28 to 2026-11-02 they rode the monthly Woning line instead; before that
+     it was property-only (2026-10-24 NAMI / 2026-10-27 Climax). Installation is the same as for a
      huur add: a Climax package brings the Climax installation line (once), a NAMI package's
      installation is chosen on Overzicht. Checked add-ons get their lines through
      syncAddonLines(), as for a huur add. */

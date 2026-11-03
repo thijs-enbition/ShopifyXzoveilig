@@ -140,6 +140,22 @@
   endcapture
   assign woning_variant_ids = woning_variant_ids | strip
   assign woning_variant_id_list = woning_variant_ids | split: '|'
+  comment
+    Koop Woning lines (2026-11-03): the one-time line of a BOUGHT package's floors, one per Woning
+    product (parallel to woning_variant_id_list). Read off the cart itself by handle + SKU
+    (zv-woning-koop-lines): never looked up, this page is at the 20-handle limit. 0 = no such line
+    in the cart. woning_koop_line_log / woning_koop_floor_log collect 'product index:quantity|' per
+    Koop Woning line and 'product index:floors|' per BOUGHT package line, for the gate below.
+  endcomment
+  capture woning_koop_variant_ids
+    render 'zv-woning-koop-lines', handles: zv_woning_koop_handles, skus: zv_woning_koop_skus
+  endcapture
+  assign woning_koop_variant_ids = woning_koop_variant_ids | strip
+  assign woning_koop_variant_id_list = woning_koop_variant_ids | split: '|'
+  assign woning_koop_line_log = ''
+  assign woning_koop_floor_log = ''
+  assign woning_koop_line_discounted = false
+  assign woning_koop_line_price_off = false
   assign woning_applies_by_product_list = zv_woning_applies_by_product | split: '|'
   assign woning_applies_fks_by_product_list = zv_woning_applies_fks_by_product | split: '|'
   assign woning_applies_list = zv_woning_applies_handles | split: '|'
@@ -245,6 +261,24 @@
         assign woning_line_price_off = true
       endif
     endif
+    comment
+      A Koop Woning line: one-time, counted in today_cents above, never in "Daarna". Its quantity is
+      the floors (no promo.months multiplier), at full price: a discount on it, or a unit price
+      other than zv_woning_koop_unit_cents, blocks checkout (cart_woning_bad below).
+    endcomment
+    if woning_koop_variant_id_list contains item_vid
+      for wid in woning_koop_variant_id_list
+        if wid == item_vid
+          assign woning_koop_line_log = woning_koop_line_log | append: forloop.index0 | append: ':' | append: item.quantity | append: '|'
+        endif
+      endfor
+      if item.final_line_price < item.original_line_price
+        assign woning_koop_line_discounted = true
+      endif
+      if item.original_price != zv_woning_koop_unit_cents
+        assign woning_koop_line_price_off = true
+      endif
+    endif
 
     comment
       Ontzorgpakket (per package since 2026-10-27): a confirmed recurring monthly service, so
@@ -294,11 +328,12 @@
         endunless
       endif
       comment
-        Woning on a bought package (2026-10-28): follows the same path as Ontzorgpakket now —
-        its floors feed woning_floor_log exactly like a rented package's, just matched by
+        Woning on a bought package: its floors feed woning_koop_floor_log (2026-11-03), matched by
         finder_key (woning_applies_fks_by_product) since a Koop line's handle isn't in
-        woning_applies_by_product. Was property-only (Thijs, 2026-10-24 NAMI / 2026-10-27
-        Climax); nothing ever billed it because neither Shopify nor Odoo had a line to key off.
+        woning_applies_by_product, and are carried by the platform's one-time Koop Woning line at
+        quantity = floors. From 2026-10-28 to 2026-11-02 they fed woning_floor_log instead, i.e. the
+        MONTHLY Woning line at pkg_qty x floors (3 prepaid months at a discount for something that
+        is bought); before that it was property-only (Thijs, 2026-10-24 NAMI / 2026-10-27 Climax).
       endcomment
       if item.properties['Woning'] != blank and woning_applies_fk_list contains item_koop_fk
         capture item_koop_woning_floors
@@ -309,7 +344,7 @@
           for wa_fk in woning_applies_fks_by_product_list
             assign wa_fk_list = wa_fk | split: ','
             if wa_fk_list contains item_koop_fk
-              assign woning_floor_log = woning_floor_log | append: forloop.index0 | append: ':' | append: item_koop_woning_floors | append: '|'
+              assign woning_koop_floor_log = woning_koop_floor_log | append: forloop.index0 | append: ':' | append: item_koop_woning_floors | append: '|'
             endif
           endfor
         endif
@@ -468,6 +503,42 @@
   if woning_line_log != '' and woning_line_undiscounted
     assign cart_woning_bad = true
   endif
+  comment
+    The same per Koop Woning product (2026-11-03): its quantity must be exactly the floors over the
+    BOUGHT package lines of ITS OWN platform (no pkg_qty multiplier: it is one-time), on one line,
+    at full price and the config's unit. A product with floors but no line also blocks: zv-cart-guard
+    adds it, and a cart it cannot add it to (the product is gone) must not check out without it.
+  endcomment
+  assign woning_koop_line_log_list = woning_koop_line_log | split: '|'
+  assign woning_koop_floor_log_list = woning_koop_floor_log | split: '|'
+  for wkid in woning_koop_variant_id_list
+    assign wk_idx = forloop.index0 | append: ''
+    assign wk_count = 0
+    assign wk_qty = 0
+    for e in woning_koop_line_log_list
+      assign ep = e | split: ':'
+      if ep[0] == wk_idx
+        assign wk_count = wk_count | plus: 1
+        assign wk_qty = wk_qty | plus: ep[1]
+      endif
+    endfor
+    assign wk_floors = 0
+    for e in woning_koop_floor_log_list
+      assign ep = e | split: ':'
+      if ep[0] == wk_idx
+        assign wk_floors = wk_floors | plus: ep[1]
+      endif
+    endfor
+    if wk_qty != wk_floors or wk_count > 1
+      assign cart_woning_bad = true
+    endif
+  endfor
+  if woning_koop_line_log != '' and woning_koop_line_discounted
+    assign cart_woning_bad = true
+  endif
+  if woning_koop_line_log != '' and woning_koop_line_price_off
+    assign cart_woning_bad = true
+  endif
   if woning_line_log != '' and woning_line_price_off
     assign cart_woning_bad = true
   endif
@@ -508,7 +579,7 @@
     assign cart_checkout_blocked = true
   endif
 -%}
-{%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_ids: woning_variant_ids, woning_applies_by_product: zv_woning_applies_by_product, woning_applies_fks_by_product: zv_woning_applies_fks_by_product, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles, woning_applies_fks: zv_woning_applies_fks, rider_pairs: zv_rider_pairs, koop_map: zv_koop_fk_by_handle -%}
+{%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_ids: woning_variant_ids, woning_applies_by_product: zv_woning_applies_by_product, woning_applies_fks_by_product: zv_woning_applies_fks_by_product, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles, woning_applies_fks: zv_woning_applies_fks, rider_pairs: zv_rider_pairs, koop_map: zv_koop_fk_by_handle, woning_koop_handles: zv_woning_koop_handles, woning_koop_skus: zv_woning_koop_skus -%}
 {%- liquid
 
   comment
@@ -759,8 +830,8 @@
                         {%- assign ovi_units = item.quantity | divided_by: zv_promo_package_qty -%}
                       {%- endif -%}
                     {%- endif -%}
-                    {%- if woning_variant_id_list contains item_vid -%}
-                      {%- capture woning_label -%}{%- render 'zv-woning-label', variant_id: item_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
+                    {%- if woning_variant_id_list contains item_vid or woning_koop_variant_id_list contains item_vid -%}
+                      {%- capture woning_label -%}{%- render 'zv-woning-label', variant_id: item_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix, koop_variant_ids: woning_koop_variant_ids, applies_fks_by_product: zv_woning_applies_fks_by_product, koop_map: zv_koop_fk_by_handle -%}{%- endcapture -%}
                       {%- assign woning_label = woning_label | strip -%}
                       <div class="ovitem ovitem--woning">
                         <div class="ovi-thumb">
@@ -840,7 +911,8 @@
                             {%- capture ovi_wf -%}{%- render 'zv-woning-floors', value: item.properties['Woning'], v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
                           {%- endif -%}
                           {%- assign ovi_wf = ovi_wf | strip | plus: 0 -%}
-                          {%- if ovi_wf > 0 -%}
+                          {%- comment -%} Only while there is no Koop Woning line of its own in the cart (then it has its own row, like a rented package's). {%- endcomment -%}
+                          {%- if ovi_wf > 0 and woning_koop_line_log == '' -%}
                             {%- if ovi_wf == 2 -%}{%- assign ovi_wl = zv_woning_2_value -%}{%- else -%}{%- assign ovi_wl = zv_woning_1_value -%}{%- endif -%}
                             <div class="ovi-meta">Woning: {{ ovi_wl | escape }}</div>
                           {%- endif -%}

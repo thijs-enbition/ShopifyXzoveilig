@@ -37,15 +37,19 @@
 
   Renders zv-cart-guard: keeps the package line at quantity 3, adds the Climax installation
   line to a Climax package that lacks it, and removes it from a cart without one; keeps each
-  Woning line at 3 x its own platform's floors (NAMI and Climax each have their own) and keeps the
+  Woning line at 3 x its own platform's floors (NAMI and Climax each have their own), a bought
+  package's floors on the platform's one-time Koop Woning line at quantity = floors, and keeps the
   camera subscription in step with a bought Videodeurbel (ADC-750). See
   snippets/zv-cart-guard.liquid.
 
   Koop lines (Huren/Kopen, 2026-10-24, docs/koop-checkout-2026-10-24.md): a bought package
   (Afname: Kopen on a Koop product, snippets/zv-koop-fk.liquid) shows its package name, "Kopen",
   its one-time final_line_price and no +/- (the guard keeps it at 1). It is never counted as a
-  package for "p/m", the promo note or "Daarna". Woning on a bought package shows as its
-  property only; there is no Woning line for it.
+  package for "p/m", the promo note or "Daarna". Woning on a bought package is its own one-time
+  line since 2026-11-03 (the Koop Woning product, quantity = floors, no discount): one
+  non-editable "Woning: <option value>" row in the Kopen group, labelled from the BOUGHT packages'
+  Woning values (zv-woning-label with koop_variant_ids). Its id is read off the cart itself
+  (zv-woning-koop-lines, woning_koop_variant_id_list), never looked up: the page is at the 20-handle limit.
 
   Groups and discount badge (2026-10-28, docs/cart-huur-koop-split-2026-10-28.md): the lines are
   listed in two groups, "Huren" above "Kopen · eenmalig", each with a subtotal of its
@@ -101,12 +105,12 @@
 {%- endcomment -%}
 {%- assign woning_applies_list = zv_woning_applies_handles | split: '|' -%}
 {%- capture zv_rider_pairs -%}{%- render 'zv-addon-riders', map: zv_addon_rider_by_lead, lead_by: 'handle' -%}{%- endcapture -%}
-{%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_ids: woning_variant_ids, woning_applies_by_product: zv_woning_applies_by_product, woning_applies_fks_by_product: zv_woning_applies_fks_by_product, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles, woning_applies_fks: zv_woning_applies_fks, rider_pairs: zv_rider_pairs, koop_map: zv_koop_fk_by_handle -%}
+{%- render 'zv-cart-guard', activation_variant_id: activation_variant_id, sub_type: sub_type, nami_geen_variant_id: nami_install_geen_variant_id, nami_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_huis_variant_id: nami_install_huis_variant_id, pkg_qty: zv_promo_package_qty, inzicht_handle: zv_inzicht_handle, zeker_handle: zv_zeker_handle, beschermd_handle: zv_beschermd_handle, alert_handle: zv_alert_handle, protect_handle: zv_protect_handle, woning_variant_ids: woning_variant_ids, woning_applies_by_product: zv_woning_applies_by_product, woning_applies_fks_by_product: zv_woning_applies_fks_by_product, woning_v1: zv_woning_1_value, woning_v2: zv_woning_2_value, woning_legacy: zv_woning_legacy_prefix, woning_applies: zv_woning_applies_handles, woning_applies_fks: zv_woning_applies_fks, rider_pairs: zv_rider_pairs, koop_map: zv_koop_fk_by_handle, woning_koop_handles: zv_woning_koop_handles, woning_koop_skus: zv_woning_koop_skus -%}
 {%- liquid
   assign zv_visible_item_count = 0
   for item in cart.items
     assign item_vid = item.variant_id | append: ''
-    if zv_ontzorg_variant_id_list contains item_vid or woning_variant_id_list contains item_vid or zv_rider_variant_id_list contains item_vid
+    if zv_ontzorg_variant_id_list contains item_vid or woning_variant_id_list contains item_vid or woning_koop_variant_id_list contains item_vid or zv_rider_variant_id_list contains item_vid
       continue
     endif
     unless item.variant_id == zv_addon_videodeurbel_variant_id or item.variant_id == zv_addon_afstandsbediening_variant_id or item.variant_id == zv_koop_addon_videodeurbel_variant_id or item.variant_id == zv_koop_addon_afstandsbediening_variant_id
@@ -219,9 +223,9 @@
                   {%- assign cg_key = '|' | append: item.key | append: '|' -%}
                   {%- unless cg_keys contains cg_key -%}{%- continue -%}{%- endunless -%}
                   {%- assign item_vid = item.variant_id | append: '' -%}
-                  {%- if woning_variant_id_list contains item_vid -%}
+                  {%- if woning_variant_id_list contains item_vid or woning_koop_variant_id_list contains item_vid -%}
                     {%- comment -%} A Woning line: not editable here (no quantity, no remove, no product link); zv-cart-guard keeps its quantity at 3 x its own packages' floors. Labelled from those package lines' Woning values; an orphan line (no Woning left, the guard removes it) reads just "Woning". {%- endcomment -%}
-                    {%- capture woning_label -%}{%- render 'zv-woning-label', variant_id: item_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix -%}{%- endcapture -%}
+                    {%- capture woning_label -%}{%- render 'zv-woning-label', variant_id: item_vid, variant_ids: woning_variant_ids, applies_by_product: zv_woning_applies_by_product, v1: zv_woning_1_value, v2: zv_woning_2_value, legacy: zv_woning_legacy_prefix, koop_variant_ids: woning_koop_variant_ids, applies_fks_by_product: zv_woning_applies_fks_by_product, koop_map: zv_koop_fk_by_handle -%}{%- endcapture -%}
                     {%- assign woning_label = woning_label | strip -%}
                     <div class="citem citem--woning">
                       <div class="ci-thumb">
@@ -453,7 +457,7 @@
                 {%- for item in sorted_items -%}
                   {%- assign cg_key = '|' | append: item.key | append: '|' -%}
                   {%- unless cg_keys contains cg_key -%}{%- continue -%}{%- endunless -%}
-                  {%- capture row_name -%}{%- render 'zv-cart-row-name', item: item, sub_type: sub_type, sub_tag: sub_tag, zv_package_names_by_fk: zv_package_names_by_fk, zv_install_names_by_handle: zv_install_names_by_handle, zv_koop_fk_by_handle: zv_koop_fk_by_handle, zv_addon_videodeurbel_variant_id: zv_addon_videodeurbel_variant_id, zv_addon_afstandsbediening_variant_id: zv_addon_afstandsbediening_variant_id, zv_koop_addon_videodeurbel_variant_id: zv_koop_addon_videodeurbel_variant_id, zv_koop_addon_afstandsbediening_variant_id: zv_koop_addon_afstandsbediening_variant_id, zv_rider_variant_id_list: zv_rider_variant_id_list, zv_ontzorg_variant_id_list: zv_ontzorg_variant_id_list, woning_variant_id_list: woning_variant_id_list, woning_variant_ids: woning_variant_ids, zv_woning_applies_by_product: zv_woning_applies_by_product, zv_woning_1_value: zv_woning_1_value, zv_woning_2_value: zv_woning_2_value, zv_woning_legacy_prefix: zv_woning_legacy_prefix, activation_variant_id: activation_variant_id, nami_install_geen_variant_id: nami_install_geen_variant_id, nami_install_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_install_huis_variant_id: nami_install_huis_variant_id -%}{%- endcapture -%}
+                  {%- capture row_name -%}{%- render 'zv-cart-row-name', item: item, sub_type: sub_type, sub_tag: sub_tag, zv_package_names_by_fk: zv_package_names_by_fk, zv_install_names_by_handle: zv_install_names_by_handle, zv_koop_fk_by_handle: zv_koop_fk_by_handle, zv_addon_videodeurbel_variant_id: zv_addon_videodeurbel_variant_id, zv_addon_afstandsbediening_variant_id: zv_addon_afstandsbediening_variant_id, zv_koop_addon_videodeurbel_variant_id: zv_koop_addon_videodeurbel_variant_id, zv_koop_addon_afstandsbediening_variant_id: zv_koop_addon_afstandsbediening_variant_id, zv_rider_variant_id_list: zv_rider_variant_id_list, zv_ontzorg_variant_id_list: zv_ontzorg_variant_id_list, woning_variant_id_list: woning_variant_id_list, woning_variant_ids: woning_variant_ids, woning_koop_variant_id_list: woning_koop_variant_id_list, woning_koop_variant_ids: woning_koop_variant_ids, zv_woning_applies_fks_by_product: zv_woning_applies_fks_by_product, zv_woning_applies_by_product: zv_woning_applies_by_product, zv_woning_1_value: zv_woning_1_value, zv_woning_2_value: zv_woning_2_value, zv_woning_legacy_prefix: zv_woning_legacy_prefix, activation_variant_id: activation_variant_id, nami_install_geen_variant_id: nami_install_geen_variant_id, nami_install_telefonisch_variant_id: nami_install_telefonisch_variant_id, nami_install_huis_variant_id: nami_install_huis_variant_id -%}{%- endcapture -%}
                   <div class="srow"><span>{{ row_name | strip | escape }}</span><b>{{ item.final_line_price | money }}</b></div>
                 {%- endfor -%}
                 <div class="srow srow--sub"><span>{% render 'zv-cart-group-label', group: cg, part: 'subtotal' %}</span><b>{{ cg_cents | money }}</b></div>

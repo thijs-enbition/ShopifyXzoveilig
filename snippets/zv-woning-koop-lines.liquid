@@ -1,0 +1,39 @@
+{%- comment -%}
+  zv-woning-koop-lines (2026-11-03): prints the variant id of each KOOP Woning line that is IN THE
+  CART, pipe-separated and in the same order as `handles` (zv_woning_koop_handles, so entry i is
+  the one-time Woning line of the product at index i of zv_woning_handles). 0 where the cart has
+  no such line, which keeps the list parallel and never matches a cart line.
+
+  Unlike zv-woning-variants this does NOT look anything up with all_products: the Oplossingen
+  page, the header's zv-hidden-cart-lines and /cart already resolve 20 unique handles (Shopify's
+  limit per page), so two more would come back blank. A line is recognised from the cart itself,
+  by its product handle AND its first variant's SKU being the config's (the same pair check as for
+  every other product); the id is the line's own. That is all the server-side readers need (hide
+  it from the item count, label it, gate it). Adding the line when it is missing needs an id the
+  cart doesn't have yet: the scripts fetch /products/<handle>.js for that (zv-cart-guard rule 5,
+  oplossingen.liquid's woningKoopLinePlan()).
+
+  Params (render scope can't see the caller's zv_* variables, so pass them in; `cart` is global):
+    handles - zv_woning_koop_handles
+    skus    - zv_woning_koop_skus
+  Usage: capture it, then `| strip`, and `| split: '|'` for a list of strings.
+{%- endcomment -%}
+{%- liquid
+  assign wk_handles = handles | split: '|'
+  assign wk_skus = skus | split: '|'
+  assign wk_out = ''
+  for h in wk_handles
+    assign wk_id = 0
+    for item in cart.items
+      if wk_id == 0 and item.product.handle == h and item.sku == wk_skus[forloop.parentloop.index0]
+        assign wk_id = item.variant_id
+      endif
+    endfor
+    if forloop.first
+      assign wk_out = wk_id | append: ''
+    else
+      assign wk_out = wk_out | append: '|' | append: wk_id
+    endif
+  endfor
+  echo wk_out
+-%}

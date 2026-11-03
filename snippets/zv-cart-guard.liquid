@@ -25,18 +25,24 @@
      fixed fee, one correct answer, safe to add on the customer's behalf.
   4. The Climax installation line in a cart with no Climax package is removed: CL003 must
      never be charged for a NAMI package.
-  5. The Woning lines (2026-09-25; one per platform since 2026-10-27; Koop packages counted in
-     since 2026-10-28): one for the NAMI packages, one for the Climax packages (zv_woning_handles
-     / zv_woning_skus, resolved by the caller with zv-woning-variants into woning_variant_ids,
-     parallel to woning_applies_by_product). Per Woning product, its target quantity is pkg_qty x
-     the floors over ITS OWN package lines' `Woning` properties: a Huren line by its handle
-     (woning_applies_by_product), a Koop line by its finder_key (woning_applies_fks_by_product,
-     via koop_map) since a Koop line's handle is a different product — zv-woning-floors' values
-     and legacy prefix apply either way, so a legacy "Groter dan 100 m²…" value counts as 1
-     floor. Never another platform's. More than one line of a product is merged into one at the
-     target; a single line at another quantity is set to the target; target 0 removes it; a cart
-     with Woning but no line (e.g. a NAMI cart from before 2026-09-25, or any Koop cart before
-     2026-10-28) gets the line added.
+  5. The Woning lines (2026-09-25; one per platform since 2026-10-27; split Huren/Koop 2026-11-03):
+     per platform there are TWO Woning products, resolved per rule below. Huren: the monthly line
+     (zv_woning_handles / zv_woning_skus, resolved by the caller with zv-woning-variants into
+     woning_variant_ids, parallel to woning_applies_by_product), at pkg_qty x the floors over ITS
+     OWN RENTED package lines' `Woning` properties, matched by handle (woning_applies_by_product).
+     Koop: the one-time line of a BOUGHT package (woning_koop_handles / woning_koop_skus, parallel,
+     one per platform), at quantity = the floors over ITS OWN bought package lines, no
+     pkg_qty multiplier, matched by finder_key (woning_applies_fks_by_product, via koop_map) since a
+     Koop line's handle is a different product. A bought package's floors never reach the monthly
+     line any more: from 2026-10-28 to 2026-11-02 they did (3 prepaid months, discounted, for
+     something bought), so a cart from that window has its monthly Woning line set to the rented
+     floors only, i.e. removed when there are none. zv-woning-floors' values and legacy prefix apply
+     either way, so a legacy "Groter dan 100 m²…" value counts as 1 floor. Never another platform's.
+     Per line, whichever kind: more than one is merged into one at the target; a single line at
+     another quantity is set to the target; target 0 removes it; a cart with Woning but no line
+     gets it added. The Koop line is recognised by its handle (it.handle) and added by variant id
+     fetched from /products/<handle>.js (resolveKoopWoningIds(), checked against the SKU): no theme
+     lookup resolves it, because the pages this renders on are at Shopify's 20-handle limit.
   6. A package line whose package doesn't offer Woning (not in woning_applies) but carries a
      `Woning` property has it deleted via /cart/change.js, same quantity. Until 2026-10-27 that
      was every Climax line (Beschermd and Protect had no Woning from 2026-09-25 to 2026-10-27);
@@ -57,11 +63,10 @@
   the property Afname: Kopen whose handle is one of koop_map's Koop products. It is a one-time
   purchase, never a package line above: rule 2 keeps it at quantity 1 (never pkg_qty) and
   removes a second line for the same Koop product; a bought Climax package counts for rules 3
-  and 4 exactly like a rented one (CL003 added, kept). A bought package's Woning choice now
-  follows the same path as its Ontzorgpakket add-on (2026-10-28, was property-only since
-  2026-10-24 for NAMI / 2026-10-27 for Climax — Odoo had nothing to bill it from): it counts
-  towards its platform's Woning line in rule 5 too, matched by finder_key since a Koop line's
-  handle isn't in woning_applies_by_product. Rule 6 still strips the property from a Koop line
+  and 4 exactly like a rented one (CL003 added, kept). A bought package's Woning choice has
+  its own one-time line (2026-11-03; 2026-10-28 to 2026-11-02 it rode the monthly Woning line,
+  before that it was the property only): it counts towards its platform's Koop Woning line in
+  rule 5, matched by finder_key since a Koop line's handle isn't in woning_applies_by_product. Rule 6 still strips the property from a Koop line
   whose package (woning_applies_fks) doesn't offer Woning at all. A line with Afname: Kopen on
   any other product is left alone here; Overzicht blocks checkout for it.
 
@@ -87,6 +92,7 @@
   (zv_promo_package_qty), and the package product handles inzicht_handle, zeker_handle,
   alert_handle (NAMI) and beschermd_handle, protect_handle (Climax); for the Woning rules
   woning_variant_ids (zv-woning-variants' output, 0 for an unresolved product),
+  woning_koop_handles / woning_koop_skus (zv_woning_koop_handles / _skus, parallel to it),
   woning_applies_by_product and woning_applies_fks_by_product (zv_woning_applies_by_product /
   zv_woning_applies_fks_by_product, both parallel to it), woning_v1, woning_v2
   (zv_woning_1_value / _2_value), woning_legacy (zv_woning_legacy_prefix), woning_applies
@@ -111,21 +117,27 @@
   var WONING_V1 = {{ woning_v1 | json }}, WONING_V2 = {{ woning_v2 | json }}, WONING_LEGACY = {{ woning_legacy | json }};
   var WONING_APPLIES = String({{ woning_applies | json }} || '').split('|').filter(Boolean);
   var WONING_APPLIES_FKS = String({{ woning_applies_fks | json }} || '').split('|').filter(Boolean);
-  // One entry per Woning product (NAMI, Climax): its variant id, the Huren package handles
-  // whose floors it carries (applies), and the same packages' finder_keys (appliesFks) — a
-  // Koop line is a different handle (koop_map) so rule 5 matches it by finder_key instead.
-  // An unresolved product (0) is left out: property only.
+  // One entry per Woning product (NAMI, Climax): its monthly variant id (id, null when the theme
+  // couldn't resolve it: property only), the Huren package handles whose floors it carries
+  // (applies), the same packages' finder_keys (appliesFks) — a Koop line is a different handle
+  // (koop_map) so rule 5 matches it by finder_key instead — and the one-time Koop product a bought
+  // package's floors ride (koopHandle/koopSku; koopId is fetched on demand, see resolveKoopWoningIds).
   var WONING_PRODUCTS = (function () {
     var ids = String({{ woning_variant_ids | json }} || '').split('|');
     var applies = String({{ woning_applies_by_product | json }} || '').split('|');
     var appliesFks = String({{ woning_applies_fks_by_product | json }} || '').split('|');
+    var koopHandles = String({{ woning_koop_handles | json }} || '').split('|');
+    var koopSkus = String({{ woning_koop_skus | json }} || '').split('|');
     return ids.map(function (id, i) {
       return {
-        id: id,
+        id: id && id !== '0' ? id : null,
         applies: String(applies[i] || '').split(',').filter(Boolean),
-        appliesFks: String(appliesFks[i] || '').split(',').filter(Boolean)
+        appliesFks: String(appliesFks[i] || '').split(',').filter(Boolean),
+        koopHandle: koopHandles[i] || null,
+        koopSku: koopSkus[i] || null,
+        koopId: null
       };
-    }).filter(function (wp) { return wp.id && wp.id !== '0'; });
+    }).filter(function (wp) { return wp.id || wp.koopHandle; });
   })();
   // Rider pairs (rule 7): lead product handle (a cart line's own `handle`, no lookup) -> rider variant.
   var RIDERS = String({{ rider_pairs | json }} || '').split('|').map(function (s) { return s.split(':'); })
@@ -161,6 +173,31 @@
     }).then(function (r) { if (r.ok) window.location.reload(); });
   }
 
+  // The floors a Koop Woning line must carry: over the BOUGHT package lines whose finder_key (koop_map)
+  // belongs to this Woning product. Shared by rule 5 and resolveKoopWoningIds().
+  function koopWoningFloors(items, wp) {
+    var floors = 0;
+    items.filter(isKoop).forEach(function (it) {
+      if (wp.appliesFks.indexOf(KOOP_FK[it.handle]) !== -1) floors += woningFloors((it.properties || {})['Woning']);
+    });
+    return floors;
+  }
+  // A Koop Woning line's variant id is not known to the page (the theme can't look it up, see rule 5):
+  // fetch it for each product that needs a line it doesn't have yet. The SKU must be the config's, like
+  // every other product's handle+SKU check; a product that doesn't resolve stays null and rule 5 leaves
+  // it (Overzicht's gate still blocks checkout for the missing line).
+  function resolveKoopWoningIds(cart) {
+    var items = (cart && cart.items) || [];
+    return Promise.all(WONING_PRODUCTS.filter(function (wp) {
+      return wp.koopHandle && !wp.koopId && koopWoningFloors(items, wp) > 0 && !items.some(function (it) { return it.handle === wp.koopHandle; });
+    }).map(function (wp) {
+      return window.fetch('/products/' + encodeURIComponent(wp.koopHandle) + '.js').then(function (r) { return r.ok ? r.json() : null; }).then(function (prod) {
+        var v = prod && prod.variants && prod.variants[0];
+        if (v && v.sku === wp.koopSku) wp.koopId = String(v.id);
+      }).catch(function () { /* stays null */ });
+    }));
+  }
+
   // The rules below, as a pure function of a /cart.js response: returns the ONE fix to
   // apply as { url, body }, or null when the cart is in shape. Exposed as
   // window.zvCartGuard.planFix so Overzicht's checkout button can re-check a fresh cart
@@ -168,7 +205,7 @@
   function planFix(cart) {
     var items = (cart && cart.items) || [];
     var isWoningLine = function (it) {
-      return WONING_PRODUCTS.some(function (wp) { return String(it.variant_id) === wp.id; });
+      return WONING_PRODUCTS.some(function (wp) { return (wp.id && String(it.variant_id) === wp.id) || (wp.koopHandle && it.handle === wp.koopHandle); });
     };
     var isPkg = function (it) {
       return !isWoningLine(it) && !isKoopProp(it) && it.product_type === SUB_TYPE && (NAMI_PKG_HANDLES.indexOf(it.handle) !== -1 || CLIMAX_PKG_HANDLES.indexOf(it.handle) !== -1);
@@ -230,34 +267,53 @@
       return { url: '/cart/update.js', body: { updates: rm } };
     }
 
-    // 5. The Woning lines: per Woning product, one line at pkg_qty x its own package lines' floors.
+    // 5. The Woning lines: per Woning product, the monthly line at pkg_qty x its RENTED package lines'
+    //    floors, and the one-time Koop line at quantity = its BOUGHT package lines' floors.
     for (var w = 0; w < WONING_PRODUCTS.length; w++) {
       var wp = WONING_PRODUCTS[w];
-      var floors = 0;
-      pkgLines.forEach(function (it) {
-        if (wp.applies.indexOf(it.handle) !== -1) floors += woningFloors((it.properties || {})['Woning']);
-      });
-      koopLines.forEach(function (it) {
-        if (wp.appliesFks.indexOf(KOOP_FK[it.handle]) !== -1) floors += woningFloors((it.properties || {})['Woning']);
-      });
-      var target = PKG_QTY * floors;
-      var woningLines = items.filter(function (it) { return String(it.variant_id) === wp.id; });
-      if (woningLines.length > 1) {
-        var merge = {};
-        woningLines.forEach(function (it, i) { merge[it.key] = i === 0 ? target : 0; });
-        return { url: '/cart/update.js', body: { updates: merge } };
+      if (wp.id) {
+        var floors = 0;
+        pkgLines.forEach(function (it) {
+          if (wp.applies.indexOf(it.handle) !== -1) floors += woningFloors((it.properties || {})['Woning']);
+        });
+        var target = PKG_QTY * floors;
+        var woningLines = items.filter(function (it) { return String(it.variant_id) === wp.id; });
+        if (woningLines.length > 1) {
+          var merge = {};
+          woningLines.forEach(function (it, i) { merge[it.key] = i === 0 ? target : 0; });
+          return { url: '/cart/update.js', body: { updates: merge } };
+        }
+        if (woningLines.length === 1 && woningLines[0].quantity !== target) {
+          var setWoning = {};
+          setWoning[woningLines[0].key] = target;   // 0 removes it
+          return { url: '/cart/update.js', body: { updates: setWoning } };
+        }
+        // Missing: update.js with an absolute quantity by variant id adds it, and two overlapping
+        // guard runs can't stack it (same reason as rule 3).
+        if (!woningLines.length && target > 0) {
+          var addWoning = {};
+          addWoning[wp.id] = target;
+          return { url: '/cart/update.js', body: { updates: addWoning } };
+        }
       }
-      if (woningLines.length === 1 && woningLines[0].quantity !== target) {
-        var setWoning = {};
-        setWoning[woningLines[0].key] = target;   // 0 removes it
-        return { url: '/cart/update.js', body: { updates: setWoning } };
-      }
-      // Missing: update.js with an absolute quantity by variant id adds it, and two overlapping
-      // guard runs can't stack it (same reason as rule 3).
-      if (!woningLines.length && target > 0) {
-        var addWoning = {};
-        addWoning[wp.id] = target;
-        return { url: '/cart/update.js', body: { updates: addWoning } };
+      if (wp.koopHandle) {
+        var koopTarget = koopWoningFloors(items, wp);   // one-time: the floors, never x PKG_QTY
+        var koopWoningLines = items.filter(function (it) { return it.handle === wp.koopHandle; });
+        if (koopWoningLines.length > 1) {
+          var mergeKoop = {};
+          koopWoningLines.forEach(function (it, i) { mergeKoop[it.key] = i === 0 ? koopTarget : 0; });
+          return { url: '/cart/update.js', body: { updates: mergeKoop } };
+        }
+        if (koopWoningLines.length === 1 && koopWoningLines[0].quantity !== koopTarget) {
+          var setKoopWoning = {};
+          setKoopWoning[koopWoningLines[0].key] = koopTarget;   // 0 removes it
+          return { url: '/cart/update.js', body: { updates: setKoopWoning } };
+        }
+        if (!koopWoningLines.length && koopTarget > 0 && wp.koopId) {
+          var addKoopWoning = {};
+          addKoopWoning[wp.koopId] = koopTarget;
+          return { url: '/cart/update.js', body: { updates: addKoopWoning } };
+        }
       }
     }
 
@@ -293,8 +349,10 @@
   window.zvCartGuard = { planFix: planFix };
 
   window.fetch('/cart.js').then(function (r) { return r.json(); }).then(function (cart) {
-    var fix = planFix(cart);
-    if (fix) return post(fix.url, fix.body);
+    return resolveKoopWoningIds(cart).then(function () {
+      var fix = planFix(cart);
+      if (fix) return post(fix.url, fix.body);
+    });
   }).catch(function () { /* fail safe: server-side gate (Overzicht) still blocks checkout */ });
 })();
 </script>
