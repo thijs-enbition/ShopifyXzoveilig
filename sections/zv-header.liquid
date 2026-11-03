@@ -191,7 +191,7 @@
   // while /cart is empty) and on the drawer's cart:refresh. Woning/add-on ids are read
   // off this link's own data attributes (server-rendered by
   // snippets/zv-hidden-cart-lines.liquid) since the header renders on every page, not
-  // just Oplossingen — it can't rely on that page's #oplossingen-page data attributes.
+  // just Oplossingen — it can't rely on that page's #Oplossingen-page data attributes.
   var zvCartLink = document.querySelector('a.cart');
   var ZV_HIDDEN_VARIANT_IDS = zvCartLink ? [
     zvCartLink.dataset.addonVideodeurbelVariantId,
