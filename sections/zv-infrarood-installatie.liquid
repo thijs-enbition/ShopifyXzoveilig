@@ -1,0 +1,165 @@
+{%- comment -%}
+  Zo Veilig — Installatieservice infraroodpanelen (2026-11-09, Robi).
+  Vaste pagina-layout in de stijl van de juridische pagina's (zelfde hero). Tarieven en
+  aanvraagadres staan in de sectie-instellingen (Thema aanpassen), de rekenvoorbeelden worden
+  daaruit berekend. Eventuele tekst in de pagina zelf (page.content) verschijnt onder de intro.
+{%- endcomment -%}
+{%- liquid
+  assign ir_call = section.settings.call_cents | default: 7400
+  assign ir_panel = section.settings.panel_cents | default: 7500
+  assign ir_mail = section.settings.request_email | default: 'planning@zoveilig.nl'
+  assign ir_phone = section.settings.phone | default: '088 122 11 11'
+-%}
+<div class="zv-ir">
+  <section class="page-hero">
+    <div class="wrap">
+      <span class="eyebrow"><span class="d"></span>{{ section.settings.eyebrow | default: 'Installatieservice' | escape }}</span>
+      <h1>{{ page.title | default: 'Installatieservice infraroodpanelen' | escape }}</h1>
+      <p class="ir-lead">{{ section.settings.lead | escape }}</p>
+      <div class="ir-hero-cta">
+        <a class="btn btn--gold" href="mailto:{{ ir_mail }}?subject=Aanvraag%20installatie%20infraroodpanelen">Installatie aanvragen</a>
+        <a class="ir-call" href="tel:{{ ir_phone | remove: ' ' }}">of bel {{ ir_phone }}</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="ir-main">
+    <div class="wrap">
+      <div class="ir-grid">
+        <div class="ir-col">
+          {%- if page.content != blank -%}<div class="ir-card ir-rte rte">{{ page.content }}</div>{%- endif -%}
+
+          <div class="ir-card">
+            <h2>Wat doen wij?</h2>
+            <ol class="ir-steps">
+              <li><b>Plek bepalen.</b> Samen kiezen we de beste plek voor elk paneel, aan de wand of aan het plafond.</li>
+              <li><b>Ophangen.</b> We hangen het paneel stevig op met de meegeleverde beugel, op beton, gips of hout.</li>
+              <li><b>Aansluiten.</b> We sluiten het paneel aan op een bestaand stopcontact, lichtpunt of thermostaat.</li>
+              <li><b>Testen en uitleggen.</b> We controleren of alles werkt en laten zien hoe u het bedient.</li>
+            </ol>
+          </div>
+
+          <div class="ir-card">
+            <h2>Wanneer kunnen wij installeren?</h2>
+            <ul class="ir-checks">
+              <li><b>Er is stroom in de buurt:</b> een geaard stopcontact (liefst met een aardlekschakelaar van 30 mA), een lichtpunt of een thermostaat.</li>
+              <li><b>Het paneel past bij de plek:</b> een wandpaneel aan de wand, een plafondpaneel aan het plafond. Hoge-temperatuurpanelen mogen alleen aan het plafond.</li>
+              <li><b>De plafondhoogte is geschikt:</b> tussen 2,40 en 3,00 meter werkt het best. Hoger? Dan is een paneel met meer vermogen of ophangkabels nodig.</li>
+              <li><b>Er is ruimte rondom:</b> minimaal 10 cm vrij rond het paneel, en geen kasten of meubels voor de straling.</li>
+              <li><b>Meerdere panelen op één thermostaat?</b> Dat kan, zolang het totale vermogen binnen het maximum van de thermostaat blijft (vaak 3000 watt). Per ruimte een eigen thermostaat.</li>
+              <li><b>De panelen zijn in huis:</b> u koopt de panelen zelf, wij zorgen voor de installatie.</li>
+            </ul>
+            <div class="ir-note"><b>Let op:</b> nieuwe leidingen, extra groepen in de meterkast of kabels wegwerken in de muur vallen niet onder deze service. Twijfelt u? Stuur ons een paar foto's, dan kijken we met u mee.</div>
+          </div>
+
+          <div class="ir-card">
+            <h2>Hoeveel panelen heeft u nodig?</h2>
+            <div class="ir-two">
+              <div><h3>Bijverwarming</h3><p>Een paneel boven uw zithoek of bureau maakt het daar 1 tot 2 graden warmer. Vaak is één paneel per plek genoeg.</p></div>
+              <div><h3>Hoofdverwarming</h3><p>Het benodigde vermogen hangt af van het type woning, de isolatie en de ruimte die u wilt verwarmen.</p></div>
+            </div>
+            <p class="ir-more">Reken het uit met de <a href="https://www.verwarminghandel.nl/collections/vermogenscalculator" target="_blank" rel="noopener">vermogenscalculator van Verwarminghandel.nl</a>, of lees meer over <a href="https://www.verwarminghandel.nl/collections/installatie-aansluiten-van-infrarood-panelen" target="_blank" rel="noopener">het installeren en aansluiten van infraroodpanelen</a>.</p>
+          </div>
+        </div>
+
+        <aside class="ir-side">
+          <div class="ir-price">
+            <p class="ir-label">Onze tarieven</p>
+            <div class="ir-row"><span>Voorrijkosten</span><b>{{ ir_call | money }}</b></div>
+            <div class="ir-row"><span>Per paneel</span><b>{{ ir_panel | money }}</b></div>
+            <p class="ir-small">Eenmalig per bezoek, alle bedragen inclusief btw.</p>
+            <p class="ir-label ir-label--2">Voorbeelden</p>
+            {%- for n in (1..4) -%}
+              {%- assign ir_total = ir_panel | times: n | plus: ir_call -%}
+              <div class="ir-row ir-row--sm"><span>{{ n }} {% if n == 1 %}paneel{% else %}panelen{% endif %}</span><b>{{ ir_total | money }}</b></div>
+            {%- endfor -%}
+          </div>
+
+          <div class="ir-ask">
+            <h2>Installatie aanvragen</h2>
+            <p>Mail of bel ons en geef alvast door:</p>
+            <ul>
+              <li>Uw naam, adres en telefoonnummer</li>
+              <li>Het aantal panelen en het merk of type</li>
+              <li>Wand of plafond, en de plafondhoogte</li>
+              <li>Stopcontact, lichtpunt of thermostaat</li>
+              <li>Een paar foto's van de plek</li>
+            </ul>
+            <a class="btn btn--gold ir-btn" href="mailto:{{ ir_mail }}?subject=Aanvraag%20installatie%20infraroodpanelen">Mail {{ ir_mail }}</a>
+            <a class="ir-tel" href="tel:{{ ir_phone | remove: ' ' }}">Of bel {{ ir_phone }}</a>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</div>
+
+{% stylesheet %}
+.zv-ir { --ink:#1a1230; --indigo:#322469; --indigo-deep:#281c54; --paper:#fffdf8; --cream:#fdfaf2; --gold:#e4a311; --gold-lt:#f5c84a; --gold-soft:#fbf0d4; --belt:#9c6c08; --line:#e7e0cf; --muted:#6f6786; color:var(--ink); line-height:1.5; }
+.zv-ir .wrap { max-width:1160px; margin:0 auto; padding:0 clamp(20px,3.6vw,52px); }
+.zv-ir .page-hero { background:radial-gradient(64% 120% at 92% 0%,rgba(197,46,47,.34) 0%,rgba(197,46,47,0) 55%),radial-gradient(66% 122% at 4% 102%,rgba(0,80,159,.5) 0%,rgba(0,80,159,0) 58%),linear-gradient(180deg,#2c3076 0%,#241c54 100%); color:#fff; padding:clamp(40px,5vw,72px) 0 clamp(34px,4vw,56px); }
+.zv-ir .page-hero .eyebrow { display:inline-flex; align-items:center; gap:9px; font-size:12px; font-weight:800; letter-spacing:.24em; text-transform:uppercase; color:var(--gold-lt); }
+.zv-ir .page-hero .eyebrow .d { width:8px; height:8px; border-radius:50%; background:var(--gold); }
+.zv-ir .page-hero h1 { color:#fff; font-size:clamp(30px,4vw,52px); font-weight:900; letter-spacing:-.02em; line-height:1.03; margin-top:14px; max-width:20ch; text-wrap:balance; }
+.zv-ir .ir-lead { font-size:clamp(16px,1.6vw,19px); font-weight:500; color:#d8d2ef; margin-top:16px; max-width:56ch; }
+.zv-ir .ir-hero-cta { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-top:26px; }
+.zv-ir .ir-call { color:#fff; font-weight:800; text-decoration:underline; text-underline-offset:3px; }
+.zv-ir .ir-main { background:var(--cream); padding:clamp(30px,4vw,56px) 0 clamp(56px,6vw,90px); }
+.zv-ir .ir-grid { display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:28px; align-items:start; }
+.zv-ir .ir-col { display:flex; flex-direction:column; gap:20px; }
+.zv-ir .ir-card { background:var(--paper); border:1px solid var(--line); border-radius:20px; padding:clamp(22px,2.6vw,32px); }
+.zv-ir .ir-card h2, .zv-ir .ir-ask h2 { font-size:22px; font-weight:900; color:var(--indigo); letter-spacing:-.015em; line-height:1.2; margin:0; }
+.zv-ir .ir-card h3 { font-size:17px; font-weight:900; color:var(--indigo); margin:0; }
+.zv-ir .ir-card p, .zv-ir .ir-card li { font-size:15.5px; font-weight:500; color:#463f5c; line-height:1.6; }
+.zv-ir .ir-card b { color:var(--ink); font-weight:800; }
+.zv-ir .ir-card a { color:var(--indigo); font-weight:800; }
+.zv-ir .ir-steps { list-style:none; counter-reset:irs; margin:18px 0 0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.zv-ir .ir-steps li { counter-increment:irs; position:relative; background:var(--cream); border:1px solid var(--line); border-radius:14px; padding:16px 16px 16px 58px; }
+.zv-ir .ir-steps li::before { content:counter(irs); position:absolute; left:16px; top:14px; width:30px; height:30px; border-radius:50%; background:var(--indigo); color:#fff; font-weight:900; display:flex; align-items:center; justify-content:center; font-size:15px; }
+.zv-ir .ir-checks { list-style:none; margin:16px 0 0; padding:0; display:flex; flex-direction:column; gap:12px; }
+.zv-ir .ir-checks li { position:relative; padding-left:32px; }
+.zv-ir .ir-checks li::before { content:""; position:absolute; left:0; top:3px; width:20px; height:20px; border-radius:50%; background:var(--gold-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' stroke='%23322469' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/13px no-repeat; }
+.zv-ir .ir-note { margin-top:18px; background:var(--gold-soft); border-left:4px solid var(--gold); border-radius:0 12px 12px 0; padding:14px 16px; font-size:14.5px; font-weight:600; color:#5a4210; line-height:1.55; }
+.zv-ir .ir-two { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:16px; }
+.zv-ir .ir-two > div { background:var(--cream); border:1px solid var(--line); border-radius:14px; padding:16px; }
+.zv-ir .ir-two p { margin-top:6px; }
+.zv-ir .ir-more { margin-top:16px; }
+.zv-ir .ir-rte p { margin-top:10px; }
+.zv-ir .ir-side { position:sticky; top:110px; display:flex; flex-direction:column; gap:16px; }
+.zv-ir .ir-price { background:var(--indigo); color:#fff; border-radius:20px; padding:26px; }
+.zv-ir .ir-label { font-size:12.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--gold-lt); margin:0 0 8px; }
+.zv-ir .ir-label--2 { margin-top:22px; }
+.zv-ir .ir-row { display:flex; justify-content:space-between; gap:12px; align-items:baseline; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.14); font-size:16px; font-weight:600; color:#e6e1f7; }
+.zv-ir .ir-row b { font-size:22px; font-weight:900; color:#fff; white-space:nowrap; }
+.zv-ir .ir-row--sm b { font-size:16px; }
+.zv-ir .ir-row:last-child { border-bottom:none; }
+.zv-ir .ir-small { font-size:13px; color:#cdc6e8; margin:10px 0 0; }
+.zv-ir .ir-ask { background:var(--paper); border:1px solid var(--line); border-radius:20px; padding:24px; }
+.zv-ir .ir-ask p { font-size:15px; color:#463f5c; margin:8px 0 0; }
+.zv-ir .ir-ask ul { margin:10px 0 0; padding-left:20px; display:flex; flex-direction:column; gap:6px; font-size:14.5px; color:#463f5c; }
+.zv-ir .ir-btn { margin-top:18px; width:100%; justify-content:center; white-space:normal; text-align:center; }
+.zv-ir .ir-tel { display:block; text-align:center; margin-top:12px; font-weight:800; color:var(--indigo); }
+@media (max-width: 900px) {
+  .zv-ir .ir-grid { grid-template-columns:1fr; }
+  .zv-ir .ir-side { position:static; order:-1; }
+}
+@media (max-width: 600px) {
+  .zv-ir .ir-steps, .zv-ir .ir-two { grid-template-columns:1fr; }
+}
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Infraroodpanelen",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Installatieservice" },
+    { "type": "textarea", "id": "lead", "label": "Introtekst", "default": "Heeft u infraroodpanelen gekocht? Onze ervaren monteurs hangen ze netjes op en sluiten ze veilig aan, aan de wand of aan het plafond." },
+    { "type": "number", "id": "call_cents", "label": "Voorrijkosten in centen (7400 = € 74,00)", "default": 7400 },
+    { "type": "number", "id": "panel_cents", "label": "Prijs per paneel in centen (7500 = € 75,00)", "default": 7500 },
+    { "type": "text", "id": "request_email", "label": "E-mailadres voor aanvragen", "default": "planning@zoveilig.nl" },
+    { "type": "text", "id": "phone", "label": "Telefoonnummer", "default": "088 122 11 11" }
+  ],
+  "presets": [{ "name": "Infraroodpanelen" }]
+}
+{% endschema %}
