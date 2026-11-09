@@ -49,7 +49,7 @@
           <a href="{% render 'zv-route', key: 'pakketten' %}">Vergelijk pakketten</a>
           <a href="{% render 'zv-route', key: 'zakelijk' %}">Zakelijk</a>
           {%- comment -%} Installatieservice infraroodpanelen (2026-11-09, Robi): only shown once the page exists. Pas 'installatie-infraroodpanelen' aan als de pagina een ander adres (handle) heeft. {%- endcomment -%}
-          {%- assign zv_ir_page = pages['installatie-infraroodpanelen'] -%}
+          {%- assign zv_ir_page = pages['installatieservice-infraroodpanelen'] -%}
           {%- if zv_ir_page != blank -%}<a href="{{ zv_ir_page.url }}">Infraroodpanelen</a>{%- endif -%}
         {%- endif -%}
       </div>
