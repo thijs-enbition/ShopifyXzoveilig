@@ -9,16 +9,7 @@
  */
 {
   "sections": {
-    "wizard": { "type": "zelf-samenstellen-wizard", "settings": { "tier_appartement": "secure", "tier_rijtjeswoning": "guard", "tier_vrijstaand": "secure_plus" } },
-    "main": {
-      "type": "zelf-samenstellen",
-      "blocks": {
-        "trust-bedenktijd": { "type": "trust", "settings": { "label": "14 dagen bedenktijd", "route": "herroepingsrecht" } },
-        "trust-advies": { "type": "trust", "settings": { "label": "Gratis installatieadvies", "route": "contact" } }
-      },
-      "block_order": ["trust-bedenktijd", "trust-advies"],
-      "settings": {}
-    }
+    "wizard": { "type": "zelf-samenstellen-wizard", "settings": { "tier_appartement": "secure", "tier_rijtjeswoning": "guard", "tier_vrijstaand": "secure_plus" } }
   },
-  "order": ["wizard", "main"]
+  "order": ["wizard"]
 }

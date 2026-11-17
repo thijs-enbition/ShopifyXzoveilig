@@ -1,27 +1,26 @@
 {%- comment -%}
-  Zo Veilig — offertewizard boven de Zelf samenstellen-grid (2026-11-17). Vier korte vragen, de vorm van
-  de oude offertebuilder, op de huidige producten. Het is GEEN prijsberekening en geen pakketkiezer: de
-  wizard filtert/markeert alleen de bestaande grid (sections/zelf-samenstellen.liquid) en vult het
-  terugbelformulier voor. Logica in assets/zv-offerte-wizard.js; deze file levert alleen markup, tekst en
-  de koppelingen vraag -> grid-categorie.
+  Zo Veilig — offertewizard op /pages/zelf-samenstellen (2026-11-17; vanaf de laatste ronde ZONDER grid).
+  Vier korte vragen (de vorm van de oude offertebuilder), daarna een resultaatstap: een gewone lijst van de
+  passende producten/categorieen, de Woning-toelichting vanaf 2 etages, de regel "Ons advies: <pakket>" en
+  een formulier (naam, e-mail, telefoon, toestemming) waarmee de aanbeveling per e-mail wordt aangevraagd.
+  Geen product wordt hier verkocht, geen prijs getoond of berekend, de winkelwagen wordt niet aangeraakt.
+  Het lead gaat als lead_type 'zelfsamenstellen' naar ZV_LEAD_ENDPOINT (Odoo) via ZVLeadWebhook; de e-mail zelf
+  is een Odoo-automatisering (niet in deze repo). Logica in assets/zv-offerte-wizard.js; deze file levert
+  markup, tekst en de koppelingen vraag -> categorie. Zie docs/zelf-samenstellen-wizard-2026-11-17.md.
 
   Koppelingen staan als data-attributen op de opties, zodat de JS generiek blijft:
-    data-cats   spatie-gescheiden categorieen van de grid (sensoren, camera, deurbel, bediening);
-                de grid-filter wordt de UNIE van Q1 en Q4.
-    data-d      korte tekst voor de regel "Offertewizard: ..." die als `description` met de lead meegaat.
-    data-floors aantal etages (Q3); 2 of meer toont de Woning-toelichting in de grid.
-    data-types  (Q4) beperkt de categorie van die optie tot rijen met dit `type` in de grid
-                (Binnencamera -> Binnen, Buitencamera -> Buiten). Zo'n optie VERSMALT ook Q1's
-                camera-categorie; een leeg resultaat valt in de grid terug op de hele categorie.
-    data-tier-* (Q2) pakketadvies uit de sectie-instellingen hieronder (per woningtype een pakket, leeg =
-                geen advies). De mapping woningtype -> pakket is NIET bevestigd (Thijs/Robi), dus er staat
-                bewust niets ingevuld; zie docs/zelf-samenstellen-wizard-2026-11-17.md.
+    data-cats   spatie-gescheiden categorieen (sensoren, camera, deurbel, bediening); de resultaatlijst is de
+                UNIE van Q1 en Q4.
+    data-d      korte tekst voor de samenvatting die als `description` met het lead meegaat.
+    data-floors aantal etages (Q3); 2 of meer toont de Woning-toelichting in het resultaat.
+    data-types  (Q4) beperkt de categorie van die optie tot producten met dit type (Binnencamera -> Binnen,
+                Buitencamera -> Buiten). Zo'n optie VERSMALT ook Q1's camera-categorie; een leeg resultaat valt
+                terug op de hele categorie.
+    data-tier-* (Q2) pakketadvies uit de sectie-instellingen hieronder (per woningtype een pakket, leeg = geen
+                advies). In de vraag zelf is het een balk met link naar Oplossingen; in het resultaat gewone tekst.
 
-  Q2 (type woning) en Q3 (etages) filteren de grid niet: die heeft geen pakketten en geen Woning-regel
-  (die hoort bij een pakketregel en wordt los door de winkelwagen-guard verwijderd). Q2 toont, als er een
-  mapping is ingesteld, een "Ons advies"-balk (zelfde opmaak als .pm-advies van de pakket-matcher) met een
-  link naar /pages/oplossingen?pakket=<finder_key> (de bestaande Keuzehulp-koppeling: opent dat pakket);
-  beide antwoorden reizen mee in de lead. Q3 toont vanaf 2 etages alleen een toelichting. Geen bedragen,
+  Productnamen: #zvwData hieronder is de opzoeklijst categorie -> productnamen (overgenomen uit de rijen van
+  sections/zelf-samenstellen.liquid, die niet meer op de pagina staat). Alleen namen en types: geen bedragen,
   geen productcodes in deze file (scripts/check_pricing.py).
 {%- endcomment -%}
 {% comment %}theme-check-disable DeprecatedTag, UndefinedObject{% endcomment %}
@@ -31,14 +30,16 @@
 
 <div class="zv-wiz" data-zv-wizard>
   <div class="wrap">
-    <form class="zvw-card" id="zvwForm" novalidate aria-labelledby="zvw-title">
+    <div class="zvw-card" aria-labelledby="zvw-title">
       <div class="zvw-head">
-        <h2 id="zvw-title">{{ section.settings.title | default: 'Stel uw beveiliging samen in 4 vragen' | escape }}</h2>
-        <p>{{ section.settings.lead | default: 'Beantwoord vier korte vragen. Daarna laten we de onderdelen zien die erbij passen en nemen we uw antwoorden mee in uw terugbelverzoek.' | escape }}</p>
+        <h1 id="zvw-title">{{ section.settings.title | default: 'Stel uw beveiliging samen in 4 vragen' | escape }}</h1>
+        <p>{{ section.settings.lead | default: 'Beantwoord vier korte vragen en ontvang de aanbeveling voor uw woning per e-mail.' | escape }}</p>
       </div>
 
       <div class="zvw-progress" aria-hidden="true"><span class="zvw-bar" id="zvwBar"></span></div>
       <p class="zvw-count" id="zvwCount" aria-live="polite">Vraag 1 van 4</p>
+
+      <form id="zvwForm" class="zvw-qform" novalidate>
 
       <fieldset class="zvw-step" data-step="1" data-name="beveiliging">
         <legend tabindex="-1">Hoe wilt u uw woning beveiligen?<span class="zvw-sub">Kies alles wat past.</span></legend>
@@ -98,9 +99,76 @@
         <button type="button" class="zvw-back" id="zvwBack" hidden>Vorige</button>
         <button type="submit" class="zvw-next" id="zvwNext">Volgende</button>
       </div>
-    </form>
+      </form>
+
+      <section class="zvw-result" id="zvwResult" aria-labelledby="zvwResH" hidden>
+        <h2 id="zvwResH" tabindex="-1">Uw aanbeveling</h2>
+        <p class="zvw-res-intro">Op basis van uw antwoorden past dit bij u:</p>
+        <div id="zvwResList"></div>
+        <p class="zvw-res-note" id="zvwResWoning" data-summary="Meerdere etages: de toeslag &quot;Extra etage of &gt;100 m²&quot; kan van toepassing zijn. Bespreken in het adviesgesprek." hidden>Woont u op meerdere etages, of is uw woning groter dan 100 m&sup2;? Bij een abonnement komt daar de toeslag &ldquo;Extra etage of &gt;100 m&sup2;&rdquo; bij. Die is niet los te bestellen: we bespreken dit met u in het adviesgesprek.</p>
+        <p class="zvw-res-advies" id="zvwResAdvies" hidden><b>{{ section.settings.advies_label | default: 'Ons advies:' | escape }} <span id="zvwResAdviesName"></span>.</b> <span id="zvwResAdviesText"></span></p>
+
+        <form class="zvw-lead" id="zvwLead" novalidate data-consent-error="{% render 'zv-form-copy', key: 'consent_error' %}">
+          <h3 class="zvw-lead__h">Waar mogen we de aanbeveling naartoe sturen?</h3>
+          <p class="zvw-lead__p">We sturen de aanbeveling naar dit e-mailadres. Onze klantenservice neemt ook contact met u op.</p>
+          <div class="zvw-fld"><label for="zvwName">Naam</label><input type="text" id="zvwName" name="name" autocomplete="name" required></div>
+          <div class="zvw-fld"><label for="zvwEmail">E-mailadres</label><input type="email" id="zvwEmail" name="email" autocomplete="email" inputmode="email" required></div>
+          <div class="zvw-fld"><label for="zvwPhone">Telefoonnummer</label><input type="tel" id="zvwPhone" name="phone" autocomplete="tel" inputmode="tel" placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}" required></div>
+          <label class="zvw-consent"><input type="checkbox" id="zvwConsent" name="consent" required><span>{% render 'zv-form-copy', key: 'consent' %}</span></label>
+          <div class="zvw-err" id="zvwLeadErr" role="alert" hidden></div>
+          <button type="submit" class="zvw-next zvw-send" id="zvwSend">Ontvang uw aanbeveling per e-mail</button>
+        </form>
+
+        <div class="zvw-done" id="zvwDone" role="status" tabindex="-1" hidden>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <p>Bedankt. U ontvangt de aanbeveling per e-mail. Onze klantenservice neemt ook contact met u op.</p>
+        </div>
+
+        <button type="button" class="zvw-back" id="zvwEdit">Antwoorden wijzigen</button>
+      </section>
+    </div>
   </div>
 </div>
+
+{%- comment -%} Opzoeklijst voor de resultaatlijst: categorie -> productnamen + type (type = wat Q4 Binnen/Buiten filtert). Alleen namen. {%- endcomment -%}
+<script type="application/json" id="zvwData">
+{
+  "order": ["sensoren", "camera", "deurbel", "bediening"],
+  "cats": {
+    "sensoren": {
+      "label": "Sensoren",
+      "items": [
+        { "n": "Magneetcontact (DC-23)", "t": "Sensor" },
+        { "n": "PIR Bewegingsdetector", "t": "Sensor" },
+        { "n": "Rookmelder", "t": "Sensor" },
+        { "n": "Watersensor", "t": "Sensor" }
+      ]
+    },
+    "camera": {
+      "label": "Camera's",
+      "items": [
+        { "n": "Binnencamera 516", "t": "Binnen" },
+        { "n": "Buitencamera bedraad Dome 826", "t": "Buiten" },
+        { "n": "729 WiFi Camera Floodlight (Mickey)", "t": "Buiten" },
+        { "n": "730 Buitencamera met spotlight", "t": "Buiten" }
+      ]
+    },
+    "deurbel": {
+      "label": "Videodeurbel",
+      "items": [
+        { "n": "Video Deurbel 750", "t": "Deurbel" },
+        { "n": "Video Deurbel 780 (accu)", "t": "Deurbel" }
+      ]
+    },
+    "bediening": {
+      "label": "Bediening",
+      "items": [
+        { "n": "Afstandsbediening", "t": "Accessoire" }
+      ]
+    }
+  }
+}
+</script>
 
 <script src="{{ 'zv-offerte-wizard.js' | asset_url }}" defer="defer"></script>
 
@@ -113,7 +181,6 @@
 }
 .zv-wiz .wrap { max-width:1180px; margin:0 auto; padding:clamp(24px,3.4vw,44px) clamp(16px,3.4vw,48px); }
 .zv-wiz .zvw-card { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:clamp(18px,2.6vw,30px); box-shadow:0 26px 56px -42px rgba(26,18,48,.5); display:flex; flex-direction:column; gap:18px; max-width:860px; }
-.zv-wiz .zvw-head h2 { font-size:clamp(21px,2.6vw,28px); font-weight:900; letter-spacing:-.015em; line-height:1.15; color:var(--indigo); margin:0; }
 .zv-wiz .zvw-head p { font-size:15px; font-weight:600; color:var(--muted); margin:8px 0 0; max-width:620px; }
 .zv-wiz .zvw-progress { height:6px; border-radius:99px; background:var(--indigo-soft); overflow:hidden; }
 .zv-wiz .zvw-bar { display:block; height:100%; width:25%; background:var(--indigo); border-radius:99px; transition:width .25s ease; }
@@ -141,6 +208,40 @@
 .zv-wiz .zvw-advies__cta { flex:none; font-size:14.5px; font-weight:800; color:var(--ink); background:var(--gold); border-radius:12px; padding:11px 18px; text-decoration:none; box-shadow:0 2px 0 var(--belt); }
 .zv-wiz .zvw-advies__cta:focus-visible { outline:2px solid var(--indigo); outline-offset:3px; }
 .zv-wiz .zvw-sr { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.zv-wiz .zvw-head h1 { font-size:clamp(24px,3vw,32px); font-weight:900; letter-spacing:-.015em; line-height:1.12; color:var(--indigo); margin:0; }
+.zv-wiz .zvw-qform { display:flex; flex-direction:column; gap:18px; }
+.zv-wiz .zvw-result { display:flex; flex-direction:column; gap:16px; }
+.zv-wiz .zvw-result[hidden], .zv-wiz .zvw-qform[hidden], .zv-wiz .zvw-res-note[hidden], .zv-wiz .zvw-res-advies[hidden], .zv-wiz .zvw-lead[hidden], .zv-wiz .zvw-done[hidden], .zv-wiz .zvw-back[hidden] { display:none; }
+.zv-wiz .zvw-result h2 { font-size:clamp(19px,2.2vw,23px); font-weight:900; letter-spacing:-.01em; color:var(--indigo); margin:0; }
+.zv-wiz .zvw-result h2:focus, .zv-wiz .zvw-done:focus { outline:none; }
+.zv-wiz .zvw-res-intro { font-size:15px; font-weight:600; color:var(--muted); margin:-6px 0 0; }
+.zv-wiz .zvw-res-cat { font-size:13px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--indigo-2); margin:14px 0 4px; }
+.zv-wiz .zvw-res-cat:first-child { margin-top:0; }
+.zv-wiz .zvw-res-list { margin:0; padding:0 0 0 20px; font-size:15.5px; font-weight:700; color:var(--ink); }
+.zv-wiz .zvw-res-list li { padding:2px 0; }
+.zv-wiz .zvw-res-note { margin:0; padding:11px 16px; background:var(--indigo-soft); border-radius:12px; font-size:13.5px; font-weight:700; color:var(--indigo); }
+.zv-wiz .zvw-res-advies { margin:0; font-size:15px; font-weight:500; color:#5b5374; line-height:1.45; }
+.zv-wiz .zvw-res-advies b { color:var(--indigo); font-weight:900; }
+.zv-wiz .zvw-lead { display:flex; flex-direction:column; gap:12px; padding-top:18px; border-top:1px solid var(--line); }
+.zv-wiz .zvw-lead__h { font-size:17px; font-weight:900; color:var(--indigo); margin:0; }
+.zv-wiz .zvw-lead__p { font-size:14px; font-weight:600; color:var(--muted); margin:-6px 0 0; }
+.zv-wiz .zvw-fld { display:flex; flex-direction:column; gap:5px; max-width:420px; }
+.zv-wiz .zvw-fld label { font-size:13.5px; font-weight:800; color:var(--indigo); }
+.zv-wiz .zvw-fld input { font-family:inherit; font-size:15.5px; font-weight:600; color:var(--ink); border:1.5px solid var(--line-2); border-radius:10px; padding:12px 13px; background:#fff; }
+.zv-wiz .zvw-fld input:focus-visible, .zv-wiz .zvw-consent input:focus-visible { outline:2px solid var(--indigo); outline-offset:2px; }
+.zv-wiz .zvw-fld.is-invalid input { border-color:var(--red); }
+.zv-wiz .zvw-fld.is-invalid label { color:var(--rood); }
+.zv-wiz .zvw-consent { display:flex; align-items:flex-start; gap:10px; cursor:pointer; max-width:560px; }
+.zv-wiz .zvw-consent input { width:18px; height:18px; margin-top:2px; flex:none; accent-color:var(--indigo); }
+.zv-wiz .zvw-consent span { font-size:13px; font-weight:600; color:var(--muted); line-height:1.45; }
+.zv-wiz .zvw-consent a { color:var(--indigo); font-weight:800; }
+.zv-wiz .zvw-consent.is-invalid span { color:var(--rood); }
+.zv-wiz .zvw-send { align-self:flex-start; }
+.zv-wiz .zvw-send[disabled] { opacity:.6; cursor:default; }
+.zv-wiz .zvw-done { display:flex; align-items:flex-start; gap:10px; padding:14px 16px; background:#eaf6ef; border:1.5px solid #2f8f5b; border-radius:14px; color:#1d6b42; font-weight:700; }
+.zv-wiz .zvw-done svg { width:20px; height:20px; flex:none; margin-top:2px; }
+.zv-wiz .zvw-done p { margin:0; font-size:15px; }
+.zv-wiz #zvwEdit { align-self:flex-start; }
 .zv-wiz .zvw-nav { display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
 .zv-wiz .zvw-next, .zv-wiz .zvw-back { font-family:inherit; font-size:15.5px; font-weight:800; border-radius:13px; padding:14px 22px; cursor:pointer; }
 .zv-wiz .zvw-next { color:var(--ink); background:var(--gold); border:none; box-shadow:0 2px 0 var(--belt); transition:transform .14s,box-shadow .14s; }
@@ -148,7 +249,7 @@
 .zv-wiz .zvw-back { color:var(--indigo); background:#fff; border:1.5px solid var(--line-2); }
 .zv-wiz .zvw-back:hover { border-color:var(--indigo); }
 .zv-wiz .zvw-next:focus-visible, .zv-wiz .zvw-back:focus-visible { outline:2px solid var(--indigo); outline-offset:3px; }
-@media(max-width:520px){ .zv-wiz .zvw-advies__cta { flex-basis:100%; text-align:center; } .zv-wiz .zvw-opt { flex:1 1 100%; } .zv-wiz .zvw-nav { flex-direction:column-reverse; align-items:stretch; } .zv-wiz .zvw-next, .zv-wiz .zvw-back { text-align:center; } }
+@media(max-width:520px){ .zv-wiz .zvw-send, .zv-wiz #zvwEdit { align-self:stretch; text-align:center; } .zv-wiz .zvw-fld { max-width:none; } .zv-wiz .zvw-advies__cta { flex-basis:100%; text-align:center; } .zv-wiz .zvw-opt { flex:1 1 100%; } .zv-wiz .zvw-nav { flex-direction:column-reverse; align-items:stretch; } .zv-wiz .zvw-next, .zv-wiz .zvw-back { text-align:center; } }
 @media(prefers-reduced-motion:reduce){ .zv-wiz .zvw-bar { transition:none; } }
 {% endstylesheet %}
 
@@ -158,8 +259,8 @@
   "tag": "section",
   "settings": [
     { "type": "text", "id": "title", "label": "Titel", "default": "Stel uw beveiliging samen in 4 vragen" },
-    { "type": "textarea", "id": "lead", "label": "Introductie", "default": "Beantwoord vier korte vragen. Daarna laten we de onderdelen zien die erbij passen en nemen we uw antwoorden mee in uw terugbelverzoek." },
-    { "type": "header", "content": "Pakketadvies bij vraag 2", "info": "Leeg = geen advies voor dat woningtype. Mapping nog niet bevestigd, dus standaard leeg. De link opent het gekozen pakket op Oplossingen." },
+    { "type": "textarea", "id": "lead", "label": "Introductie", "default": "Beantwoord vier korte vragen en ontvang de aanbeveling voor uw woning per e-mail." },
+    { "type": "header", "content": "Pakketadvies bij vraag 2", "info": "Leeg = geen advies voor dat woningtype. Bij de vraag zelf een balk met link naar het pakket op Oplossingen; in het resultaat gewone tekst." },
     { "type": "select", "id": "tier_appartement", "label": "Appartement", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
     { "type": "text", "id": "text_appartement", "label": "Toelichting appartement (optioneel)" },
     { "type": "select", "id": "tier_rijtjeswoning", "label": "Rijtjeswoning", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
