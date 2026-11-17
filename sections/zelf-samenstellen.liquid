@@ -21,6 +21,12 @@
   + "Aanbevolen · Nx" badge), dims the rest and fills the hidden #ccDescription of the callback form, which
   the lead sends as `description`. See docs/zelf-samenstellen-matcher-2026-11-02.md.
 
+  Offertewizard (sections/zelf-samenstellen-wizard.liquid, 2026-11-17): its `zv-wizard:apply` event
+  ({cats, description, extraFloors}) filters the grid to several categories at once (state.cats), shows
+  the Woning note from 2 floors and fills #ccDescription (also shown to the visitor in #ccDescShow).
+  See docs/zelf-samenstellen-wizard-2026-11-17.md. The older matcher event above still works but the
+  page template no longer renders the matcher.
+
   Filter chips (data-filter) match a row's `cat`; a chip that matches no row is hidden.
   Trust strip: one `trust` block per item (template JSON), a label plus an optional zv-route
   key for the page that backs it.
@@ -81,6 +87,7 @@
       <span id="zvMatchNoteT"></span>
       <button type="button" id="zvMatchClear">Toon alles</button>
     </div>
+    <p class="zv-wiz-woning" id="zvWizWoning" role="note" hidden>Woont u op meerdere etages, of is uw woning groter dan 100 m&sup2;? Bij een abonnement komt daar de toeslag &ldquo;Extra etage of &gt;100 m&sup2;&rdquo; bij. Die is niet los te bestellen: we bespreken dit met u in het adviesgesprek.</p>
     <div class="rows" id="rows"></div>
   </section>
 
@@ -107,6 +114,7 @@
     <form class="cam-contact" id="camContact" data-consent-error="{% render 'zv-form-copy', key: 'consent_error' %}">
       <div class="cam-contact-h">Of laat ons u terugbellen</div>
       <input type="hidden" id="ccDescription" name="description">
+      <div class="cam-contact-desc" id="ccDescShow" hidden><span id="ccDescText"></span><button type="button" id="ccDescClear">Wissen</button></div>
       <input type="text" id="ccName" placeholder="Naam" required>
       <input type="tel" id="ccPhone" placeholder="{% render 'zv-form-copy', key: 'phone_placeholder' %}" aria-label="Telefoonnummer" required>
       <input type="email" id="ccEmail" placeholder="E-mailadres (optioneel)">
@@ -223,7 +231,7 @@
   /* `match` is the matcher's {slug: qty} map (sections/zelf-samenstellen-matcher.liquid, row field
      `m`), null while no recommendation is active. It lives here, not on the DOM, because
      renderRows() rebuilds every card on each Koop/Huur click. */
-  var state={ lines:{}, filter:'', open:{}, match:null };
+  var state={ lines:{}, filter:'', open:{}, match:null, cats:null };
   function euro(n){ return '€ '+Number(n).toFixed(2).replace('.',','); }
 
   var SRC=['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid'];
@@ -308,7 +316,7 @@
   function renderRows(){
     var rows=document.getElementById('rows'); rows.innerHTML='';
     GROUPS.forEach(function(g){
-      var list=HW.filter(function(h){ return (h.huur!=null)===g.huur && (!state.filter || catsOf(h).indexOf(state.filter)>-1); });
+      var list=HW.filter(function(h){ return (h.huur!=null)===g.huur && (!state.filter || catsOf(h).indexOf(state.filter)>-1) && (!state.cats || catsOf(h).some(function(c){ return state.cats.indexOf(c)>-1; })); });
       if(!list.length) return;
       var head=document.createElement('h3'); head.className='hw-group-h'; head.textContent=g.title;
       var grid=document.createElement('div'); grid.className='hw-grid';
@@ -351,11 +359,15 @@
   });
   function syncChips(){
     filters.querySelectorAll('[data-filter]').forEach(function(x){
-      var on=x.getAttribute('data-filter')===state.filter; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on?'true':'false');
+      var f=x.getAttribute('data-filter');
+      var on=state.cats?state.cats.indexOf(f)>-1:f===state.filter; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on?'true':'false');
     });
   }
   filters.addEventListener('click',function(e){
     var b=e.target.closest('[data-filter]'); if(!b) return;
+    /* A chip click takes over from the wizard's multi-category filter (its note goes); the wizard's
+       description stays, visible above the callback form, until "Wissen" or "Toon alles". */
+    if(state.cats){ state.cats=null; matchNote.hidden=true; woningNote.hidden=true; }
     state.filter=b.getAttribute('data-filter');
     syncChips();
     renderRows();
@@ -367,20 +379,44 @@
      callback form below sends along. "Toon alles" clears both, so a dismissed recommendation can't
      reach a lead. */
   var matchNote=document.getElementById('zvMatchNote'), ccDesc=document.getElementById('ccDescription');
+  var woningNote=document.getElementById('zvWizWoning'), descShow=document.getElementById('ccDescShow');
+  /* One writer for the lead description, so the hidden field and the line the visitor can see never differ. */
+  function setDesc(v){
+    ccDesc.value=v||'';
+    document.getElementById('ccDescText').textContent=v?'Uw antwoorden gaan mee: '+v.replace(/^Offertewizard: /,''):'';
+    descShow.hidden=!v;
+  }
   function applyMatch(d){
     var n=Object.keys(d.qty).length; if(!n) return clearMatch();
-    state.match=d.qty; state.filter=''; syncChips();
-    ccDesc.value=d.description||'';
+    state.match=d.qty; state.cats=null; woningNote.hidden=true; state.filter=''; syncChips();
+    setDesc(d.description);
     document.getElementById('zvMatchNoteT').textContent='Gemarkeerd: '+(n===1?'1 product dat bij':n+' producten die bij')+' uw antwoorden '+(n===1?'past':'passen')+'.';
     matchNote.hidden=false;
     renderRows();
   }
+  /* The offertewizard (sections/zelf-samenstellen-wizard.liquid) hands over {cats, description,
+     extraFloors}: the grid shows only those categories (several at once, which the single-chip filter
+     can't), `description` goes into the callback form, and from 2 floors a note explains the Woning
+     toeslag. It marks no card and shows no price. Nothing here touches the cart. */
+  function applyWizard(d){
+    var cats=(d.cats||[]).filter(function(c){ return HW.some(function(h){ return h.cat===c; }); });
+    if(!cats.length) return clearMatch();
+    state.match=null; state.cats=cats; state.filter=''; syncChips();
+    setDesc(d.description);
+    var names=cats.map(function(c){ var b=filters.querySelector('[data-filter="'+c+'"]'); return b?b.firstChild.textContent.trim():c; });
+    document.getElementById('zvMatchNoteT').textContent='Getoond op basis van uw antwoorden: '+names.join(', ')+'.';
+    matchNote.hidden=false;
+    woningNote.hidden=!d.extraFloors;
+    renderRows();
+  }
   function clearMatch(){
-    state.match=null; ccDesc.value=''; matchNote.hidden=true;
+    state.match=null; state.cats=null; setDesc(''); matchNote.hidden=true; woningNote.hidden=true; syncChips();
     renderRows();
   }
   document.addEventListener('zv-match:apply',function(e){ applyMatch(e.detail||{qty:{}}); });
+  document.addEventListener('zv-wizard:apply',function(e){ applyWizard(e.detail||{}); });
   document.getElementById('zvMatchClear').addEventListener('click',clearMatch);
+  document.getElementById('ccDescClear').addEventListener('click',function(){ setDesc(''); });
 
   function renderSummary(){
     var list=document.getElementById('sumList'), keys=Object.keys(state.lines);
@@ -577,6 +613,11 @@
 .zv-zelf .zv-match-note { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; margin:-6px 0 20px; padding:11px 16px; background:#fbf1e0; border:1.5px solid var(--gold); border-radius:12px; font-size:13.5px; font-weight:700; color:var(--ink); }
 .zv-zelf .zv-match-note[hidden] { display:none; }
 .zv-zelf .zv-match-note button { font-family:inherit; font-size:13.5px; font-weight:800; color:var(--indigo); background:none; border:none; padding:2px 0; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+.zv-zelf .zv-wiz-woning { margin:-8px 0 20px; padding:11px 16px; background:var(--indigo-soft); border-radius:12px; font-size:13.5px; font-weight:700; color:var(--indigo); }
+.zv-zelf .zv-wiz-woning[hidden] { display:none; }
+.zv-zelf .cam-contact-desc { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; font-size:12.5px; font-weight:700; color:var(--muted); line-height:1.45; }
+.zv-zelf .cam-contact-desc[hidden] { display:none; }
+.zv-zelf .cam-contact .cam-contact-desc button { background:none; color:var(--indigo); padding:0; font-size:12.5px; text-decoration:underline; text-underline-offset:3px; }
 .zv-zelf .hw.zv-match-hit { border-color:var(--gold); box-shadow:0 10px 26px -18px rgba(180,126,10,.7); }
 .zv-zelf .hw.zv-match-hit.has { border-color:var(--indigo); }
 .zv-zelf .hw.zv-match-dim:not(.has) { opacity:.5; transition:opacity .14s,border-color .14s,box-shadow .14s; }

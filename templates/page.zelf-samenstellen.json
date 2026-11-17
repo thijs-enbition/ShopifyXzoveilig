@@ -9,7 +9,7 @@
  */
 {
   "sections": {
-    "matcher": { "type": "zelf-samenstellen-matcher", "settings": {} },
+    "wizard": { "type": "zelf-samenstellen-wizard", "settings": {} },
     "main": {
       "type": "zelf-samenstellen",
       "blocks": {
@@ -20,5 +20,5 @@
       "settings": {}
     }
   },
-  "order": ["matcher", "main"]
+  "order": ["wizard", "main"]
 }

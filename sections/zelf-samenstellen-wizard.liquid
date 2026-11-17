@@ -1,0 +1,131 @@
+{%- comment -%}
+  Zo Veilig — offertewizard boven de Zelf samenstellen-grid (2026-11-17). Vier korte vragen, de vorm van
+  de oude offertebuilder, op de huidige producten. Het is GEEN prijsberekening en geen pakketkiezer: de
+  wizard filtert/markeert alleen de bestaande grid (sections/zelf-samenstellen.liquid) en vult het
+  terugbelformulier voor. Logica in assets/zv-offerte-wizard.js; deze file levert alleen markup, tekst en
+  de koppelingen vraag -> grid-categorie.
+
+  Koppelingen staan als data-attributen op de opties, zodat de JS generiek blijft:
+    data-cats   spatie-gescheiden categorieen van de grid (sensoren, camera, deurbel, bediening);
+                de grid-filter wordt de UNIE van Q1 en Q4.
+    data-d      korte tekst voor de regel "Offertewizard: ..." die als `description` met de lead meegaat.
+    data-floors aantal etages (Q3); 2 of meer toont de Woning-toelichting in de grid.
+
+  Q2 (type woning) en Q3 (etages) filteren niets: de grid heeft geen pakketten en geen Woning-regel
+  (die hoort bij een pakketregel en wordt los door de winkelwagen-guard verwijderd), dus ze reizen mee
+  in de lead en Q3 toont alleen een toelichting. Q4 Binnen-/Buitencamera tonen voorlopig de hele
+  camera-categorie (bekend gat, zie docs/zelf-samenstellen-wizard-2026-11-17.md). Geen bedragen, geen
+  productcodes in deze file (scripts/check_pricing.py).
+{%- endcomment -%}
+
+<div class="zv-wiz" data-zv-wizard>
+  <div class="wrap">
+    <form class="zvw-card" id="zvwForm" novalidate aria-labelledby="zvw-title">
+      <div class="zvw-head">
+        <h2 id="zvw-title">{{ section.settings.title | default: 'Stel uw beveiliging samen in 4 vragen' | escape }}</h2>
+        <p>{{ section.settings.lead | default: 'Beantwoord vier korte vragen. Daarna laten we de onderdelen zien die erbij passen en nemen we uw antwoorden mee in uw terugbelverzoek.' | escape }}</p>
+      </div>
+
+      <div class="zvw-progress" aria-hidden="true"><span class="zvw-bar" id="zvwBar"></span></div>
+      <p class="zvw-count" id="zvwCount" aria-live="polite">Vraag 1 van 4</p>
+
+      <fieldset class="zvw-step" data-step="1" data-name="beveiliging">
+        <legend tabindex="-1">Hoe wilt u uw woning beveiligen?<span class="zvw-sub">Kies alles wat past.</span></legend>
+        <div class="zvw-opts">
+          <label class="zvw-opt"><input type="checkbox" name="beveiliging" value="alarm" data-cats="sensoren bediening" data-d="Alarmsysteem"><span>Met een alarmsysteem</span></label>
+          <label class="zvw-opt"><input type="checkbox" name="beveiliging" value="camera" data-cats="camera" data-d="Camera's"><span>Met camera's</span></label>
+          <label class="zvw-opt"><input type="checkbox" name="beveiliging" value="deurbel" data-cats="deurbel" data-d="Videodeurbel"><span>Met een video deurbel</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="zvw-step" data-step="2" data-name="woning" hidden>
+        <legend tabindex="-1">Wat voor type woning heeft u?</legend>
+        <div class="zvw-opts">
+          <label class="zvw-opt"><input type="radio" name="woning" value="appartement" data-d="Appartement"><span>Appartement</span></label>
+          <label class="zvw-opt"><input type="radio" name="woning" value="rijtjeswoning" data-d="Rijtjeswoning"><span>Rijtjeswoning</span></label>
+          <label class="zvw-opt"><input type="radio" name="woning" value="vrijstaand" data-d="Vrijstaand"><span>Vrijstaand</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="zvw-step" data-step="3" data-name="etages" hidden>
+        <legend tabindex="-1">Uit hoeveel etages bestaat uw woning?</legend>
+        <div class="zvw-opts">
+          <label class="zvw-opt"><input type="radio" name="etages" value="1" data-floors="1" data-d="1 etage"><span>1 etage</span></label>
+          <label class="zvw-opt"><input type="radio" name="etages" value="2" data-floors="2" data-d="2 etages"><span>2 etages</span></label>
+          <label class="zvw-opt"><input type="radio" name="etages" value="3" data-floors="3" data-d="3 etages"><span>3 etages</span></label>
+          <label class="zvw-opt"><input type="radio" name="etages" value="4" data-floors="4" data-d="4 etages"><span>4 etages</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="zvw-step" data-step="4" data-name="camera" hidden>
+        <legend tabindex="-1">Welke camera heeft uw interesse?</legend>
+        <div class="zvw-opts">
+          <label class="zvw-opt"><input type="radio" name="camera" value="geen" data-cats="" data-d="Geen camera"><span>Geen</span></label>
+          <label class="zvw-opt"><input type="radio" name="camera" value="deurbelcamera" data-cats="deurbel" data-d="Deurbelcamera"><span>Deurbelcamera</span></label>
+          <label class="zvw-opt"><input type="radio" name="camera" value="binnencamera" data-cats="camera" data-d="Binnencamera"><span>Binnencamera</span></label>
+          <label class="zvw-opt"><input type="radio" name="camera" value="buitencamera" data-cats="camera" data-d="Buitencamera"><span>Buitencamera</span></label>
+        </div>
+      </fieldset>
+
+      <div class="zvw-err" id="zvwErr" role="alert" hidden></div>
+
+      <div class="zvw-nav">
+        <button type="button" class="zvw-back" id="zvwBack" hidden>Vorige</button>
+        <button type="submit" class="zvw-next" id="zvwNext">Volgende</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="{{ 'zv-offerte-wizard.js' | asset_url }}" defer="defer"></script>
+
+{% stylesheet %}
+.zv-wiz {
+  --ink:#1a1230; --indigo:#322469; --indigo-2:#473a86; --indigo-soft:#efecf7;
+  --cream:#fdfaf2; --paper:#fffdf8; --gold:#e4a311; --belt:#9c6c08;
+  --red:#e24b4a; --rood:#c52e2f; --line:#e8e0cd; --line-2:#ded6c0; --muted:#6f6786;
+  color:var(--ink); line-height:1.5; background:#fbf5e9;
+}
+.zv-wiz .wrap { max-width:1180px; margin:0 auto; padding:clamp(24px,3.4vw,44px) clamp(16px,3.4vw,48px); }
+.zv-wiz .zvw-card { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:clamp(18px,2.6vw,30px); box-shadow:0 26px 56px -42px rgba(26,18,48,.5); display:flex; flex-direction:column; gap:18px; max-width:860px; }
+.zv-wiz .zvw-head h2 { font-size:clamp(21px,2.6vw,28px); font-weight:900; letter-spacing:-.015em; line-height:1.15; color:var(--indigo); margin:0; }
+.zv-wiz .zvw-head p { font-size:15px; font-weight:600; color:var(--muted); margin:8px 0 0; max-width:620px; }
+.zv-wiz .zvw-progress { height:6px; border-radius:99px; background:var(--indigo-soft); overflow:hidden; }
+.zv-wiz .zvw-bar { display:block; height:100%; width:25%; background:var(--indigo); border-radius:99px; transition:width .25s ease; }
+.zv-wiz .zvw-count { font-size:12.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:-8px 0 0; }
+.zv-wiz fieldset { border:0; margin:0; padding:0; min-width:0; }
+.zv-wiz fieldset[hidden], .zv-wiz .zvw-err[hidden], .zv-wiz .zvw-back[hidden] { display:none; }
+.zv-wiz legend { display:block; padding:0; font-size:clamp(18px,2vw,21px); font-weight:900; color:var(--indigo); letter-spacing:-.01em; line-height:1.3; margin-bottom:14px; }
+.zv-wiz legend:focus { outline:none; }
+.zv-wiz .zvw-sub { display:block; margin-top:2px; font-size:13.5px; font-weight:700; color:var(--muted); letter-spacing:0; }
+.zv-wiz .zvw-opts { display:flex; flex-wrap:wrap; gap:10px; }
+.zv-wiz .zvw-opt { display:inline-flex; align-items:center; gap:9px; font-size:15px; font-weight:800; color:var(--indigo); background:#fff; border:1.5px solid var(--line-2); border-radius:12px; padding:12px 16px; cursor:pointer; transition:border-color .14s,background .14s; }
+.zv-wiz .zvw-opt:hover { border-color:var(--indigo); }
+.zv-wiz .zvw-opt input { width:18px; height:18px; margin:0; flex:none; accent-color:var(--indigo); }
+.zv-wiz .zvw-opt:has(input:checked) { border-color:var(--indigo); background:var(--indigo-soft); }
+.zv-wiz .zvw-opt:has(input:focus-visible) { outline:2px solid var(--indigo); outline-offset:3px; }
+.zv-wiz .is-missing legend { color:var(--rood); }
+.zv-wiz .is-missing .zvw-opt { border-color:var(--red); }
+.zv-wiz .zvw-err { font-size:13.5px; font-weight:700; color:var(--rood); }
+.zv-wiz .zvw-nav { display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
+.zv-wiz .zvw-next, .zv-wiz .zvw-back { font-family:inherit; font-size:15.5px; font-weight:800; border-radius:13px; padding:14px 22px; cursor:pointer; }
+.zv-wiz .zvw-next { color:var(--ink); background:var(--gold); border:none; box-shadow:0 2px 0 var(--belt); transition:transform .14s,box-shadow .14s; }
+.zv-wiz .zvw-next:hover { transform:translateY(-1px); box-shadow:0 4px 0 var(--belt),0 12px 24px -12px rgba(180,126,10,.7); }
+.zv-wiz .zvw-back { color:var(--indigo); background:#fff; border:1.5px solid var(--line-2); }
+.zv-wiz .zvw-back:hover { border-color:var(--indigo); }
+.zv-wiz .zvw-next:focus-visible, .zv-wiz .zvw-back:focus-visible { outline:2px solid var(--indigo); outline-offset:3px; }
+@media(max-width:520px){ .zv-wiz .zvw-opt { flex:1 1 100%; } .zv-wiz .zvw-nav { flex-direction:column-reverse; align-items:stretch; } .zv-wiz .zvw-next, .zv-wiz .zvw-back { text-align:center; } }
+@media(prefers-reduced-motion:reduce){ .zv-wiz .zvw-bar { transition:none; } }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Zelf samenstellen wizard",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "title", "label": "Titel", "default": "Stel uw beveiliging samen in 4 vragen" },
+    { "type": "textarea", "id": "lead", "label": "Introductie", "default": "Beantwoord vier korte vragen. Daarna laten we de onderdelen zien die erbij passen en nemen we uw antwoorden mee in uw terugbelverzoek." }
+  ],
+  "presets": [{ "name": "Zelf samenstellen wizard" }]
+}
+{% endschema %}
