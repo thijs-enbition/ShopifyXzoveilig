@@ -1,6 +1,6 @@
 {%- comment -%}
   Zo Veilig — offertewizard op /pages/zelf-samenstellen (2026-11-17; vanaf de laatste ronde ZONDER grid).
-  Vier korte vragen (de vorm van de oude offertebuilder), daarna een resultaatstap: eerst, direct onder de
+  Zeven korte vragen (de oude offertebuilder had er vier), daarna een resultaatstap: eerst, direct onder de
   kop, de regel "Ons advies: <pakket>", dan een gewone lijst van de passende producten/categorieen, de
   Woning-toelichting vanaf 2 etages en een formulier (naam, e-mail, telefoon, toestemming) waarmee de aanbeveling per e-mail wordt aangevraagd.
   Geen product wordt hier verkocht, geen prijs getoond of berekend, de winkelwagen wordt niet aangeraakt.
@@ -16,10 +16,14 @@
     data-types  (Q4) beperkt de categorie van die optie tot producten met dit type (Binnencamera -> Binnen,
                 Buitencamera -> Buiten). Zo'n optie VERSMALT ook Q1's camera-categorie; een leeg resultaat valt
                 terug op de hele categorie.
-    data-tier-* (Q2) pakketadvies uit de sectie-instellingen hieronder (per woningtype een pakket, leeg = geen
-                advies). Alleen data: het verschijnt als gewone tekst "Ons advies: <pakket>." in het RESULTAAT.
+    data-tier-<lijn>-* (Q3, type woning) pakketadvies uit de sectie-instellingen hieronder, per pakketlijn die Q2
+                kiest (mijn-thuis of langer-thuis) en per woningtype een pakket (leeg = geen advies). Alleen data:
+                het verschijnt als gewone tekst "Ons advies: <pakket>." in het RESULTAAT, uit de lijn van Q2.
                 Tijdens de vragen verschijnt er niets en er is geen link naar Oplossingen: bezoekers blijven in
                 de vragenlijst (balk met link verwijderd, zie docs/zelf-samenstellen-wizard-2026-11-17.md).
+    data-drop-cats / data-qty-label  (Q7) "Geen" haalt de categorie bediening uit het resultaat, ook als Q1 hem
+                via het alarmsysteem toevoegde; 1 / 2 / 3+ toont "Afstandsbediening x<N>" (alleen tekst).
+    show:false  (in #zvwData) categorie die wel meedoet maar niet getoond wordt: sensoren (magneetcontact, PIR).
 
   Productnamen: #zvwData hieronder is de opzoeklijst categorie -> productnamen (overgenomen uit de rijen van
   sections/zelf-samenstellen.liquid, die niet meer op de pagina staat). Alleen namen en types: geen bedragen,
@@ -34,12 +38,12 @@
   <div class="wrap">
     <div class="zvw-card" aria-labelledby="zvw-title">
       <div class="zvw-head">
-        <h1 id="zvw-title">{{ section.settings.title | default: 'Stel uw beveiliging samen in 4 vragen' | escape }}</h1>
-        <p>{{ section.settings.lead | default: 'Beantwoord vier korte vragen en ontvang de aanbeveling voor uw woning per e-mail.' | escape }}</p>
+        <h1 id="zvw-title">{{ section.settings.title | default: 'Stel uw beveiliging samen in 7 vragen' | escape }}</h1>
+        <p>{{ section.settings.lead | default: 'Beantwoord zeven korte vragen en ontvang de aanbeveling voor uw woning per e-mail.' | escape }}</p>
       </div>
 
       <div class="zvw-progress" aria-hidden="true"><span class="zvw-bar" id="zvwBar"></span></div>
-      <p class="zvw-count" id="zvwCount" aria-live="polite">Vraag 1 van 4</p>
+      <p class="zvw-count" id="zvwCount" aria-live="polite">Vraag 1 van 7</p>
 
       <form id="zvwForm" class="zvw-qform" novalidate>
 
@@ -52,24 +56,38 @@
         </div>
       </fieldset>
 
-      <fieldset class="zvw-step" data-step="2" data-name="woning" hidden>
+      <fieldset class="zvw-step" data-step="2" data-name="doel" hidden>
+        <legend tabindex="-1">Waar zoekt u in de eerste plaats beveiliging voor?</legend>
+        <div class="zvw-opts zvw-opts--stack">
+          <label class="zvw-opt"><input type="radio" name="doel" value="mijn_thuis" data-line-label="Mijn Thuis" data-d="Algemene beveiliging van de woning"><span>Algemene beveiliging van mijn woning (inbraak, brand, camera's)</span></label>
+          <label class="zvw-opt"><input type="radio" name="doel" value="langer_thuis" data-line-label="Langer Thuis" data-d="Zelfstandig en veilig blijven wonen"><span>Zelfstandig en veilig blijven wonen &mdash; voor mezelf of een naaste</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="zvw-step" data-step="3" data-name="woning" hidden>
         <legend tabindex="-1">Wat voor type woning heeft u?</legend>
         <div class="zvw-opts">
           {%- assign zv_wiz_wk = 'appartement|rijtjeswoning|vrijstaand' | split: '|' -%}
           {%- assign zv_wiz_wl = 'Appartement|Rijtjeswoning|Vrijstaand' | split: '|' -%}
           {%- for wk in zv_wiz_wk -%}
-            {%- assign fk_id = 'tier_' | append: wk -%}
-            {%- assign tx_id = 'text_' | append: wk -%}
-            {%- assign fk = section.settings[fk_id] -%}
-            {%- assign tier_name = '' -%}
-            {%- if fk != blank -%}{%- capture tier_name -%}{%- render 'zv-package-name', finder_key: fk, names: zv_wiz_names -%}{%- endcapture -%}{%- endif -%}
+            {%- assign mt_id = 'tier_' | append: wk -%}
+            {%- assign mt_tx = 'text_' | append: wk -%}
+            {%- assign lt_id = 'tier_lt_' | append: wk -%}
+            {%- assign lt_tx = 'text_lt_' | append: wk -%}
+            {%- assign mt_fk = section.settings[mt_id] -%}
+            {%- assign lt_fk = section.settings[lt_id] -%}
+            {%- assign mt_name = '' -%}
+            {%- assign lt_name = '' -%}
+            {%- if mt_fk != blank -%}{%- capture mt_name -%}{%- render 'zv-package-name', finder_key: mt_fk, names: zv_wiz_names -%}{%- endcapture -%}{%- endif -%}
+            {%- if lt_fk != blank -%}{%- capture lt_name -%}{%- render 'zv-package-name', finder_key: lt_fk, names: zv_wiz_names -%}{%- endcapture -%}{%- endif -%}
             <label class="zvw-opt"><input type="radio" name="woning" value="{{ wk }}" data-d="{{ zv_wiz_wl[forloop.index0] }}"
-              {%- if tier_name != blank %} data-tier-name="{{ tier_name | escape }}" data-tier-text="{{ section.settings[tx_id] | escape }}"{% endif %}><span>{{ zv_wiz_wl[forloop.index0] }}</span></label>
+              {%- if mt_name != blank %} data-tier-mijn-thuis-name="{{ mt_name | escape }}" data-tier-mijn-thuis-text="{{ section.settings[mt_tx] | escape }}"{% endif -%}
+              {%- if lt_name != blank %} data-tier-langer-thuis-name="{{ lt_name | escape }}" data-tier-langer-thuis-text="{{ section.settings[lt_tx] | escape }}"{% endif %}><span>{{ zv_wiz_wl[forloop.index0] }}</span></label>
           {%- endfor -%}
         </div>
       </fieldset>
 
-      <fieldset class="zvw-step" data-step="3" data-name="etages" hidden>
+      <fieldset class="zvw-step" data-step="4" data-name="etages" hidden>
         <legend tabindex="-1">Uit hoeveel etages bestaat uw woning?</legend>
         <div class="zvw-opts">
           <label class="zvw-opt"><input type="radio" name="etages" value="1" data-floors="1" data-d="1 etage"><span>1 etage</span></label>
@@ -79,13 +97,33 @@
         </div>
       </fieldset>
 
-      <fieldset class="zvw-step" data-step="4" data-name="camera" hidden>
+      <fieldset class="zvw-step" data-step="5" data-name="camera" hidden>
         <legend tabindex="-1">Welke camera heeft uw interesse?</legend>
         <div class="zvw-opts">
           <label class="zvw-opt"><input type="radio" name="camera" value="geen" data-cats="" data-d="Geen camera"><span>Geen</span></label>
           <label class="zvw-opt"><input type="radio" name="camera" value="deurbelcamera" data-cats="deurbel" data-d="Deurbelcamera"><span>Deurbelcamera</span></label>
           <label class="zvw-opt"><input type="radio" name="camera" value="binnencamera" data-cats="camera" data-types="Binnen" data-d="Binnencamera"><span>Binnencamera</span></label>
           <label class="zvw-opt"><input type="radio" name="camera" value="buitencamera" data-cats="camera" data-types="Buiten" data-d="Buitencamera"><span>Buitencamera</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="zvw-step" data-step="6" data-name="rookwater" hidden>
+        <legend tabindex="-1">Heeft u interesse in rook- of waterdetectie?</legend>
+        <div class="zvw-opts">
+          <label class="zvw-opt"><input type="radio" name="rookwater" value="geen" data-cats="" data-d="Geen"><span>Geen</span></label>
+          <label class="zvw-opt"><input type="radio" name="rookwater" value="rook" data-cats="rookwater" data-types="Rook" data-d="Rookmelder"><span>Rookmelder</span></label>
+          <label class="zvw-opt"><input type="radio" name="rookwater" value="water" data-cats="rookwater" data-types="Water" data-d="Watersensor"><span>Watersensor</span></label>
+          <label class="zvw-opt"><input type="radio" name="rookwater" value="beide" data-cats="rookwater" data-d="Rookmelder en watersensor"><span>Beide</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="zvw-step" data-step="7" data-name="remote" hidden>
+        <legend tabindex="-1">Hoeveel afstandsbedieningen heeft u nodig?</legend>
+        <div class="zvw-opts">
+          <label class="zvw-opt"><input type="radio" name="remote" value="0" data-cats="" data-drop-cats="bediening" data-d="Geen"><span>Geen</span></label>
+          <label class="zvw-opt"><input type="radio" name="remote" value="1" data-cats="bediening" data-qty-label="1" data-d="1"><span>1</span></label>
+          <label class="zvw-opt"><input type="radio" name="remote" value="2" data-cats="bediening" data-qty-label="2" data-d="2"><span>2</span></label>
+          <label class="zvw-opt"><input type="radio" name="remote" value="3plus" data-cats="bediening" data-qty-label="3+" data-d="3 of meer"><span>3+</span></label>
         </div>
       </fieldset>
 
@@ -106,7 +144,7 @@
             <p class="zvw-res-advies__x" id="zvwResAdviesText"></p>
           </div>
         </div>
-        <p class="zvw-res-intro">Op basis van uw antwoorden past dit bij u:</p>
+        <p class="zvw-res-intro" id="zvwResIntro" data-full="Op basis van uw antwoorden past dit bij u:" data-empty="Op basis van uw antwoorden bespreken we de onderdelen graag met u in het adviesgesprek.">Op basis van uw antwoorden past dit bij u:</p>
         <div id="zvwResList"></div>
         <p class="zvw-res-note" id="zvwResWoning" data-summary="Meerdere etages: de toeslag &quot;Extra etage of &gt;100 m²&quot; kan van toepassing zijn. Bespreken in het adviesgesprek." hidden>Woont u op meerdere etages, of is uw woning groter dan 100 m&sup2;? Bij een abonnement komt daar de toeslag &ldquo;Extra etage of &gt;100 m&sup2;&rdquo; bij. Die is niet los te bestellen: we bespreken dit met u in het adviesgesprek.</p>
 
@@ -132,18 +170,17 @@
   </div>
 </div>
 
-{%- comment -%} Opzoeklijst voor de resultaatlijst: categorie -> productnamen + type (type = wat Q4 Binnen/Buiten filtert). Alleen namen. {%- endcomment -%}
+{%- comment -%} Opzoeklijst voor de resultaatlijst: categorie -> productnamen + type (type = wat Q5 Binnen/Buiten en Q6 Rook/Water filtert). Alleen namen. show:false = telt mee maar wordt niet getoond. {%- endcomment -%}
 <script type="application/json" id="zvwData">
 {
-  "order": ["sensoren", "camera", "deurbel", "bediening"],
+  "order": ["sensoren", "camera", "deurbel", "rookwater", "bediening"],
   "cats": {
     "sensoren": {
       "label": "Sensoren",
+      "show": false,
       "items": [
         { "n": "Magneetcontact (DC-23)", "t": "Sensor" },
-        { "n": "PIR Bewegingsdetector", "t": "Sensor" },
-        { "n": "Rookmelder", "t": "Sensor" },
-        { "n": "Watersensor", "t": "Sensor" }
+        { "n": "PIR Bewegingsdetector", "t": "Sensor" }
       ]
     },
     "camera": {
@@ -160,6 +197,13 @@
       "items": [
         { "n": "Video Deurbel 750", "t": "Deurbel" },
         { "n": "Video Deurbel 780 (accu)", "t": "Deurbel" }
+      ]
+    },
+    "rookwater": {
+      "label": "Rook- en waterdetectie",
+      "items": [
+        { "n": "Rookmelder", "t": "Rook" },
+        { "n": "Watersensor", "t": "Water" }
       ]
     },
     "bediening": {
@@ -193,6 +237,9 @@
 .zv-wiz legend:focus { outline:none; }
 .zv-wiz .zvw-sub { display:block; margin-top:2px; font-size:13.5px; font-weight:700; color:var(--muted); letter-spacing:0; }
 .zv-wiz .zvw-opts { display:flex; flex-wrap:wrap; gap:10px; }
+.zv-wiz .zvw-opts--stack { flex-direction:column; align-items:stretch; }
+.zv-wiz .zvw-opts--stack .zvw-opt { align-items:flex-start; line-height:1.35; }
+.zv-wiz .zvw-opts--stack .zvw-opt input { margin-top:2px; }
 .zv-wiz .zvw-opt { display:inline-flex; align-items:center; gap:9px; font-size:15px; font-weight:800; color:var(--indigo); background:#fff; border:1.5px solid var(--line-2); border-radius:12px; padding:12px 16px; cursor:pointer; transition:border-color .14s,background .14s; }
 .zv-wiz .zvw-opt:hover { border-color:var(--indigo); }
 .zv-wiz .zvw-opt input { width:18px; height:18px; margin:0; flex:none; accent-color:var(--indigo); }
@@ -256,15 +303,22 @@
   "name": "Zelf samenstellen wizard",
   "tag": "section",
   "settings": [
-    { "type": "text", "id": "title", "label": "Titel", "default": "Stel uw beveiliging samen in 4 vragen" },
-    { "type": "textarea", "id": "lead", "label": "Introductie", "default": "Beantwoord vier korte vragen en ontvang de aanbeveling voor uw woning per e-mail." },
-    { "type": "header", "content": "Pakketadvies (resultaat)", "info": "Per woningtype (vraag 2) het pakket dat in het resultaat als gewone tekst \"Ons advies: ...\" staat. Leeg = geen advies voor dat woningtype. Er is geen link: bezoekers blijven in de vragenlijst." },
+    { "type": "text", "id": "title", "label": "Titel", "default": "Stel uw beveiliging samen in 7 vragen" },
+    { "type": "textarea", "id": "lead", "label": "Introductie", "default": "Beantwoord zeven korte vragen en ontvang de aanbeveling voor uw woning per e-mail." },
+    { "type": "header", "content": "Pakketadvies Mijn Thuis bij vraag 3", "info": "Geldt als vraag 2 \"Algemene beveiliging van mijn woning\" is gekozen. Per woningtype het pakket dat in het resultaat als gewone tekst \"Ons advies: ...\" staat. Leeg = geen advies. Er is geen link: bezoekers blijven in de vragenlijst." },
     { "type": "select", "id": "tier_appartement", "label": "Appartement", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
     { "type": "text", "id": "text_appartement", "label": "Toelichting appartement (optioneel)" },
     { "type": "select", "id": "tier_rijtjeswoning", "label": "Rijtjeswoning", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
     { "type": "text", "id": "text_rijtjeswoning", "label": "Toelichting rijtjeswoning (optioneel)" },
     { "type": "select", "id": "tier_vrijstaand", "label": "Vrijstaand", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
     { "type": "text", "id": "text_vrijstaand", "label": "Toelichting vrijstaand (optioneel)" },
+    { "type": "header", "content": "Pakketadvies Langer Thuis bij vraag 3", "info": "Geldt als vraag 2 \"Zelfstandig en veilig blijven wonen\" is gekozen. Zelfde opzet als Mijn Thuis hierboven." },
+    { "type": "select", "id": "tier_lt_appartement", "label": "Appartement", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
+    { "type": "text", "id": "text_lt_appartement", "label": "Toelichting appartement (optioneel)" },
+    { "type": "select", "id": "tier_lt_rijtjeswoning", "label": "Rijtjeswoning", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
+    { "type": "text", "id": "text_lt_rijtjeswoning", "label": "Toelichting rijtjeswoning (optioneel)" },
+    { "type": "select", "id": "tier_lt_vrijstaand", "label": "Vrijstaand", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
+    { "type": "text", "id": "text_lt_vrijstaand", "label": "Toelichting vrijstaand (optioneel)" },
     { "type": "text", "id": "advies_label", "label": "Label advies", "default": "Ons advies:" }
   ],
   "presets": [{ "name": "Zelf samenstellen wizard" }]

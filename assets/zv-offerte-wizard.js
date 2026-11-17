@@ -1,12 +1,17 @@
 /* Zo Veilig offertewizard (2026-11-17). Drives sections/zelf-samenstellen-wizard.liquid on
-   /pages/zelf-samenstellen: four questions, one at a time, then a result step.
+   /pages/zelf-samenstellen: seven questions, one at a time, then a result step.
+
+   Questions: 1 beveiligingswijze (multi), 2 waar zoekt u beveiliging voor (Mijn Thuis / Langer Thuis, decides which
+   package mapping Q3 uses), 3 type woning, 4 etages, 5 camera-interesse, 6 rook- of waterdetectie, 7 aantal
+   afstandsbedieningen.
 
    There is NO product grid any more (the grid-based version is superseded, see
-   docs/zelf-samenstellen-wizard-2026-11-17.md). After Q4 the result step shows
-     - first, right under the heading, the line "Ons advies: <package>." (static text, no link) when Q2's woning
-       type has a package set. Nothing about the package is shown during the questions: visitors stay in the
-       flow instead of being routed out,
-     - then a plain list of the matched products, grouped by category (names only, no prices),
+   docs/zelf-samenstellen-wizard-2026-11-17.md). After Q7 the result step shows
+     - first, right under the heading, the line "Ons advies: <package>." (static text, no link) when the package
+       mapping of Q2's line has a package for Q3's woning type. Nothing about the package is shown during the
+       questions: visitors stay in the flow instead of being routed out,
+     - then a plain list of the matched products, grouped by category (names only, no prices; the Sensoren
+       category counts but is never listed),
      - the Woning note from 2 etages,
      - the contact form (naam, e-mail, telefoon, toestemming).
    Submitting posts one lead to window.ZV_LEAD_ENDPOINT (Odoo) through window.ZVLeadWebhook with
@@ -15,10 +20,13 @@
    theme. Nothing here touches the cart or shows a price.
 
    The question -> category mapping is NOT in this file: every option carries data-cats / data-d /
-   data-floors / data-types / data-tier-* in the section markup, and the category -> product-name lookup is
-   the JSON island #zvwData. The result list is the union of Q1's and Q4's data-cats; a Q4 option with
-   data-types (Binnencamera -> Binnen, Buitencamera -> Buiten) narrows its category to products of that
-   type, also when Q1 already asked for the whole category (unless that would leave the category empty). */
+   data-floors / data-types / data-drop-cats / data-qty-label / data-tier-<line>-* in the section markup, and the
+   category -> product-name lookup is the JSON island #zvwData. The result list is the union of Q1's and
+   Q5-Q7's data-cats. An option with data-types narrows its categories to products of that type (Q5 Binnencamera
+   -> Binnen, Buitencamera -> Buiten; Q6 Rookmelder -> Rook, Watersensor -> Water), also when Q1 already asked for
+   the whole category (unless that would leave the category empty). Q7 is the most specific answer about the
+   remote: "Geen" (data-drop-cats) removes the bediening category even when Q1's alarm system added it, 1 / 2 / 3+
+   (data-qty-label) show "Afstandsbediening x<N>" as text, also without an alarm system in Q1. */
 (function () {
   'use strict';
   var root = document.querySelector('[data-zv-wizard]');
@@ -74,55 +82,75 @@
 
   /* Answers -> matched products. Only the data attributes are read, never the label text. */
   function compute() {
-    var q1 = checked('beveiliging'), q2 = checked('woning')[0], q3 = checked('etages')[0], q4 = checked('camera')[0];
-    var cats = [], catTypes = {};
+    var q1 = checked('beveiliging'), doel = checked('doel')[0], woning = checked('woning')[0], etages = checked('etages')[0];
+    var camera = checked('camera')[0], rook = checked('rookwater')[0], remote = checked('remote')[0];
+    var cats = [], catTypes = {}, drop = [], qty = {};
     function addCats(el) { words(el.getAttribute('data-cats')).forEach(function (c) { if (cats.indexOf(c) < 0) cats.push(c); }); }
     q1.forEach(addCats);
-    if (q4) {
-      addCats(q4);
-      var types = words(q4.getAttribute('data-types'));
-      if (types.length) words(q4.getAttribute('data-cats')).forEach(function (c) { catTypes[c] = types; });
-    }
+    [camera, rook, remote].forEach(function (el) {
+      if (!el) return;
+      addCats(el);
+      var types = words(el.getAttribute('data-types'));
+      if (types.length) words(el.getAttribute('data-cats')).forEach(function (c) { catTypes[c] = types; });
+      words(el.getAttribute('data-drop-cats')).forEach(function (c) { drop.push(c); });
+      var ql = el.getAttribute('data-qty-label');
+      if (ql) words(el.getAttribute('data-cats')).forEach(function (c) { qty[c] = ql; });
+    });
+    cats = cats.filter(function (c) { return drop.indexOf(c) < 0; });
     var groups = [];
     (DATA.order || []).forEach(function (c) {
       var cat = DATA.cats[c];
-      if (!cat || cats.indexOf(c) < 0) return;
+      if (!cat || cat.show === false || cats.indexOf(c) < 0) return;   // show:false = counts, is never listed
       var items = cat.items;
       var t = catTypes[c];
       if (t) {
         var narrowed = items.filter(function (it) { return t.indexOf(it.t) > -1; });
         if (narrowed.length) items = narrowed; else t = null;   // never leave a category empty
       }
-      groups.push({ cat: c, label: cat.label + (t ? ' (' + t.join(', ').toLowerCase() + ')' : ''), names: items.map(function (it) { return it.n; }) });
+      groups.push({
+        cat: c,
+        label: cat.label + (t && c === 'camera' ? ' (' + t.join(', ').toLowerCase() + ')' : ''),
+        names: items.map(function (it) { return it.n + (qty[c] ? ' x' + qty[c] : ''); })
+      });
     });
-    var floors = q3 ? parseInt(q3.getAttribute('data-floors'), 10) : 1;
+    var floors = etages ? parseInt(etages.getAttribute('data-floors'), 10) : 1;
+    /* Package advice: the mapping of the line Q2 chose (mijn_thuis -> data-tier-mijn-thuis-*), read off Q3's option. */
+    var tierKey = doel ? doel.value.replace(/_/g, '-') : '';
+    var tierName = (woning && tierKey && woning.getAttribute('data-tier-' + tierKey + '-name')) || '';
     return {
       q1: q1.map(function (e) { return e.getAttribute('data-d'); }),
-      woning: q2 ? q2.getAttribute('data-d') : '',
-      etages: q3 ? q3.getAttribute('data-d') : '',
-      camera: q4 ? q4.getAttribute('data-d') : '',
+      doel: doel ? doel.getAttribute('data-d') : '',
+      lineLabel: doel ? doel.getAttribute('data-line-label') : '',
+      woning: woning ? woning.getAttribute('data-d') : '',
+      etages: etages ? etages.getAttribute('data-d') : '',
+      camera: camera ? camera.getAttribute('data-d') : '',
+      rookwater: rook ? rook.getAttribute('data-d') : '',
+      remote: remote ? remote.getAttribute('data-d') : '',
       floors: floors,
       extraFloors: floors >= 2,
-      tierName: (q2 && q2.getAttribute('data-tier-name')) || '',
-      tierText: (q2 && q2.getAttribute('data-tier-text')) || '',
+      tierName: tierName,
+      tierText: tierName ? (woning.getAttribute('data-tier-' + tierKey + '-text') || '') : '',
       groups: groups
     };
   }
 
   /* One flat string for the lead (never JSON): the answers, the matched products, the Woning remark when
-     it applies and the package advice when one is set. Lines end with a full stop so the text still reads
-     when a system collapses the line breaks. */
+     it applies and the package advice (with the package line it came from) when one is set. Lines end with a
+     full stop so the text still reads when a system collapses the line breaks. */
   function describe(c) {
     var lines = [
       'Zelf samenstellen (offertewizard).',
       'Beveiliging: ' + c.q1.join(', ') + '.',
+      'Zoekt beveiliging voor: ' + c.doel + '.',
       'Type woning: ' + c.woning + '.',
       'Etages: ' + c.floors + '.',
       'Camera-interesse: ' + c.camera + '.',
-      'Aanbevolen producten: ' + c.groups.map(function (g) { return g.label + ': ' + g.names.join(', '); }).join('; ') + '.'
+      'Rook- of waterdetectie: ' + c.rookwater + '.',
+      'Afstandsbedieningen: ' + c.remote + '.',
+      'Aanbevolen producten: ' + (c.groups.length ? c.groups.map(function (g) { return g.label + ': ' + g.names.join(', '); }).join('; ') : 'geen specifieke producten') + '.'
     ];
     if (c.extraFloors) lines.push(root.querySelector('#zvwResWoning').getAttribute('data-summary'));
-    if (c.tierName) lines.push('Pakketadvies: ' + c.tierName + '.');
+    if (c.tierName) lines.push('Pakketadvies: ' + c.tierName + ' (' + c.lineLabel + ').');
     return lines.join('\n');
   }
 
@@ -135,6 +163,8 @@
       g.names.forEach(function (n) { var li = document.createElement('li'); li.textContent = n; ul.appendChild(li); });
       list.appendChild(h); list.appendChild(ul);
     });
+    var intro = root.querySelector('#zvwResIntro');
+    intro.textContent = intro.getAttribute(c.groups.length ? 'data-full' : 'data-empty');
     root.querySelector('#zvwResWoning').hidden = !c.extraFloors;
     var adv = root.querySelector('#zvwResAdvies');
     adv.hidden = !c.tierName;
