@@ -16,11 +16,10 @@
     data-types  (Q4) beperkt de categorie van die optie tot producten met dit type (Binnencamera -> Binnen,
                 Buitencamera -> Buiten). Zo'n optie VERSMALT ook Q1's camera-categorie; een leeg resultaat valt
                 terug op de hele categorie.
-    data-tier-<lijn>-* (Q3, type woning) pakketadvies uit de sectie-instellingen hieronder, per pakketlijn die Q2
-                kiest (mijn-thuis of langer-thuis) en per woningtype een pakket (leeg = geen advies). Alleen data:
-                het verschijnt als gewone tekst "Ons advies: <pakket>." in het RESULTAAT, uit de lijn van Q2.
-                Tijdens de vragen verschijnt er niets en er is geen link naar Oplossingen: bezoekers blijven in
-                de vragenlijst (balk met link verwijderd, zie docs/zelf-samenstellen-wizard-2026-11-17.md).
+    data-tier-name  (Q3, welk soort bescherming) het pakket waar die optie 1 op 1 naar verwijst; de naam komt uit
+                de config (zv-package-name). Geen instelling of mapping meer: de optie IS de keuze. Q3 toont de drie
+                opties van de lijn die Q2 kiest (data-line op de groep); het pakket verschijnt als gewone tekst
+                "Ons advies: <pakket>." in het RESULTAAT, nooit tijdens de vragen en zonder link naar Oplossingen.
     data-drop-cats / data-qty-label  (Q7) "Geen" haalt de categorie bediening uit het resultaat, ook als Q1 hem
                 via het alarmsysteem toevoegde; 1 / 2 / 3+ toont "Afstandsbediening x<N>" (alleen tekst).
     show:false  (in #zvwData) categorie die wel meedoet maar niet getoond wordt: sensoren (magneetcontact, PIR).
@@ -64,26 +63,24 @@
         </div>
       </fieldset>
 
-      <fieldset class="zvw-step" data-step="3" data-name="woning" hidden>
-        <legend tabindex="-1">Wat voor type woning heeft u?</legend>
-        <div class="zvw-opts">
-          {%- assign zv_wiz_wk = 'appartement|rijtjeswoning|vrijstaand' | split: '|' -%}
-          {%- assign zv_wiz_wl = 'Appartement|Rijtjeswoning|Vrijstaand' | split: '|' -%}
-          {%- for wk in zv_wiz_wk -%}
-            {%- assign mt_id = 'tier_' | append: wk -%}
-            {%- assign mt_tx = 'text_' | append: wk -%}
-            {%- assign lt_id = 'tier_lt_' | append: wk -%}
-            {%- assign lt_tx = 'text_lt_' | append: wk -%}
-            {%- assign mt_fk = section.settings[mt_id] -%}
-            {%- assign lt_fk = section.settings[lt_id] -%}
-            {%- assign mt_name = '' -%}
-            {%- assign lt_name = '' -%}
-            {%- if mt_fk != blank -%}{%- capture mt_name -%}{%- render 'zv-package-name', finder_key: mt_fk, names: zv_wiz_names -%}{%- endcapture -%}{%- endif -%}
-            {%- if lt_fk != blank -%}{%- capture lt_name -%}{%- render 'zv-package-name', finder_key: lt_fk, names: zv_wiz_names -%}{%- endcapture -%}{%- endif -%}
-            <label class="zvw-opt"><input type="radio" name="woning" value="{{ wk }}" data-d="{{ zv_wiz_wl[forloop.index0] }}"
-              {%- if mt_name != blank %} data-tier-mijn-thuis-name="{{ mt_name | escape }}" data-tier-mijn-thuis-text="{{ section.settings[mt_tx] | escape }}"{% endif -%}
-              {%- if lt_name != blank %} data-tier-langer-thuis-name="{{ lt_name | escape }}" data-tier-langer-thuis-text="{{ section.settings[lt_tx] | escape }}"{% endif %}><span>{{ zv_wiz_wl[forloop.index0] }}</span></label>
-          {%- endfor -%}
+      <fieldset class="zvw-step" data-step="3" data-name="bescherming" hidden>
+        <legend tabindex="-1">Welk soort bescherming past het beste bij u?</legend>
+        {%- comment -%} Pakketnamen uit de config; de finder_key staat per optie vast (1 optie = 1 pakket). Beide groepen starten verborgen en uitgeschakeld, de JS toont die van Q2. {%- endcomment -%}
+        {%- capture n_secure -%}{%- render 'zv-package-name', finder_key: 'secure', names: zv_wiz_names -%}{%- endcapture -%}
+        {%- capture n_guard -%}{%- render 'zv-package-name', finder_key: 'guard', names: zv_wiz_names -%}{%- endcapture -%}
+        {%- capture n_vista -%}{%- render 'zv-package-name', finder_key: 'secure_plus', names: zv_wiz_names -%}{%- endcapture -%}
+        {%- capture n_aware -%}{%- render 'zv-package-name', finder_key: 'aware', names: zv_wiz_names -%}{%- endcapture -%}
+        {%- capture n_aware_plus -%}{%- render 'zv-package-name', finder_key: 'aware_plus', names: zv_wiz_names -%}{%- endcapture -%}
+        {%- capture n_care -%}{%- render 'zv-package-name', finder_key: 'care', names: zv_wiz_names -%}{%- endcapture -%}
+        <div class="zvw-opts zvw-opts--stack" data-line="mijn_thuis" hidden>
+          <label class="zvw-opt"><input type="radio" name="bescherming" value="alert" disabled data-tier-name="{{ n_secure | strip | default: 'Alert' | escape }}" data-d="Inbraakbeveiliging die ik zelf beheer via de app"><span>Inbraakbeveiliging die ik zelf beheer via de app</span></label>
+          <label class="zvw-opt"><input type="radio" name="bescherming" value="protect" disabled data-tier-name="{{ n_guard | strip | default: 'Protect' | escape }}" data-d="Inbraak én brand, met 24/7 meldkamer die meekijkt"><span>Inbraak én brand, met 24/7 meldkamer die meekijkt</span></label>
+          <label class="zvw-opt"><input type="radio" name="bescherming" value="vista" disabled data-tier-name="{{ n_vista | strip | default: 'Vista' | escape }}" data-d="Camerabeveiliging op maat"><span>Camerabeveiliging op maat</span></label>
+        </div>
+        <div class="zvw-opts zvw-opts--stack" data-line="langer_thuis" hidden>
+          <label class="zvw-opt"><input type="radio" name="bescherming" value="inzicht" disabled data-tier-name="{{ n_aware | strip | default: 'Inzicht' | escape }}" data-d="Vooral rust dat de dag goed verloopt"><span>Vooral rust dat de dag goed verloopt</span></label>
+          <label class="zvw-opt"><input type="radio" name="bescherming" value="zeker" disabled data-tier-name="{{ n_aware_plus | strip | default: 'Zeker' | escape }}" data-d="Vroeg willen weten als het ritme verandert"><span>Vroeg willen weten als het ritme verandert</span></label>
+          <label class="zvw-opt"><input type="radio" name="bescherming" value="beschermd" disabled data-tier-name="{{ n_care | strip | default: 'Beschermd' | escape }}" data-d="Snelle hulp bij een noodsituatie, met 24/7 meldkamer"><span>Snelle hulp bij een noodsituatie, met 24/7 meldkamer</span></label>
         </div>
       </fieldset>
 
@@ -141,7 +138,6 @@
           <span class="zvw-res-advies__chk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           <div class="zvw-res-advies__body">
             <p class="zvw-res-advies__t">{{ section.settings.advies_label | default: 'Ons advies:' | escape }} <span id="zvwResAdviesName"></span>.</p>
-            <p class="zvw-res-advies__x" id="zvwResAdviesText"></p>
           </div>
         </div>
         <p class="zvw-res-intro" id="zvwResIntro" data-full="Op basis van uw antwoorden past dit bij u:" data-empty="Op basis van uw antwoorden bespreken we de onderdelen graag met u in het adviesgesprek.">Op basis van uw antwoorden past dit bij u:</p>
@@ -264,8 +260,6 @@
 .zv-wiz .zvw-res-advies__chk { flex:none; width:32px; height:32px; border-radius:50%; background:#fff; color:var(--indigo); display:grid; place-items:center; }
 .zv-wiz .zvw-res-advies__chk svg { width:17px; height:17px; }
 .zv-wiz .zvw-res-advies__t { margin:0; font-size:clamp(18px,2.2vw,22px); font-weight:900; letter-spacing:-.01em; line-height:1.25; color:var(--indigo); }
-.zv-wiz .zvw-res-advies__x { margin:4px 0 0; font-size:14.5px; font-weight:600; color:#5b5374; line-height:1.45; }
-.zv-wiz .zvw-res-advies__x:empty { display:none; }
 .zv-wiz .zvw-res-advies:not([hidden]) + .zvw-res-intro { margin-top:0; }
 .zv-wiz .zvw-lead { display:flex; flex-direction:column; gap:12px; padding-top:18px; border-top:1px solid var(--line); }
 .zv-wiz .zvw-lead__h { font-size:17px; font-weight:900; color:var(--indigo); margin:0; }
@@ -305,20 +299,6 @@
   "settings": [
     { "type": "text", "id": "title", "label": "Titel", "default": "Stel uw beveiliging samen in 7 vragen" },
     { "type": "textarea", "id": "lead", "label": "Introductie", "default": "Beantwoord zeven korte vragen en ontvang de aanbeveling voor uw woning per e-mail." },
-    { "type": "header", "content": "Pakketadvies Mijn Thuis bij vraag 3", "info": "Geldt als vraag 2 \"Algemene beveiliging van mijn woning\" is gekozen. Per woningtype het pakket dat in het resultaat als gewone tekst \"Ons advies: ...\" staat. Leeg = geen advies. Er is geen link: bezoekers blijven in de vragenlijst." },
-    { "type": "select", "id": "tier_appartement", "label": "Appartement", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
-    { "type": "text", "id": "text_appartement", "label": "Toelichting appartement (optioneel)" },
-    { "type": "select", "id": "tier_rijtjeswoning", "label": "Rijtjeswoning", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
-    { "type": "text", "id": "text_rijtjeswoning", "label": "Toelichting rijtjeswoning (optioneel)" },
-    { "type": "select", "id": "tier_vrijstaand", "label": "Vrijstaand", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
-    { "type": "text", "id": "text_vrijstaand", "label": "Toelichting vrijstaand (optioneel)" },
-    { "type": "header", "content": "Pakketadvies Langer Thuis bij vraag 3", "info": "Geldt als vraag 2 \"Zelfstandig en veilig blijven wonen\" is gekozen. Zelfde opzet als Mijn Thuis hierboven." },
-    { "type": "select", "id": "tier_lt_appartement", "label": "Appartement", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
-    { "type": "text", "id": "text_lt_appartement", "label": "Toelichting appartement (optioneel)" },
-    { "type": "select", "id": "tier_lt_rijtjeswoning", "label": "Rijtjeswoning", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
-    { "type": "text", "id": "text_lt_rijtjeswoning", "label": "Toelichting rijtjeswoning (optioneel)" },
-    { "type": "select", "id": "tier_lt_vrijstaand", "label": "Vrijstaand", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
-    { "type": "text", "id": "text_lt_vrijstaand", "label": "Toelichting vrijstaand (optioneel)" },
     { "type": "text", "id": "advies_label", "label": "Label advies", "default": "Ons advies:" }
   ],
   "presets": [{ "name": "Zelf samenstellen wizard" }]
