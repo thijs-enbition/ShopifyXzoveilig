@@ -1,8 +1,8 @@
 {%- comment -%}
   Zo Veilig — offertewizard op /pages/zelf-samenstellen (2026-11-17; vanaf de laatste ronde ZONDER grid).
-  Vier korte vragen (de vorm van de oude offertebuilder), daarna een resultaatstap: een gewone lijst van de
-  passende producten/categorieen, de Woning-toelichting vanaf 2 etages, de regel "Ons advies: <pakket>" en
-  een formulier (naam, e-mail, telefoon, toestemming) waarmee de aanbeveling per e-mail wordt aangevraagd.
+  Vier korte vragen (de vorm van de oude offertebuilder), daarna een resultaatstap: eerst, direct onder de
+  kop, de regel "Ons advies: <pakket>", dan een gewone lijst van de passende producten/categorieen, de
+  Woning-toelichting vanaf 2 etages en een formulier (naam, e-mail, telefoon, toestemming) waarmee de aanbeveling per e-mail wordt aangevraagd.
   Geen product wordt hier verkocht, geen prijs getoond of berekend, de winkelwagen wordt niet aangeraakt.
   Het lead gaat als lead_type 'zelfsamenstellen' naar ZV_LEAD_ENDPOINT (Odoo) via ZVLeadWebhook; de e-mail zelf
   is een Odoo-automatisering (niet in deze repo). Logica in assets/zv-offerte-wizard.js; deze file levert
@@ -99,10 +99,16 @@
 
       <section class="zvw-result" id="zvwResult" aria-labelledby="zvwResH" hidden>
         <h2 id="zvwResH" tabindex="-1">Uw aanbeveling</h2>
+        <div class="zvw-res-advies" id="zvwResAdvies" hidden>
+          <span class="zvw-res-advies__chk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <div class="zvw-res-advies__body">
+            <p class="zvw-res-advies__t">{{ section.settings.advies_label | default: 'Ons advies:' | escape }} <span id="zvwResAdviesName"></span>.</p>
+            <p class="zvw-res-advies__x" id="zvwResAdviesText"></p>
+          </div>
+        </div>
         <p class="zvw-res-intro">Op basis van uw antwoorden past dit bij u:</p>
         <div id="zvwResList"></div>
         <p class="zvw-res-note" id="zvwResWoning" data-summary="Meerdere etages: de toeslag &quot;Extra etage of &gt;100 m²&quot; kan van toepassing zijn. Bespreken in het adviesgesprek." hidden>Woont u op meerdere etages, of is uw woning groter dan 100 m&sup2;? Bij een abonnement komt daar de toeslag &ldquo;Extra etage of &gt;100 m&sup2;&rdquo; bij. Die is niet los te bestellen: we bespreken dit met u in het adviesgesprek.</p>
-        <p class="zvw-res-advies" id="zvwResAdvies" hidden><b>{{ section.settings.advies_label | default: 'Ons advies:' | escape }} <span id="zvwResAdviesName"></span>.</b> <span id="zvwResAdviesText"></span></p>
 
         <form class="zvw-lead" id="zvwLead" novalidate data-consent-error="{% render 'zv-form-copy', key: 'consent_error' %}">
           <h3 class="zvw-lead__h">Waar mogen we de aanbeveling naartoe sturen?</h3>
@@ -207,8 +213,13 @@
 .zv-wiz .zvw-res-list { margin:0; padding:0 0 0 20px; font-size:15.5px; font-weight:700; color:var(--ink); }
 .zv-wiz .zvw-res-list li { padding:2px 0; }
 .zv-wiz .zvw-res-note { margin:0; padding:11px 16px; background:var(--indigo-soft); border-radius:12px; font-size:13.5px; font-weight:700; color:var(--indigo); }
-.zv-wiz .zvw-res-advies { margin:0; font-size:15px; font-weight:500; color:#5b5374; line-height:1.45; }
-.zv-wiz .zvw-res-advies b { color:var(--indigo); font-weight:900; }
+.zv-wiz .zvw-res-advies { display:flex; align-items:center; gap:14px; padding:14px 18px; background:var(--indigo-soft); border-radius:14px; }
+.zv-wiz .zvw-res-advies__chk { flex:none; width:32px; height:32px; border-radius:50%; background:#fff; color:var(--indigo); display:grid; place-items:center; }
+.zv-wiz .zvw-res-advies__chk svg { width:17px; height:17px; }
+.zv-wiz .zvw-res-advies__t { margin:0; font-size:clamp(18px,2.2vw,22px); font-weight:900; letter-spacing:-.01em; line-height:1.25; color:var(--indigo); }
+.zv-wiz .zvw-res-advies__x { margin:4px 0 0; font-size:14.5px; font-weight:600; color:#5b5374; line-height:1.45; }
+.zv-wiz .zvw-res-advies__x:empty { display:none; }
+.zv-wiz .zvw-res-advies:not([hidden]) + .zvw-res-intro { margin-top:0; }
 .zv-wiz .zvw-lead { display:flex; flex-direction:column; gap:12px; padding-top:18px; border-top:1px solid var(--line); }
 .zv-wiz .zvw-lead__h { font-size:17px; font-weight:900; color:var(--indigo); margin:0; }
 .zv-wiz .zvw-lead__p { font-size:14px; font-weight:600; color:var(--muted); margin:-6px 0 0; }

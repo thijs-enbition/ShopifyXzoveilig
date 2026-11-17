@@ -3,10 +3,11 @@
 
    There is NO product grid any more (the grid-based version is superseded, see
    docs/zelf-samenstellen-wizard-2026-11-17.md). After Q4 the result step shows
-     - a plain list of the matched products, grouped by category (names only, no prices),
+     - first, right under the heading, the line "Ons advies: <package>." (static text, no link) when Q2's woning
+       type has a package set. Nothing about the package is shown during the questions: visitors stay in the
+       flow instead of being routed out,
+     - then a plain list of the matched products, grouped by category (names only, no prices),
      - the Woning note from 2 etages,
-     - the line "Ons advies: <package>." (static text, no link) when Q2's woning type has a package set. Nothing
-       about the package is shown during the questions: visitors stay in the flow instead of being routed out,
      - the contact form (naam, e-mail, telefoon, toestemming).
    Submitting posts one lead to window.ZV_LEAD_ENDPOINT (Odoo) through window.ZVLeadWebhook with
    lead_type 'zelfsamenstellen' and a flat-string `description` (also sent as `message`, the key the

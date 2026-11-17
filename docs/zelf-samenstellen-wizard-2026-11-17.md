@@ -47,16 +47,23 @@ invited leaving, and a lead only comes from finishing). What went with it: the b
 
 ### Result step (after Q4: "Toon mijn aanbeveling")
 
-1. **A plain list** (not cards) of the matched products, grouped under their category ("Sensoren", "Camera's
-   (buiten)", "Videodeurbel", "Bediening"). Names only: no price, no product code, no buy control.
-2. The **Woning note** from 2 etages: the toeslag "Extra etage of >100 m²" comes with a subscription, is not
+On screen, top to bottom (the package comes first since 2026-11-17, it used to sit below the product list):
+
+1. The heading "Uw aanbeveling".
+2. **"Ons advies: <package>."** as static text (no link), directly under the heading, when Q2's type has a package set.
+   It is styled to stand out: a tinted box with a check mark, the line itself at heading size (`clamp(18px, 2.2vw, 22px)`, weight 900: 22 px on desktop vs the
+   23 px heading, 18 px at 390 px), and the optional `text_*` note in a smaller line under it. When
+   no package is set the block is hidden and the page starts with the intro line.
+3. "Op basis van uw antwoorden past dit bij u:" and **a plain list** (not cards) of the matched products, grouped
+   under their category ("Sensoren", "Camera's (buiten)", "Videodeurbel", "Bediening"). Names only: no price, no
+   product code, no buy control. Unchanged by the reorder.
+4. The **Woning note** from 2 etages: the toeslag "Extra etage of >100 m²" comes with a subscription, is not
    orderable on its own, and is discussed in the adviesgesprek. No code or amount in it (`check_pricing.py` #13
    forbids a theme file naming the Woning products).
-3. **"Ons advies: <package>."** as static text (no link) when Q2's type has a package set.
-4. **The contact form**: Naam, E-mailadres, Telefoonnummer (all required, e-mail format checked), the shared
+5. **The contact form**: Naam, E-mailadres, Telefoonnummer (all required, e-mail format checked), the shared
    consent checkbox (`zv-form-copy` consent and consent_error, the single source for lead forms), button
    "Ontvang uw aanbeveling per e-mail". "Antwoorden wijzigen" goes back to Q4 with every answer kept.
-5. On submit: **"Bedankt. U ontvangt de aanbeveling per e-mail. Onze klantenservice neemt ook contact met u op."**
+6. On submit: **"Bedankt. U ontvangt de aanbeveling per e-mail. Onze klantenservice neemt ook contact met u op."**
    If the lead cannot be sent at all (no `ZV_LEAD_ENDPOINT` or no `ZVLeadWebhook`), the visitor gets "Het versturen
    is niet gelukt. Probeer het later opnieuw of bel ons op 088 122 11 11." instead of a thank-you for a lead that
    went nowhere.
@@ -94,7 +101,9 @@ Meerdere etages: de toeslag "Extra etage of >100 m²" kan van toepassing zijn. B
 Pakketadvies: Protect.
 ```
 
-The Meerdere-etages line appears only from 2 etages, the Pakketadvies line only when Q2's type has a package. No prices,
+The Meerdere-etages line appears only from 2 etages, the Pakketadvies line only when Q2's type has a package. The
+on-screen reorder did not change the lead: the `Pakketadvies:` line stays at the end of `description` and `message`
+(the text is for the adviser, it need not follow the screen). No prices,
 no `item_name`: the list says what suits the visitor, it is not a quote (no quantities).
 
 ## Open follow-ups (not buildable from this repo)
@@ -131,7 +140,16 @@ so DeprecatedTag/UndefinedObject are switched off around those lines only, as ot
 `scripts/check_pricing.py` fails on main too with the same single line (`zv-infrarood-installatie.liquid` literal
 price); nothing added.
 
-**Last round (Q2 bar removed): 63 checks, 0 failures**, the no-grid checks below re-run unchanged plus:
+**Latest round (package line moved to the top of the result): 73 checks, 0 failures**, everything below re-run plus:
+- For Appartement / Rijtjeswoning / Vrijstaand the result's children are in the order heading, Ons advies, intro,
+  product list, both in the DOM and by on-screen position (`getBoundingClientRect`), with the line at 22 px / weight 900
+  next to the 23 px heading (measured at 1280 px).
+- The product groups for alarm (Sensoren 4 + Bediening 1) and all 16 Q1 x Q4 lists are unchanged.
+- 390 px: the Ons advies box sits between the heading and the intro, fits inside the card (320 of 358 px), no horizontal
+  overflow, the rest of the result and the form lay out as before. The lead `description` check (exact string incl.
+  `Pakketadvies:`) still passes. `shopify theme check` 568 / 0 like `origin/main`, `check_pricing.py` only the known failure.
+
+**Previous round (Q2 bar removed): 63 checks, 0 failures**, the no-grid checks below re-run unchanged plus:
 - After Q2 for each of Appartement / Rijtjeswoning / Vrijstaand: no `.zvw-advies` / `#zvwAdvies*` element, no `.pm-advies`,
   no link at all in the question form, no `pakket=` / `oplossingen` link, no `target=_blank`, no `data-tier-href`, and
   no "Ons advies" / "Bekijk dit pakket" text; choosing a type opens no new tab and the page stays on question 2.
