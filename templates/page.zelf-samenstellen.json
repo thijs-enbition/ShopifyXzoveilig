@@ -9,7 +9,7 @@
  */
 {
   "sections": {
-    "wizard": { "type": "zelf-samenstellen-wizard", "settings": {} },
+    "wizard": { "type": "zelf-samenstellen-wizard", "settings": { "tier_appartement": "secure", "tier_rijtjeswoning": "guard", "tier_vrijstaand": "secure_plus" } },
     "main": {
       "type": "zelf-samenstellen",
       "blocks": {

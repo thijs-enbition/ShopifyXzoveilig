@@ -26,7 +26,8 @@ Bediening). The mapping lives in `data-cats` / `data-types` on the options in th
 `type`, **also when Q1 asked for all cameras** ("Met camera's" + Buitencamera = the two Buiten cameras, not
 all four; Q4 is the more specific answer). Q1 "Met camera's" with Q4 Geen or Deurbelcamera still shows all four
 cameras. Today: Binnen = Binnencamera 516; Buiten = 730 Buitencamera met spotlight + Buitencamera bedraad Dome
-826. The note above the grid says which ("Camera's (buiten)"). If a narrowing would leave no card at all (a
+826 + 729 WiFi Camera Floodlight (Mickey) (its `type` was changed from `Camera` to `Buiten` the same day, which
+also turned its badge from CAMERA to BUITEN). The note above the grid says which ("Camera's (buiten)"). If a narrowing would leave no card at all (a
 row's type renamed), the grid drops it for that category instead of going empty. A chip click or "Toon alles"
 drops it as well.
 
@@ -40,28 +41,17 @@ switches to that package's tab and opens its "Meer informatie" modal, so no new 
 new tab (`rel=noopener`) because the wizard's answers would be lost on a same-tab navigation. The package
 name comes from the config (`zv-package-name` via `zv_package_names_by_fk`), never a hardcoded string.
 
-**The woning type -> package mapping is NOT confirmed, so none is hardcoded.** Nothing in the repo ties a
-house type to a package: the tiers differ in care level (Inzicht / Zeker / Beschermd, Alert / Protect / Vista),
-not in house type, and the pakket-matcher's own scenario mapping is a placeholder that still needs sign-off
-(CLAUDE.md, "Pakket-matcher"). So the section has settings per woning type (a package picker, default
-"Geen advies", plus an optional one-line toelichting). **Until Thijs/Robi fill them in (theme editor, section
-"Zelf samenstellen wizard", "Pakketadvies bij vraag 2"), no bar shows.** The advice is not added to the lead
-description (a suggestion is not a choice). The bar was QA'd on the draft theme with a throwaway test
-mapping that was removed again.
-
-After Q4 ("Toon mijn selectie") the page scrolls to `#winkel`. The grid then:
-- shows only those categories (several chips lit; the "Alle" chip is off) and a note "Getoond op basis van uw
-  antwoorden: ..." with "Toon alles";
-- from 2 etages shows a Woning note: "Extra etage of >100 m²" is a toeslag on a subscription, not orderable on
-  its own, discussed in the adviesgesprek. No product code and no amount in it (`check_pricing.py` #13 forbids
-  a theme file naming the Woning products);
-- puts `Offertewizard: Beveiliging: ...; Woning: ...; Etages: n; Camera: ...` in the hidden `#ccDescription`
-  of the callback form and shows the same text above the form ("Uw antwoorden gaan mee: ...", with "Wissen").
-
-Interplay: Koop/Huur clicks keep the filter and the description (state is `state.cats`, not DOM). A category
-chip click takes over from the wizard filter and removes its notes; the description stays (visible, "Wissen")
-until "Toon alles" or "Wissen". The lead keeps `lead_type: 'camerahardware'`, `source_page`, `cta_location` and
-the webhook source; `item_name` / prices still describe only what the visitor picked in the grid.
+**Mapping (Thijs, 2026-11-17), set as theme-editor settings, not in code:** Appartement -> Alert (`secure`),
+Rijtjeswoning -> Protect (`guard`), Vrijstaand -> Vista (`secure_plus`). They are the `tier_appartement` /
+`tier_rijtjeswoning` / `tier_vrijstaand` settings of the `wizard` section in `templates/page.zelf-samenstellen.json`
+(the same JSON the theme editor writes), on the branch and on the draft theme. The optional one-line toelichting
+(`text_*`) is blank until Thijs/Robi supply copy. **A merge to main therefore carries this mapping.** Nothing in
+the repo ties a house type to a package on its own (the tiers differ in care level, and the pakket-matcher's
+scenario mapping is still a placeholder awaiting sign-off), so this mapping is a business decision, not derived.
+To change it: theme editor, section "Zelf samenstellen wizard", "Pakketadvies bij vraag 2"; "Geen advies" hides
+the bar for that type. Vista has no buy button on Oplossingen (lead only); `?pakket=secure_plus` still opens its
+information modal, which is what the link shows. The advice is not added to the lead description (a suggestion
+is not a choice).
 
 ## Where the brief and the repo differed (read this)
 
@@ -73,16 +63,13 @@ the webhook source; `item_name` / prices still describe only what the visitor pi
    Woning line, by design (Woning belongs to a package line; the cart guard removes a Woning line without a
    package, see `docs/zelf-samenstellen-2026-11-02.md` "Not on the page"). Q3 therefore shows only an
    explanatory note. Q2 (follow-up, 2026-11-17) links to the package on Oplossingen instead, in the
-   pakket-matcher's "Ons advies" look, driven by section settings that are still empty (the mapping is not
-   confirmed, see "Q2 package advice"). `vergelijk-pakketten` (one of the files lagging on live) was not touched.
+   pakket-matcher's "Ons advies" look, driven by section settings (mapping set, see "Q2 package advice"). `vergelijk-pakketten` (one of the files lagging on live) was not touched.
 3. **"Inbraakbeveiliging" is not a chip.** The chips are Sensoren, Camera's, Videodeurbel, Bediening. "Met een
    alarmsysteem" maps to Sensoren **and** Bediening (confirmed by Thijs 2026-11-17; was already so in the first
    version, `data-cats="sensoren bediening"`).
 4. **Binnencamera/Buitencamera now filter** (2026-11-17), because `koop-binnencamera-516` exists and is
-   published (Admin API, 2026-11-02) and the camera rows carry `type` Binnen/Buiten/Camera. **Gap: the 729 WiFi
-   Camera Floodlight (Mickey) has `type: 'Camera'`, so "Buitencamera" does NOT show it**, although it is an
-   outdoor floodlight camera (the old matcher offered it as "Liever draadloos" outdoor). Fixing it means setting
-   that row's `type` to `Buiten` in the HW array, which also changes its badge from CAMERA to BUITEN.
+   published (Admin API, 2026-11-02) and the camera rows carry `type` Binnen/Buiten. The 729 Floodlight was
+   `type: 'Camera'` and so missed Buitencamera; Thijs had its `type` changed to `Buiten` (badge CAMERA -> BUITEN).
 5. **Deurbelcamera filters to the whole Videodeurbel category** (750 and 780), not the 750 alone.
 6. **"Supabase capture-lead" is not this form's endpoint.** The callback form posts to
    `window.ZV_LEAD_ENDPOINT` (Odoo) through `ZVLeadWebhook`; `capture-lead` is the contact page. The wizard
@@ -115,3 +102,14 @@ files (the section needs `zv-pricing` for package names, an `include`, so its De
 are switched off around those lines only, as other sections do with `theme-check-disable`).
 `scripts/check_pricing.py` fails on main too with the same single line (`zv-infrarood-installatie.liquid`
 literal price); nothing added.
+
+### 2026-11-17, last round (729 -> Buiten, Q2 mapping set)
+Same method (real Chrome over CDP, lead stubbed), on the draft theme: 58 checks, 0 failures, the 16-combination
+matrix included. Buitencamera now returns **3** cards (Buitencamera bedraad Dome 826, 729 WiFi Camera Floodlight
+(Mickey), 730 Buitencamera met spotlight), also for Camera's + Buitencamera (3 cards, all `Buiten`), alarm +
+Buitencamera = 4 Sensoren + 1 Bediening + 3 Buiten = 8 (Koop click keeps it), all three + Buitencamera = 10. The
+729 card's badge reads BUITEN. The Q2 bar shows for all three answers: Alert -> `?pakket=secure`, Protect ->
+`?pakket=guard`, Vista -> `?pakket=secure_plus`; clicking each opened a new tab on `/pages/oplossingen` with that
+package's modal open. (The new tab served the live theme's Oplossingen, not the draft: the preview cookie
+did not carry to the new tab. Visitors get the live theme there too.) Theme check 568 warnings / 0 errors, same as
+`origin/main`, none new; `check_pricing.py` fails only on the known `zv-infrarood-installatie.liquid` line.
