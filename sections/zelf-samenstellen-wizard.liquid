@@ -17,7 +17,9 @@
                 Buitencamera -> Buiten). Zo'n optie VERSMALT ook Q1's camera-categorie; een leeg resultaat valt
                 terug op de hele categorie.
     data-tier-* (Q2) pakketadvies uit de sectie-instellingen hieronder (per woningtype een pakket, leeg = geen
-                advies). In de vraag zelf is het een balk met link naar Oplossingen; in het resultaat gewone tekst.
+                advies). Alleen data: het verschijnt als gewone tekst "Ons advies: <pakket>." in het RESULTAAT.
+                Tijdens de vragen verschijnt er niets en er is geen link naar Oplossingen: bezoekers blijven in
+                de vragenlijst (balk met link verwijderd, zie docs/zelf-samenstellen-wizard-2026-11-17.md).
 
   Productnamen: #zvwData hieronder is de opzoeklijst categorie -> productnamen (overgenomen uit de rijen van
   sections/zelf-samenstellen.liquid, die niet meer op de pagina staat). Alleen namen en types: geen bedragen,
@@ -55,7 +57,6 @@
         <div class="zvw-opts">
           {%- assign zv_wiz_wk = 'appartement|rijtjeswoning|vrijstaand' | split: '|' -%}
           {%- assign zv_wiz_wl = 'Appartement|Rijtjeswoning|Vrijstaand' | split: '|' -%}
-          {%- capture zv_wiz_url -%}{%- render 'zv-route', key: 'oplossingen' -%}{%- endcapture -%}
           {%- for wk in zv_wiz_wk -%}
             {%- assign fk_id = 'tier_' | append: wk -%}
             {%- assign tx_id = 'text_' | append: wk -%}
@@ -63,13 +64,8 @@
             {%- assign tier_name = '' -%}
             {%- if fk != blank -%}{%- capture tier_name -%}{%- render 'zv-package-name', finder_key: fk, names: zv_wiz_names -%}{%- endcapture -%}{%- endif -%}
             <label class="zvw-opt"><input type="radio" name="woning" value="{{ wk }}" data-d="{{ zv_wiz_wl[forloop.index0] }}"
-              {%- if tier_name != blank %} data-tier-name="{{ tier_name | escape }}" data-tier-href="{{ zv_wiz_url | strip }}?pakket={{ fk | url_encode }}" data-tier-text="{{ section.settings[tx_id] | escape }}"{% endif %}><span>{{ zv_wiz_wl[forloop.index0] }}</span></label>
+              {%- if tier_name != blank %} data-tier-name="{{ tier_name | escape }}" data-tier-text="{{ section.settings[tx_id] | escape }}"{% endif %}><span>{{ zv_wiz_wl[forloop.index0] }}</span></label>
           {%- endfor -%}
-        </div>
-        <div class="zvw-advies" id="zvwAdvies" aria-live="polite" hidden>
-          <span class="zvw-advies__chk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-          <p class="zvw-advies__txt"><b>{{ section.settings.advies_label | default: 'Ons advies:' | escape }} <span id="zvwAdviesName"></span>.</b> <span id="zvwAdviesText"></span></p>
-          <a class="zvw-advies__cta" id="zvwAdviesLink" href="{{ zv_wiz_url | strip }}" target="_blank" rel="noopener">{{ section.settings.advies_cta | default: 'Bekijk dit pakket' | escape }}<span class="zvw-sr"> (opent in een nieuw tabblad)</span></a>
         </div>
       </fieldset>
 
@@ -199,15 +195,6 @@
 .zv-wiz .is-missing legend { color:var(--rood); }
 .zv-wiz .is-missing .zvw-opt { border-color:var(--red); }
 .zv-wiz .zvw-err { font-size:13.5px; font-weight:700; color:var(--rood); }
-.zv-wiz .zvw-advies { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:16px; background:#fff; border:1.5px solid var(--indigo); border-radius:16px; padding:14px 16px 14px 18px; }
-.zv-wiz .zvw-advies[hidden] { display:none; }
-.zv-wiz .zvw-advies__chk { flex:none; width:30px; height:30px; border-radius:50%; background:var(--indigo-soft); color:var(--indigo); display:grid; place-items:center; }
-.zv-wiz .zvw-advies__chk svg { width:16px; height:16px; }
-.zv-wiz .zvw-advies__txt { flex:1 1 240px; font-size:15px; font-weight:500; color:#5b5374; line-height:1.45; margin:0; }
-.zv-wiz .zvw-advies__txt b { color:var(--indigo); font-weight:900; }
-.zv-wiz .zvw-advies__cta { flex:none; font-size:14.5px; font-weight:800; color:var(--ink); background:var(--gold); border-radius:12px; padding:11px 18px; text-decoration:none; box-shadow:0 2px 0 var(--belt); }
-.zv-wiz .zvw-advies__cta:focus-visible { outline:2px solid var(--indigo); outline-offset:3px; }
-.zv-wiz .zvw-sr { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .zv-wiz .zvw-head h1 { font-size:clamp(24px,3vw,32px); font-weight:900; letter-spacing:-.015em; line-height:1.12; color:var(--indigo); margin:0; }
 .zv-wiz .zvw-qform { display:flex; flex-direction:column; gap:18px; }
 .zv-wiz .zvw-result { display:flex; flex-direction:column; gap:16px; }
@@ -249,7 +236,7 @@
 .zv-wiz .zvw-back { color:var(--indigo); background:#fff; border:1.5px solid var(--line-2); }
 .zv-wiz .zvw-back:hover { border-color:var(--indigo); }
 .zv-wiz .zvw-next:focus-visible, .zv-wiz .zvw-back:focus-visible { outline:2px solid var(--indigo); outline-offset:3px; }
-@media(max-width:520px){ .zv-wiz .zvw-send, .zv-wiz #zvwEdit { align-self:stretch; text-align:center; } .zv-wiz .zvw-fld { max-width:none; } .zv-wiz .zvw-advies__cta { flex-basis:100%; text-align:center; } .zv-wiz .zvw-opt { flex:1 1 100%; } .zv-wiz .zvw-nav { flex-direction:column-reverse; align-items:stretch; } .zv-wiz .zvw-next, .zv-wiz .zvw-back { text-align:center; } }
+@media(max-width:520px){ .zv-wiz .zvw-send, .zv-wiz #zvwEdit { align-self:stretch; text-align:center; } .zv-wiz .zvw-fld { max-width:none; } .zv-wiz .zvw-opt { flex:1 1 100%; } .zv-wiz .zvw-nav { flex-direction:column-reverse; align-items:stretch; } .zv-wiz .zvw-next, .zv-wiz .zvw-back { text-align:center; } }
 @media(prefers-reduced-motion:reduce){ .zv-wiz .zvw-bar { transition:none; } }
 {% endstylesheet %}
 
@@ -260,15 +247,14 @@
   "settings": [
     { "type": "text", "id": "title", "label": "Titel", "default": "Stel uw beveiliging samen in 4 vragen" },
     { "type": "textarea", "id": "lead", "label": "Introductie", "default": "Beantwoord vier korte vragen en ontvang de aanbeveling voor uw woning per e-mail." },
-    { "type": "header", "content": "Pakketadvies bij vraag 2", "info": "Leeg = geen advies voor dat woningtype. Bij de vraag zelf een balk met link naar het pakket op Oplossingen; in het resultaat gewone tekst." },
+    { "type": "header", "content": "Pakketadvies (resultaat)", "info": "Per woningtype (vraag 2) het pakket dat in het resultaat als gewone tekst \"Ons advies: ...\" staat. Leeg = geen advies voor dat woningtype. Er is geen link: bezoekers blijven in de vragenlijst." },
     { "type": "select", "id": "tier_appartement", "label": "Appartement", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
     { "type": "text", "id": "text_appartement", "label": "Toelichting appartement (optioneel)" },
     { "type": "select", "id": "tier_rijtjeswoning", "label": "Rijtjeswoning", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
     { "type": "text", "id": "text_rijtjeswoning", "label": "Toelichting rijtjeswoning (optioneel)" },
     { "type": "select", "id": "tier_vrijstaand", "label": "Vrijstaand", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
     { "type": "text", "id": "text_vrijstaand", "label": "Toelichting vrijstaand (optioneel)" },
-    { "type": "text", "id": "advies_label", "label": "Label advies", "default": "Ons advies:" },
-    { "type": "text", "id": "advies_cta", "label": "Knoptekst advies", "default": "Bekijk dit pakket" }
+    { "type": "text", "id": "advies_label", "label": "Label advies", "default": "Ons advies:" }
   ],
   "presets": [{ "name": "Zelf samenstellen wizard" }]
 }

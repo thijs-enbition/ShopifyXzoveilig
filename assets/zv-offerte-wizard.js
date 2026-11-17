@@ -5,7 +5,8 @@
    docs/zelf-samenstellen-wizard-2026-11-17.md). After Q4 the result step shows
      - a plain list of the matched products, grouped by category (names only, no prices),
      - the Woning note from 2 etages,
-     - the line "Ons advies: <package>." (static text) when Q2's woning type has a package set,
+     - the line "Ons advies: <package>." (static text, no link) when Q2's woning type has a package set. Nothing
+       about the package is shown during the questions: visitors stay in the flow instead of being routed out,
      - the contact form (naam, e-mail, telefoon, toestemming).
    Submitting posts one lead to window.ZV_LEAD_ENDPOINT (Odoo) through window.ZVLeadWebhook with
    lead_type 'zelfsamenstellen' and a flat-string `description` (also sent as `message`, the key the
@@ -29,7 +30,6 @@
   var err = root.querySelector('#zvwErr');
   var back = root.querySelector('#zvwBack');
   var next = root.querySelector('#zvwNext');
-  var advies = root.querySelector('#zvwAdvies');
   var result = root.querySelector('#zvwResult');
   var lead = root.querySelector('#zvwLead');
   var leadErr = root.querySelector('#zvwLeadErr');
@@ -50,17 +50,6 @@
     steps.forEach(function (s) { s.classList.remove('is-missing'); });
   }
 
-  /* Q2: the "Ons advies" bar for the chosen woning type; hidden when that option has no package set. */
-  function syncAdvies() {
-    var el = checked('woning')[0];
-    var name = el && el.getAttribute('data-tier-name');
-    if (!name) { advies.hidden = true; return; }
-    root.querySelector('#zvwAdviesName').textContent = name;
-    root.querySelector('#zvwAdviesText').textContent = el.getAttribute('data-tier-text') || '';
-    root.querySelector('#zvwAdviesLink').setAttribute('href', el.getAttribute('data-tier-href'));
-    advies.hidden = false;
-  }
-
   function show(i, moveFocus) {
     cur = Math.max(0, Math.min(steps.length - 1, i));
     result.hidden = true;
@@ -72,7 +61,6 @@
     back.hidden = cur === 0;
     next.textContent = cur === steps.length - 1 ? 'Toon mijn aanbeveling' : 'Volgende';
     clearMissing();
-    syncAdvies();
     if (moveFocus) {
       var lg = steps[cur].querySelector('legend');
       if (lg) lg.focus({ preventScroll: true });
@@ -165,10 +153,7 @@
     root.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' });
   }
 
-  form.addEventListener('change', function (e) {
-    clearMissing();
-    if (e.target.name === 'woning') syncAdvies();
-  });
+  form.addEventListener('change', clearMissing);
 
   back.addEventListener('click', function () { show(cur - 1, true); });
   edit.addEventListener('click', function () { show(steps.length - 1, true); });

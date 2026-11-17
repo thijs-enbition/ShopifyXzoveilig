@@ -28,13 +28,22 @@ Buitencamera = the 3 Buiten cameras, not all 4; Q4 is the more specific answer);
 category empty it is dropped. Today: Binnen = Binnencamera 516; Buiten = Buitencamera bedraad Dome 826, 729 WiFi
 Camera Floodlight (Mickey), 730 Buitencamera met spotlight.
 
-**Q2 advice during the question.** After a woning type is chosen, step 2 shows an "Ons advies: <package>." bar with a
-"Bekijk dit pakket" button to `/pages/oplossingen?pakket=<finder_key>` (the Keuzehulp interlink, opens that package;
-new tab so the answers are not lost). Mapping (Thijs, 2026-11-17), set as section settings in the template JSON
-(`tier_appartement` / `tier_rijtjeswoning` / `tier_vrijstaand`), not in code: **Appartement -> Alert (`secure`),
-Rijtjeswoning -> Protect (`guard`), Vrijstaand -> Vista (`secure_plus`)**; the optional `text_*` notes are blank.
-"Geen advies" hides it for a type. The package name comes from the config (`zv-package-name`), never a literal.
-A merge to main carries this mapping.
+**Q2 package advice (result step only).** The woning type maps to a package, shown as the static line
+"Ons advies: <package>." on the result step (below) and recorded in the lead. Mapping (Thijs, 2026-11-17), set as
+section settings in the template JSON (`tier_appartement` / `tier_rijtjeswoning` / `tier_vrijstaand`), not in code:
+**Appartement -> Alert (`secure`), Rijtjeswoning -> Protect (`guard`), Vrijstaand -> Vista (`secure_plus`)**; the
+optional `text_*` notes are blank, "Geen advies" hides the line for a type. The package name comes from the config
+(`zv-package-name`), never a literal. A merge to main carries this mapping.
+
+**Removed (2026-11-17, after the no-grid round): the "Ons advies" bar that used to appear right after Q2 was
+answered**, with its "Bekijk dit pakket" button to `/pages/oplossingen?pakket=<finder_key>`. Why: visitors should stay
+in the questionnaire and finish it, not be routed out to Oplossingen mid-flow (the link opened a new tab, but it still
+invited leaving, and a lead only comes from finishing). What went with it: the bar markup, the `.zvw-advies*` and
+`.zvw-sr` CSS (copied from the pakket-matcher's `.pm-advies`), `syncAdvies()` and its two call sites in
+`assets/zv-offerte-wizard.js`, the `data-tier-href` attribute and the `zv-route` lookup that fed it, and the unused
+`advies_cta` ("Knoptekst advies") section setting. What stayed: the Q2 -> package mapping as data
+(`data-tier-name` / `data-tier-text` on the woning options, read at the result step), `advies_label`, and the
+`Pakketadvies:` line in the lead's `description`. During Q2 nothing about a package is shown any more.
 
 ### Result step (after Q4: "Toon mijn aanbeveling")
 
@@ -110,8 +119,8 @@ no `item_name`: the list says what suits the visitor, it is not a quote (no quan
 - "Inbraakbeveiliging" is not a category: "Met een alarmsysteem" -> Sensoren + Bediening (Thijs, 2026-11-17).
 - Leads go to Odoo (`ZV_LEAD_ENDPOINT`), not Supabase `capture-lead` (a separate decision for Thijs).
 - The wizard now sits alone on the page, so its title is the page's `<h1>` (it was an `<h2>` under the grid's h1).
-- The Q2 advice bar (with the Oplossingen link) was kept during the question; the brief's "static text, not a link"
-  is applied to the result step. Say if the bar should go too.
+- The Q2 advice bar with the Oplossingen link was built in an earlier round and removed in the last one (see above);
+  the advice is static text on the result step only.
 
 ## QA
 
@@ -122,7 +131,16 @@ so DeprecatedTag/UndefinedObject are switched off around those lines only, as ot
 `scripts/check_pricing.py` fails on main too with the same single line (`zv-infrarood-installatie.liquid` literal
 price); nothing added.
 
-**Last round (no grid): 62 checks, 0 failures.**
+**Last round (Q2 bar removed): 63 checks, 0 failures**, the no-grid checks below re-run unchanged plus:
+- After Q2 for each of Appartement / Rijtjeswoning / Vrijstaand: no `.zvw-advies` / `#zvwAdvies*` element, no `.pm-advies`,
+  no link at all in the question form, no `pakket=` / `oplossingen` link, no `target=_blank`, no `data-tier-href`, and
+  no "Ons advies" / "Bekijk dit pakket" text; choosing a type opens no new tab and the page stays on question 2.
+- Result step after Q4 still shows "Ons advies: Alert / Protect / Vista." (static, no link, no `pakket=` link in the
+  result), and the lead's `description` still ends with the `Pakketadvies:` line.
+- All 16 Q1 x Q4 combinations again produce exactly the expected lists. `shopify theme check` 568 warnings / 0 errors
+  (same as `origin/main`, none new); `check_pricing.py` only the known `zv-infrarood-installatie.liquid` failure.
+
+**No-grid round: 62 checks, 0 failures.**
 - The grid, filter chips, summary, old callback form and matcher are gone from the page; one `<h1>`.
 - 16 Q1 x Q4 combinations (Q1 = alarm / camera's / deurbel / all three, Q4 = Geen / Deurbelcamera / Binnencamera /
   Buitencamera): the results list equals the expected category groups and names exactly, none empty. Spelled out:
@@ -130,7 +148,7 @@ price); nothing added.
   + the remote.
 - Woning note hidden at 1 etage, shown at 2, 3, 4; no price or product code in it.
 - "Ons advies" in the result: Alert / Protect / Vista for Appartement / Rijtjeswoning / Vrijstaand, static text with no
-  link; the bar during Q2 still shows the same three.
+  link. (This round also checked the Q2 bar, since removed.)
 - Form validation (empty form names all four problems; bad e-mail; no consent -> the shared consent error); missing
   endpoint -> honest error, no thank-you; real submit -> the confirmation text above.
 - Lead (stubbed): `lead_type` `zelfsamenstellen`, contact fields, `consent: true`, standard `buildCallbackLead` fields,
@@ -147,7 +165,7 @@ trust strip, filter chips, hardware cards with Koop/Huur, "Uw set" summary, call
 `zv-wizard:apply` and the grid filtered itself to the matched categories (a chip per category, "Toon alles", a Woning
 note, `#ccDescription` prefilled for the grid's callback form, lead type `camerahardware`). That whole mechanism is gone
 from the wizard and the template. What carried over: the Q1/Q4 category union, the Binnen/Buiten narrowing (and the 729
-Floodlight's `type` change from `Camera` to `Buiten`, which is why Buitencamera shows three cameras), the Q2 mapping and
-advice bar, the Woning note, the `description` idea. What was dropped: any selling (Koop/Huur, set summary, phone-to-order),
+Floodlight's `type` change from `Camera` to `Buiten`, which is why Buitencamera shows three cameras), the Q2 mapping
+(its mid-flow advice bar was removed later), the Woning note, the `description` idea. What was dropped: any selling (Koop/Huur, set summary, phone-to-order),
 the grid's own callback form (lead type `camerahardware`, a terugbelverzoek) in favour of the e-mail lead above, the
 filter chips, the trust strip and the FAQ on this page.
