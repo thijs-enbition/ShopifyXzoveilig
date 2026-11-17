@@ -22,7 +22,7 @@
   the lead sends as `description`. See docs/zelf-samenstellen-matcher-2026-11-02.md.
 
   Offertewizard (sections/zelf-samenstellen-wizard.liquid, 2026-11-17): its `zv-wizard:apply` event
-  ({cats, description, extraFloors}) filters the grid to several categories at once (state.cats), shows
+  ({cats, catTypes, description, extraFloors}) filters the grid to several categories at once (state.cats, narrowed per category by state.catTypes), shows
   the Woning note from 2 floors and fills #ccDescription (also shown to the visitor in #ccDescShow).
   See docs/zelf-samenstellen-wizard-2026-11-17.md. The older matcher event above still works but the
   page template no longer renders the matcher.
@@ -231,7 +231,7 @@
   /* `match` is the matcher's {slug: qty} map (sections/zelf-samenstellen-matcher.liquid, row field
      `m`), null while no recommendation is active. It lives here, not on the DOM, because
      renderRows() rebuilds every card on each Koop/Huur click. */
-  var state={ lines:{}, filter:'', open:{}, match:null, cats:null };
+  var state={ lines:{}, filter:'', open:{}, match:null, cats:null, catTypes:null };
   function euro(n){ return '€ '+Number(n).toFixed(2).replace('.',','); }
 
   var SRC=['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid'];
@@ -313,10 +313,18 @@
       '</div>';
     return el;
   }
+  /* The wizard's filter: the card's category is among state.cats and, where the wizard narrowed that
+     category to some `type`s (Binnencamera -> Binnen), the card's type is one of them. */
+  function wizardOk(h){
+    if(!state.cats) return true;
+    if(state.cats.indexOf(h.cat)<0) return false;
+    var t=state.catTypes;
+    return !(t&&t[h.cat])||t[h.cat].indexOf(h.type)>-1;
+  }
   function renderRows(){
     var rows=document.getElementById('rows'); rows.innerHTML='';
     GROUPS.forEach(function(g){
-      var list=HW.filter(function(h){ return (h.huur!=null)===g.huur && (!state.filter || catsOf(h).indexOf(state.filter)>-1) && (!state.cats || catsOf(h).some(function(c){ return state.cats.indexOf(c)>-1; })); });
+      var list=HW.filter(function(h){ return (h.huur!=null)===g.huur && (!state.filter || catsOf(h).indexOf(state.filter)>-1) && wizardOk(h); });
       if(!list.length) return;
       var head=document.createElement('h3'); head.className='hw-group-h'; head.textContent=g.title;
       var grid=document.createElement('div'); grid.className='hw-grid';
@@ -367,7 +375,7 @@
     var b=e.target.closest('[data-filter]'); if(!b) return;
     /* A chip click takes over from the wizard's multi-category filter (its note goes); the wizard's
        description stays, visible above the callback form, until "Wissen" or "Toon alles". */
-    if(state.cats){ state.cats=null; matchNote.hidden=true; woningNote.hidden=true; }
+    if(state.cats){ state.cats=null; state.catTypes=null; matchNote.hidden=true; woningNote.hidden=true; }
     state.filter=b.getAttribute('data-filter');
     syncChips();
     renderRows();
@@ -388,29 +396,38 @@
   }
   function applyMatch(d){
     var n=Object.keys(d.qty).length; if(!n) return clearMatch();
-    state.match=d.qty; state.cats=null; woningNote.hidden=true; state.filter=''; syncChips();
+    state.match=d.qty; state.cats=null; state.catTypes=null; woningNote.hidden=true; state.filter=''; syncChips();
     setDesc(d.description);
     document.getElementById('zvMatchNoteT').textContent='Gemarkeerd: '+(n===1?'1 product dat bij':n+' producten die bij')+' uw antwoorden '+(n===1?'past':'passen')+'.';
     matchNote.hidden=false;
     renderRows();
   }
-  /* The offertewizard (sections/zelf-samenstellen-wizard.liquid) hands over {cats, description,
-     extraFloors}: the grid shows only those categories (several at once, which the single-chip filter
-     can't), `description` goes into the callback form, and from 2 floors a note explains the Woning
+  /* The offertewizard (sections/zelf-samenstellen-wizard.liquid) hands over {cats, catTypes,
+     description, extraFloors}: the grid shows only those categories (several at once, which the single-chip
+     filter can't; catTypes narrows a category to rows of some `type`, Binnencamera -> Binnen), `description` goes into the callback form, and from 2 floors a note explains the Woning
      toeslag. It marks no card and shows no price. Nothing here touches the cart. */
   function applyWizard(d){
     var cats=(d.cats||[]).filter(function(c){ return HW.some(function(h){ return h.cat===c; }); });
     if(!cats.length) return clearMatch();
-    state.match=null; state.cats=cats; state.filter=''; syncChips();
+    /* A narrowing that would leave no card at all (a row's type renamed, say) is dropped for that
+       category, so the grid never ends up empty. */
+    var types={};
+    Object.keys(d.catTypes||{}).forEach(function(c){
+      if(HW.some(function(h){ return h.cat===c && d.catTypes[c].indexOf(h.type)>-1; })) types[c]=d.catTypes[c];
+    });
+    state.match=null; state.cats=cats; state.catTypes=Object.keys(types).length?types:null; state.filter=''; syncChips();
     setDesc(d.description);
-    var names=cats.map(function(c){ var b=filters.querySelector('[data-filter="'+c+'"]'); return b?b.firstChild.textContent.trim():c; });
+    var names=cats.map(function(c){
+      var b=filters.querySelector('[data-filter="'+c+'"]'), n=b?b.firstChild.textContent.trim():c;
+      return state.catTypes&&state.catTypes[c]?n+' ('+state.catTypes[c].join(', ').toLowerCase()+')':n;
+    });
     document.getElementById('zvMatchNoteT').textContent='Getoond op basis van uw antwoorden: '+names.join(', ')+'.';
     matchNote.hidden=false;
     woningNote.hidden=!d.extraFloors;
     renderRows();
   }
   function clearMatch(){
-    state.match=null; state.cats=null; setDesc(''); matchNote.hidden=true; woningNote.hidden=true; syncChips();
+    state.match=null; state.cats=null; state.catTypes=null; setDesc(''); matchNote.hidden=true; woningNote.hidden=true; syncChips();
     renderRows();
   }
   document.addEventListener('zv-match:apply',function(e){ applyMatch(e.detail||{qty:{}}); });

@@ -10,13 +10,24 @@
                 de grid-filter wordt de UNIE van Q1 en Q4.
     data-d      korte tekst voor de regel "Offertewizard: ..." die als `description` met de lead meegaat.
     data-floors aantal etages (Q3); 2 of meer toont de Woning-toelichting in de grid.
+    data-types  (Q4) beperkt de categorie van die optie tot rijen met dit `type` in de grid
+                (Binnencamera -> Binnen, Buitencamera -> Buiten). Zo'n optie VERSMALT ook Q1's
+                camera-categorie; een leeg resultaat valt in de grid terug op de hele categorie.
+    data-tier-* (Q2) pakketadvies uit de sectie-instellingen hieronder (per woningtype een pakket, leeg =
+                geen advies). De mapping woningtype -> pakket is NIET bevestigd (Thijs/Robi), dus er staat
+                bewust niets ingevuld; zie docs/zelf-samenstellen-wizard-2026-11-17.md.
 
-  Q2 (type woning) en Q3 (etages) filteren niets: de grid heeft geen pakketten en geen Woning-regel
-  (die hoort bij een pakketregel en wordt los door de winkelwagen-guard verwijderd), dus ze reizen mee
-  in de lead en Q3 toont alleen een toelichting. Q4 Binnen-/Buitencamera tonen voorlopig de hele
-  camera-categorie (bekend gat, zie docs/zelf-samenstellen-wizard-2026-11-17.md). Geen bedragen, geen
-  productcodes in deze file (scripts/check_pricing.py).
+  Q2 (type woning) en Q3 (etages) filteren de grid niet: die heeft geen pakketten en geen Woning-regel
+  (die hoort bij een pakketregel en wordt los door de winkelwagen-guard verwijderd). Q2 toont, als er een
+  mapping is ingesteld, een "Ons advies"-balk (zelfde opmaak als .pm-advies van de pakket-matcher) met een
+  link naar /pages/oplossingen?pakket=<finder_key> (de bestaande Keuzehulp-koppeling: opent dat pakket);
+  beide antwoorden reizen mee in de lead. Q3 toont vanaf 2 etages alleen een toelichting. Geen bedragen,
+  geen productcodes in deze file (scripts/check_pricing.py).
 {%- endcomment -%}
+{% comment %}theme-check-disable DeprecatedTag, UndefinedObject{% endcomment %}
+{%- include 'zv-pricing' -%}
+{%- assign zv_wiz_names = zv_package_names_by_fk -%}
+{% comment %}theme-check-enable DeprecatedTag, UndefinedObject{% endcomment %}
 
 <div class="zv-wiz" data-zv-wizard>
   <div class="wrap">
@@ -41,9 +52,23 @@
       <fieldset class="zvw-step" data-step="2" data-name="woning" hidden>
         <legend tabindex="-1">Wat voor type woning heeft u?</legend>
         <div class="zvw-opts">
-          <label class="zvw-opt"><input type="radio" name="woning" value="appartement" data-d="Appartement"><span>Appartement</span></label>
-          <label class="zvw-opt"><input type="radio" name="woning" value="rijtjeswoning" data-d="Rijtjeswoning"><span>Rijtjeswoning</span></label>
-          <label class="zvw-opt"><input type="radio" name="woning" value="vrijstaand" data-d="Vrijstaand"><span>Vrijstaand</span></label>
+          {%- assign zv_wiz_wk = 'appartement|rijtjeswoning|vrijstaand' | split: '|' -%}
+          {%- assign zv_wiz_wl = 'Appartement|Rijtjeswoning|Vrijstaand' | split: '|' -%}
+          {%- capture zv_wiz_url -%}{%- render 'zv-route', key: 'oplossingen' -%}{%- endcapture -%}
+          {%- for wk in zv_wiz_wk -%}
+            {%- assign fk_id = 'tier_' | append: wk -%}
+            {%- assign tx_id = 'text_' | append: wk -%}
+            {%- assign fk = section.settings[fk_id] -%}
+            {%- assign tier_name = '' -%}
+            {%- if fk != blank -%}{%- capture tier_name -%}{%- render 'zv-package-name', finder_key: fk, names: zv_wiz_names -%}{%- endcapture -%}{%- endif -%}
+            <label class="zvw-opt"><input type="radio" name="woning" value="{{ wk }}" data-d="{{ zv_wiz_wl[forloop.index0] }}"
+              {%- if tier_name != blank %} data-tier-name="{{ tier_name | escape }}" data-tier-href="{{ zv_wiz_url | strip }}?pakket={{ fk | url_encode }}" data-tier-text="{{ section.settings[tx_id] | escape }}"{% endif %}><span>{{ zv_wiz_wl[forloop.index0] }}</span></label>
+          {%- endfor -%}
+        </div>
+        <div class="zvw-advies" id="zvwAdvies" aria-live="polite" hidden>
+          <span class="zvw-advies__chk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12.5l5 5 10-11" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <p class="zvw-advies__txt"><b>{{ section.settings.advies_label | default: 'Ons advies:' | escape }} <span id="zvwAdviesName"></span>.</b> <span id="zvwAdviesText"></span></p>
+          <a class="zvw-advies__cta" id="zvwAdviesLink" href="{{ zv_wiz_url | strip }}" target="_blank" rel="noopener">{{ section.settings.advies_cta | default: 'Bekijk dit pakket' | escape }}<span class="zvw-sr"> (opent in een nieuw tabblad)</span></a>
         </div>
       </fieldset>
 
@@ -62,8 +87,8 @@
         <div class="zvw-opts">
           <label class="zvw-opt"><input type="radio" name="camera" value="geen" data-cats="" data-d="Geen camera"><span>Geen</span></label>
           <label class="zvw-opt"><input type="radio" name="camera" value="deurbelcamera" data-cats="deurbel" data-d="Deurbelcamera"><span>Deurbelcamera</span></label>
-          <label class="zvw-opt"><input type="radio" name="camera" value="binnencamera" data-cats="camera" data-d="Binnencamera"><span>Binnencamera</span></label>
-          <label class="zvw-opt"><input type="radio" name="camera" value="buitencamera" data-cats="camera" data-d="Buitencamera"><span>Buitencamera</span></label>
+          <label class="zvw-opt"><input type="radio" name="camera" value="binnencamera" data-cats="camera" data-types="Binnen" data-d="Binnencamera"><span>Binnencamera</span></label>
+          <label class="zvw-opt"><input type="radio" name="camera" value="buitencamera" data-cats="camera" data-types="Buiten" data-d="Buitencamera"><span>Buitencamera</span></label>
         </div>
       </fieldset>
 
@@ -107,6 +132,15 @@
 .zv-wiz .is-missing legend { color:var(--rood); }
 .zv-wiz .is-missing .zvw-opt { border-color:var(--red); }
 .zv-wiz .zvw-err { font-size:13.5px; font-weight:700; color:var(--rood); }
+.zv-wiz .zvw-advies { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:16px; background:#fff; border:1.5px solid var(--indigo); border-radius:16px; padding:14px 16px 14px 18px; }
+.zv-wiz .zvw-advies[hidden] { display:none; }
+.zv-wiz .zvw-advies__chk { flex:none; width:30px; height:30px; border-radius:50%; background:var(--indigo-soft); color:var(--indigo); display:grid; place-items:center; }
+.zv-wiz .zvw-advies__chk svg { width:16px; height:16px; }
+.zv-wiz .zvw-advies__txt { flex:1 1 240px; font-size:15px; font-weight:500; color:#5b5374; line-height:1.45; margin:0; }
+.zv-wiz .zvw-advies__txt b { color:var(--indigo); font-weight:900; }
+.zv-wiz .zvw-advies__cta { flex:none; font-size:14.5px; font-weight:800; color:var(--ink); background:var(--gold); border-radius:12px; padding:11px 18px; text-decoration:none; box-shadow:0 2px 0 var(--belt); }
+.zv-wiz .zvw-advies__cta:focus-visible { outline:2px solid var(--indigo); outline-offset:3px; }
+.zv-wiz .zvw-sr { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .zv-wiz .zvw-nav { display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
 .zv-wiz .zvw-next, .zv-wiz .zvw-back { font-family:inherit; font-size:15.5px; font-weight:800; border-radius:13px; padding:14px 22px; cursor:pointer; }
 .zv-wiz .zvw-next { color:var(--ink); background:var(--gold); border:none; box-shadow:0 2px 0 var(--belt); transition:transform .14s,box-shadow .14s; }
@@ -114,7 +148,7 @@
 .zv-wiz .zvw-back { color:var(--indigo); background:#fff; border:1.5px solid var(--line-2); }
 .zv-wiz .zvw-back:hover { border-color:var(--indigo); }
 .zv-wiz .zvw-next:focus-visible, .zv-wiz .zvw-back:focus-visible { outline:2px solid var(--indigo); outline-offset:3px; }
-@media(max-width:520px){ .zv-wiz .zvw-opt { flex:1 1 100%; } .zv-wiz .zvw-nav { flex-direction:column-reverse; align-items:stretch; } .zv-wiz .zvw-next, .zv-wiz .zvw-back { text-align:center; } }
+@media(max-width:520px){ .zv-wiz .zvw-advies__cta { flex-basis:100%; text-align:center; } .zv-wiz .zvw-opt { flex:1 1 100%; } .zv-wiz .zvw-nav { flex-direction:column-reverse; align-items:stretch; } .zv-wiz .zvw-next, .zv-wiz .zvw-back { text-align:center; } }
 @media(prefers-reduced-motion:reduce){ .zv-wiz .zvw-bar { transition:none; } }
 {% endstylesheet %}
 
@@ -124,7 +158,16 @@
   "tag": "section",
   "settings": [
     { "type": "text", "id": "title", "label": "Titel", "default": "Stel uw beveiliging samen in 4 vragen" },
-    { "type": "textarea", "id": "lead", "label": "Introductie", "default": "Beantwoord vier korte vragen. Daarna laten we de onderdelen zien die erbij passen en nemen we uw antwoorden mee in uw terugbelverzoek." }
+    { "type": "textarea", "id": "lead", "label": "Introductie", "default": "Beantwoord vier korte vragen. Daarna laten we de onderdelen zien die erbij passen en nemen we uw antwoorden mee in uw terugbelverzoek." },
+    { "type": "header", "content": "Pakketadvies bij vraag 2", "info": "Leeg = geen advies voor dat woningtype. Mapping nog niet bevestigd, dus standaard leeg. De link opent het gekozen pakket op Oplossingen." },
+    { "type": "select", "id": "tier_appartement", "label": "Appartement", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
+    { "type": "text", "id": "text_appartement", "label": "Toelichting appartement (optioneel)" },
+    { "type": "select", "id": "tier_rijtjeswoning", "label": "Rijtjeswoning", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
+    { "type": "text", "id": "text_rijtjeswoning", "label": "Toelichting rijtjeswoning (optioneel)" },
+    { "type": "select", "id": "tier_vrijstaand", "label": "Vrijstaand", "default": "", "options": [{ "value": "", "label": "Geen advies" }, { "value": "aware", "label": "Inzicht" }, { "value": "aware_plus", "label": "Zeker" }, { "value": "care", "label": "Beschermd" }, { "value": "secure", "label": "Alert" }, { "value": "guard", "label": "Protect" }, { "value": "secure_plus", "label": "Vista" }] },
+    { "type": "text", "id": "text_vrijstaand", "label": "Toelichting vrijstaand (optioneel)" },
+    { "type": "text", "id": "advies_label", "label": "Label advies", "default": "Ons advies:" },
+    { "type": "text", "id": "advies_cta", "label": "Knoptekst advies", "default": "Bekijk dit pakket" }
   ],
   "presets": [{ "name": "Zelf samenstellen wizard" }]
 }
