@@ -2,13 +2,14 @@
    /pages/zelf-samenstellen: seven questions, one at a time, then a result step.
 
    Questions: 1 beveiligingswijze (multi), 2 waar zoekt u beveiliging voor (Mijn Thuis / Langer Thuis, decides which
-   three options Q3 shows), 3 welk soort bescherming past het beste (each option IS one package, 1 on 1), 4 etages,
+   three options Q3 shows), 3 welk soort bescherming past het beste (multi-select, each option IS one package, 1 on 1;
+   with several ticked only the HIGHEST package counts, see RANK below), 4 etages,
    5 camera-interesse, 6 rook- of waterdetectie, 7 aantal afstandsbedieningen.
 
    There is NO product grid any more (the grid-based version is superseded, see
    docs/zelf-samenstellen-wizard-2026-11-17.md). After Q7 the result step shows
      - first, right under the heading, the line "Ons advies: <package>." (static text, no link): the package of the
-       Q3 option the visitor chose. Nothing about the package is shown during the questions: visitors stay in the
+       Q3 option(s) the visitor ticked, the highest-ranked one when several are ticked. Nothing about the package is shown during the questions: visitors stay in the
        flow instead of being routed out,
      - then a plain list of the matched products, grouped by category (names only, no prices; the Sensoren
        category counts but is never listed),
@@ -20,7 +21,7 @@
    theme. Nothing here touches the cart or shows a price.
 
    The question -> category mapping is NOT in this file: every option carries data-cats / data-d /
-   data-floors / data-types / data-drop-cats / data-qty-label / data-tier-name in the section markup, and the
+   data-floors / data-types / data-drop-cats / data-qty-label / data-tier-name / data-rank in the section markup, and the
    category -> product-name lookup is the JSON island #zvwData. The result list is the union of Q1's and
    Q5-Q7's data-cats. An option with data-types narrows its categories to products of that type (Q5 Binnencamera
    -> Binnen, Buitencamera -> Buiten; Q6 Rookmelder -> Rook, Watersensor -> Water), also when Q1 already asked for
@@ -93,7 +94,7 @@
 
   /* Answers -> matched products. Only the data attributes are read, never the label text. */
   function compute() {
-    var q1 = checked('beveiliging'), doel = checked('doel')[0], bescherming = checked('bescherming')[0], etages = checked('etages')[0];
+    var q1 = checked('beveiliging'), doel = checked('doel')[0], bescherming = checked('bescherming'), etages = checked('etages')[0];
     var camera = checked('camera')[0], rook = checked('rookwater')[0], remote = checked('remote')[0];
     var cats = [], catTypes = {}, drop = [], qty = {};
     function addCats(el) { words(el.getAttribute('data-cats')).forEach(function (c) { if (cats.indexOf(c) < 0) cats.push(c); }); }
@@ -125,13 +126,20 @@
       });
     });
     var floors = etages ? parseInt(etages.getAttribute('data-floors'), 10) : 1;
-    /* Package advice: Q3's option maps 1 on 1 to its package (data-tier-name); Q2 only decides which options show. */
-    var tierName = (bescherming && bescherming.getAttribute('data-tier-name')) || '';
+    /* Package advice: every Q3 option maps 1 on 1 to its package (data-tier-name); Q2 only decides which options
+       show. RANK is a business rule, fixed in the markup per line (data-rank 1 < 2 < 3: Mijn Thuis Alert < Protect <
+       Vista, Langer Thuis Inzicht < Zeker < Beschermd), never alphabetical and never the order of ticking: with
+       several options ticked only the highest-ranked package is advised. */
+    var top = null;
+    bescherming.forEach(function (el) {
+      if (!top || parseInt(el.getAttribute('data-rank'), 10) > parseInt(top.getAttribute('data-rank'), 10)) top = el;
+    });
+    var tierName = (top && top.getAttribute('data-tier-name')) || '';
     return {
       q1: q1.map(function (e) { return e.getAttribute('data-d'); }),
       doel: doel ? doel.getAttribute('data-d') : '',
       lineLabel: doel ? doel.getAttribute('data-line-label') : '',
-      bescherming: bescherming ? bescherming.getAttribute('data-d') : '',
+      bescherming: bescherming.map(function (e) { return e.getAttribute('data-d'); }),
       etages: etages ? etages.getAttribute('data-d') : '',
       camera: camera ? camera.getAttribute('data-d') : '',
       rookwater: rook ? rook.getAttribute('data-d') : '',
@@ -151,7 +159,7 @@
       'Zelf samenstellen (offertewizard).',
       'Beveiliging: ' + c.q1.join(', ') + '.',
       'Zoekt beveiliging voor: ' + c.doel + '.',
-      'Soort bescherming: ' + c.bescherming + '.',
+      'Soort bescherming: ' + c.bescherming.join('; ') + '.',
       'Etages: ' + c.floors + '.',
       'Camera-interesse: ' + c.camera + '.',
       'Rook- of waterdetectie: ' + c.rookwater + '.',
@@ -205,7 +213,7 @@
     var step = steps[cur];
     if (!answered(step)) {
       step.classList.add('is-missing');
-      err.textContent = cur === 0 ? 'Kies minstens één optie.' : 'Kies een antwoord om verder te gaan.';
+      err.textContent = step.querySelector('input[type="checkbox"]') ? 'Kies minstens één optie.' : 'Kies een antwoord om verder te gaan.';
       err.hidden = false;
       var first = step.querySelector('input'); if (first) first.focus();
       return;

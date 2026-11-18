@@ -16,10 +16,13 @@
     data-types  (Q4) beperkt de categorie van die optie tot producten met dit type (Binnencamera -> Binnen,
                 Buitencamera -> Buiten). Zo'n optie VERSMALT ook Q1's camera-categorie; een leeg resultaat valt
                 terug op de hele categorie.
-    data-tier-name  (Q3, welk soort bescherming) het pakket waar die optie 1 op 1 naar verwijst; de naam komt uit
-                de config (zv-package-name). Geen instelling of mapping meer: de optie IS de keuze. Q3 toont de drie
-                opties van de lijn die Q2 kiest (data-line op de groep); het pakket verschijnt als gewone tekst
-                "Ons advies: <pakket>." in het RESULTAAT, nooit tijdens de vragen en zonder link naar Oplossingen.
+    data-tier-name / data-rank  (Q3, welk soort bescherming, MEERVOUDIGE keuze) het pakket waar die optie 1 op 1 naar
+                verwijst (naam uit de config via zv-package-name) en zijn rang binnen de lijn. Q3 toont de drie opties
+                van de lijn die Q2 kiest (data-line op de groep). Worden er meer aangevinkt, dan geldt alleen het
+                HOOGSTE pakket: data-rank 3 > 2 > 1, vast per lijn (Mijn Thuis Alert < Protect < Vista, Langer Thuis
+                Inzicht < Zeker < Beschermd; dit is een zakelijke regel, niet alfabetisch en niet de volgorde van
+                aanvinken). Dat pakket verschijnt als gewone tekst "Ons advies: <pakket>." in het RESULTAAT, nooit
+                tijdens de vragen en zonder link naar Oplossingen.
     data-drop-cats / data-qty-label  (Q7) "Geen" haalt de categorie bediening uit het resultaat, ook als Q1 hem
                 via het alarmsysteem toevoegde; 1 / 2 / 3+ toont "Afstandsbediening x<N>" (alleen tekst).
     show:false  (in #zvwData) categorie die wel meedoet maar niet getoond wordt: sensoren (magneetcontact, PIR).
@@ -64,7 +67,7 @@
       </fieldset>
 
       <fieldset class="zvw-step" data-step="3" data-name="bescherming" hidden>
-        <legend tabindex="-1">Welk soort bescherming past het beste bij u?</legend>
+        <legend tabindex="-1">Welk soort bescherming past het beste bij u?<span class="zvw-sub">Kies alles wat past.</span></legend>
         {%- comment -%} Pakketnamen uit de config; de finder_key staat per optie vast (1 optie = 1 pakket). Beide groepen starten verborgen en uitgeschakeld, de JS toont die van Q2. {%- endcomment -%}
         {%- capture n_secure -%}{%- render 'zv-package-name', finder_key: 'secure', names: zv_wiz_names -%}{%- endcapture -%}
         {%- capture n_guard -%}{%- render 'zv-package-name', finder_key: 'guard', names: zv_wiz_names -%}{%- endcapture -%}
@@ -73,14 +76,14 @@
         {%- capture n_aware_plus -%}{%- render 'zv-package-name', finder_key: 'aware_plus', names: zv_wiz_names -%}{%- endcapture -%}
         {%- capture n_care -%}{%- render 'zv-package-name', finder_key: 'care', names: zv_wiz_names -%}{%- endcapture -%}
         <div class="zvw-opts zvw-opts--stack" data-line="mijn_thuis" hidden>
-          <label class="zvw-opt"><input type="radio" name="bescherming" value="alert" disabled data-tier-name="{{ n_secure | strip | default: 'Alert' | escape }}" data-d="Inbraakbeveiliging die ik zelf beheer via de app"><span>Inbraakbeveiliging die ik zelf beheer via de app</span></label>
-          <label class="zvw-opt"><input type="radio" name="bescherming" value="protect" disabled data-tier-name="{{ n_guard | strip | default: 'Protect' | escape }}" data-d="Inbraak én brand, met 24/7 meldkamer die meekijkt"><span>Inbraak én brand, met 24/7 meldkamer die meekijkt</span></label>
-          <label class="zvw-opt"><input type="radio" name="bescherming" value="vista" disabled data-tier-name="{{ n_vista | strip | default: 'Vista' | escape }}" data-d="Camerabeveiliging op maat"><span>Camerabeveiliging op maat</span></label>
+          <label class="zvw-opt"><input type="checkbox" name="bescherming" value="alert" data-rank="1" disabled data-tier-name="{{ n_secure | strip | default: 'Alert' | escape }}" data-d="Inbraakbeveiliging die ik zelf beheer via de app"><span>Inbraakbeveiliging die ik zelf beheer via de app</span></label>
+          <label class="zvw-opt"><input type="checkbox" name="bescherming" value="protect" data-rank="2" disabled data-tier-name="{{ n_guard | strip | default: 'Protect' | escape }}" data-d="Inbraak én brand, met 24/7 meldkamer die meekijkt"><span>Inbraak én brand, met 24/7 meldkamer die meekijkt</span></label>
+          <label class="zvw-opt"><input type="checkbox" name="bescherming" value="vista" data-rank="3" disabled data-tier-name="{{ n_vista | strip | default: 'Vista' | escape }}" data-d="Camerabeveiliging op maat"><span>Camerabeveiliging op maat</span></label>
         </div>
         <div class="zvw-opts zvw-opts--stack" data-line="langer_thuis" hidden>
-          <label class="zvw-opt"><input type="radio" name="bescherming" value="inzicht" disabled data-tier-name="{{ n_aware | strip | default: 'Inzicht' | escape }}" data-d="Vooral rust dat de dag goed verloopt"><span>Vooral rust dat de dag goed verloopt</span></label>
-          <label class="zvw-opt"><input type="radio" name="bescherming" value="zeker" disabled data-tier-name="{{ n_aware_plus | strip | default: 'Zeker' | escape }}" data-d="Vroeg willen weten als het ritme verandert"><span>Vroeg willen weten als het ritme verandert</span></label>
-          <label class="zvw-opt"><input type="radio" name="bescherming" value="beschermd" disabled data-tier-name="{{ n_care | strip | default: 'Beschermd' | escape }}" data-d="Snelle hulp bij een noodsituatie, met 24/7 meldkamer"><span>Snelle hulp bij een noodsituatie, met 24/7 meldkamer</span></label>
+          <label class="zvw-opt"><input type="checkbox" name="bescherming" value="inzicht" data-rank="1" disabled data-tier-name="{{ n_aware | strip | default: 'Inzicht' | escape }}" data-d="Vooral rust dat de dag goed verloopt"><span>Vooral rust dat de dag goed verloopt</span></label>
+          <label class="zvw-opt"><input type="checkbox" name="bescherming" value="zeker" data-rank="2" disabled data-tier-name="{{ n_aware_plus | strip | default: 'Zeker' | escape }}" data-d="Vroeg willen weten als het ritme verandert"><span>Vroeg willen weten als het ritme verandert</span></label>
+          <label class="zvw-opt"><input type="checkbox" name="bescherming" value="beschermd" data-rank="3" disabled data-tier-name="{{ n_care | strip | default: 'Beschermd' | escape }}" data-d="Snelle hulp bij een noodsituatie, met 24/7 meldkamer"><span>Snelle hulp bij een noodsituatie, met 24/7 meldkamer</span></label>
         </div>
       </fieldset>
 
