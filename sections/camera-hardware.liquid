@@ -549,10 +549,10 @@
 
 /* Sticky setup bar: shown once something is chosen, settles above Uw camera-setup. Right-
    aligned so it clears the contact FAB (bottom-left, assets/zv-contact-fab.css); below 960px
-   the two don't fit side by side, so the bar sits above the FAB (80px tall, 60px <=600px). */
+   the two don't fit side by side, so the bar sits above the FAB (56px tall, 46px <=600px). */
 .zv-camera .ch-bar { position:sticky; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); z-index:5; display:flex; justify-content:flex-end; padding:0 20px; margin-top:24px; pointer-events:none; }
-@media(max-width:960px){ .zv-camera .ch-bar { bottom:calc(112px + env(safe-area-inset-bottom, 0px)); } }
-@media(max-width:600px){ .zv-camera .ch-bar { bottom:calc(88px + env(safe-area-inset-bottom, 0px)); padding:0 16px; } }
+@media(max-width:960px){ .zv-camera .ch-bar { bottom:calc(88px + env(safe-area-inset-bottom, 0px)); } }
+@media(max-width:600px){ .zv-camera .ch-bar { bottom:calc(74px + env(safe-area-inset-bottom, 0px)); padding:0 16px; } }
 .zv-camera .ch-bar[hidden] { display:none; }
 .zv-camera .ch-bar-in { pointer-events:auto; display:flex; align-items:center; gap:14px; max-width:100%; background:var(--indigo); color:#fff; border-radius:999px; padding:8px 8px 8px 18px; box-shadow:0 18px 40px -18px rgba(26,18,48,.7); }
 .zv-camera .ch-bar-t { font-size:13.5px; font-weight:700; }
