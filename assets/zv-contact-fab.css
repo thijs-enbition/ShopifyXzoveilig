@@ -23,15 +23,18 @@ body:has(.sf-drawer details[open]) .zv-fab { display: none; }
 .zv-fab__toggle {
   display: inline-flex;
   align-items: center;
-  gap: 16px;
-  min-height: 96px;
-  padding: 0 40px 0 32px;
+  gap: 14px;
+  /* Size: 80px tall (was 96px, 2026-11-19). sections/camera-hardware.liquid and
+     sections/zelf-samenstellen.liquid stack their sticky setup bar above this button below
+     960px with a hardcoded offset (20px + this height + 12px gap): change both together. */
+  min-height: 80px;
+  padding: 0 34px 0 27px;
   border: none;
   border-radius: 999px;
   background: var(--gold, #e4a311);
   color: var(--ink, #1a1230);
   font: inherit;
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 800;
   line-height: 1;
   cursor: pointer;
@@ -39,7 +42,7 @@ body:has(.sf-drawer details[open]) .zv-fab { display: none; }
   transition: background 0.15s, transform 0.15s;
 }
 .zv-fab__toggle:hover { background: var(--gold-lt, #f5c84a); transform: translateY(-1px); }
-.zv-fab__icon { width: 40px; height: 40px; flex: 0 0 auto; }
+.zv-fab__icon { width: 34px; height: 34px; flex: 0 0 auto; }
 .zv-fab__icon--close { display: none; }
 .zv-fab__toggle[aria-expanded="true"] .zv-fab__icon--open { display: none; }
 .zv-fab__toggle[aria-expanded="true"] .zv-fab__icon--close { display: block; }
@@ -104,8 +107,10 @@ body:has(.sf-drawer details[open]) .zv-fab { display: none; }
 @media (max-width: 600px) {
   .zv-fab { left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
   .zv-fab__panel { width: min(290px, calc(100vw - 32px)); }
-  .zv-fab__toggle { min-height: 72px; padding: 0 30px 0 24px; gap: 12px; font-size: 17px; }
-  .zv-fab__icon { width: 30px; height: 30px; }
+  /* 60px tall (was 72px, 2026-11-19); the two sections named above offset their bar by
+     16px + this height + 12px gap. */
+  .zv-fab__toggle { min-height: 60px; padding: 0 26px 0 20px; gap: 10px; font-size: 15px; }
+  .zv-fab__icon { width: 26px; height: 26px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .zv-fab__toggle { transition: none; }
