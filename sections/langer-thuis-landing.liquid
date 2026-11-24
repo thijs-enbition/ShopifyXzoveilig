@@ -6,6 +6,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&display=swap" rel="stylesheet">
 
+{%- comment -%}
+  zv-pricing is INCLUDEd, not rendered: render is scope-isolated, so the zv_*_monthly strings it assigns
+  would never reach this section. The package prices below come from it, never from section settings.
+{%- endcomment -%}
+{%- include 'zv-pricing' -%}
 {%- assign tel_link = section.settings.phone | remove: ' ' | remove: '-' -%}
 
 <style>
@@ -202,19 +207,19 @@
       <div class="zvlt__grid">
         <div class="zvlt__pk">
           <h3>Inzicht</h3>
-          <div><span class="zvlt__price">{{ section.settings.price_inzicht }}</span> <span class="zvlt__per">per maand</span></div>
+          <div><span class="zvlt__price">{{ zv_inzicht_monthly }}</span> <span class="zvlt__per">per maand</span></div>
           <p>Inzicht in het dagelijks leefritme.</p>
           <a href="#zvlt-aanvraag" class="zvlt__btn zvlt__btn--dark" data-zvlt-pakket="Inzicht">Advies over Inzicht</a>
         </div>
         <div class="zvlt__pk">
           <h3>Zeker</h3>
-          <div><span class="zvlt__price">{{ section.settings.price_zeker }}</span> <span class="zvlt__per">per maand</span></div>
+          <div><span class="zvlt__price">{{ zv_zeker_monthly }}</span> <span class="zvlt__per">per maand</span></div>
           <p>Alles van Inzicht, plus inzicht in slaap, rust en activiteiten per ruimte.</p>
           <a href="#zvlt-aanvraag" class="zvlt__btn zvlt__btn--dark" data-zvlt-pakket="Zeker">Advies over Zeker</a>
         </div>
         <div class="zvlt__pk zvlt__pk--hl">
           <h3>Beschermd</h3>
-          <div><span class="zvlt__price">{{ section.settings.price_beschermd }}</span> <span class="zvlt__per">per maand</span></div>
+          <div><span class="zvlt__price">{{ zv_beschermd_monthly }}</span> <span class="zvlt__per">per maand</span></div>
           <p>24/7 meldkamer, noodknop en bescherming tegen rook en brand.</p>
           <a href="#zvlt-aanvraag" class="zvlt__btn" data-zvlt-pakket="Beschermd">Advies over Beschermd</a>
         </div>
@@ -313,12 +318,8 @@
   "settings": [
     { "type": "text", "id": "eyebrow", "label": "Label boven titel", "default": "Langer Thuis" },
     { "type": "text", "id": "hero_title", "label": "Titel", "default": "Langer zelfstandig thuis. Met een gerust gevoel." },
-    { "type": "textarea", "id": "hero_text", "label": "Introtekst", "default": "Slimme sensoren geven inzicht in het leefritme van uw dierbare. Bij afwijkingen krijgt u een seintje. Zonder camera’s. Vanaf €19,95 per maand." },
+    { "type": "textarea", "id": "hero_text", "label": "Introtekst", "default": "Slimme sensoren geven inzicht in het leefritme van uw dierbare. Bij afwijkingen krijgt u een seintje. Zonder camera’s." },
     { "type": "text", "id": "cta_label", "label": "Tekst adviesknop", "default": "Vraag vrijblijvend advies aan" },
-    { "type": "header", "content": "Prijzen per maand" },
-    { "type": "text", "id": "price_inzicht", "label": "Inzicht", "default": "€19,95" },
-    { "type": "text", "id": "price_zeker", "label": "Zeker", "default": "€24,95" },
-    { "type": "text", "id": "price_beschermd", "label": "Beschermd", "default": "€39,95" },
     { "type": "header", "content": "Contact" },
     { "type": "text", "id": "phone", "label": "Telefoonnummer", "default": "088-122 11 11" },
     { "type": "text", "id": "hours", "label": "Openingstijden", "default": "Ma t/m do 08:30–17:00 · vr 08:30–13:00" }
