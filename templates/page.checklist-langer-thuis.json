@@ -1,0 +1,48 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "main": {
+      "type": "zv-checklist",
+      "blocks": {
+        "g-ritme": { "type": "group", "settings": { "heading": "Dagelijks ritme" } },
+        "q-ochtendritme": {
+          "type": "question",
+          "settings": {
+            "field": "lt_vr01_ochtendritme",
+            "label": "Weet u of uw dierbare 's ochtends volgens het gebruikelijke ritme opstaat?"
+          }
+        },
+        "g-overdag-nacht": { "type": "group", "settings": { "heading": "Overdag en 's nachts" } },
+        "g-veiligheid-contact": { "type": "group", "settings": { "heading": "Veiligheid en contact" } },
+        "g-uzelf": { "type": "group", "settings": { "heading": "En uzelf" } }
+      },
+      "block_order": [
+        "g-ritme",
+        "q-ochtendritme",
+        "g-overdag-nacht",
+        "g-veiligheid-contact",
+        "g-uzelf"
+      ],
+      "settings": {
+        "checklist_id": "langer-thuis",
+        "crumb": "Checklist",
+        "eyebrow": "Gratis checklist",
+        "title": "Hoe veilig woont iemand die u lief is?",
+        "intro": "Met deze checklist ontdekt u welke aandachtspunten er zijn om veilig en zelfstandig thuis te blijven wonen. Loop de vragen samen door en bespreek waar extra zekerheid wenselijk is.",
+        "require_answers": true,
+        "details_heading": "Uw gegevens",
+        "submit_label": "Ontvang mijn resultaten",
+        "success_text": "Bedankt! U ontvangt binnen enkele minuten een e-mail met uw persoonlijke checklist-resultaten."
+      }
+    }
+  },
+  "order": ["main"]
+}
