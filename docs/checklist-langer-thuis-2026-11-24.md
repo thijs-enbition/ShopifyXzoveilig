@@ -1,10 +1,13 @@
 # Checklist "Hoe veilig woont iemand die u lief is?" — capture side (2026-11-24)
 
-Branch `feature/checklist-langer-thuis-2026-11-24`. Pushed to `origin`, no PR, not merged, nothing on the live theme.
+Capture page merged to `main` as PR #190 (2026-11-24). **Update 2026-11-24: the 10 missing questions
+are in** (branch `feature/checklist-langer-thuis-questions-2026-11-24`, only
+`templates/page.checklist-langer-thuis.json` changes). The page is still **not published** (see "Shopify
+Page" and the open items below).
 
-**Status: structure done and tested; the question list is NOT complete.** Only 1 of the 11 questions
-is in the config, because the field spec the brief says is "attached separately" was never received
-(see "Missing input").
+**Status: structure and all 11 questions done and tested.** The field spec arrived as the full page
+template JSON (4 groups, 11 `question` blocks `lt_vr01` ... `lt_vr11`, settings unchanged) and is
+committed verbatim (see "Field spec").
 
 ## What is in the branch
 
@@ -63,23 +66,24 @@ Built with `ZVMeasurement.buildCallbackLead(ctx)` like `contact-page` and `herro
 Identity keys are written after the answers, so an answer field can never overwrite `lead_type`,
 `email` or `consent`. The honeypot field and the checkbox's own name never reach the payload.
 
-## Missing input: the field spec
+## Field spec (received 2026-11-24)
 
-The brief's own example is the only verified item: group "Dagelijks ritme" → `lt_vr01_ochtendritme` →
-"Weet u of uw dierbare 's ochtends volgens het gebruikelijke ritme opstaat?". The four group headings
-come from the brief too (the three groups without questions are in the template but not rendered yet).
+The spec is the finished template JSON, committed as `templates/page.checklist-langer-thuis.json`.
+Group → question order, `field` = Odoo key:
 
-Searched and not found: the repo, this Mac, Google Drive (full text for `lt_vr01`, `checklist-langer-thuis`,
-`record_getter`, field-spec titles) and Gmail. The closest thing is Drive's
-`Zo_Veilig_marketingreview_Robi_Woeler.docx` (17 Nov 2026): items 15/16 and the appendix list **15
-candidate questions** and say "kies 10–12", plus the "En uzelf" rubric and two questions for it. That is
-editorial input, not the 11 final questions, the group assignment or the `lt_*` names, so none of it was
-turned into config. Field names are an Odoo contract, so they were not guessed.
+| Group | Fields |
+|---|---|
+| Dagelijks ritme | `lt_vr01_ochtendritme`, `lt_vr02_later_opstaan`, `lt_vr03_keukengebruik`, `lt_vr04_minder_actief` |
+| Overdag en 's nachts | `lt_vr05_vier_uur_inactief`, `lt_vr06_nachts_actiever` |
+| Veiligheid en contact | `lt_vr07_rook_brand_melding`, `lt_vr08_regelmatig_bezoek` |
+| En uzelf | `lt_vr09_belt_zelf_controle`, `lt_vr10_ritme_verandering_merkbaar`, `lt_vr11_afstand_zonder_camera` |
 
-**To finish:** add the remaining 10 `question` blocks (and move/rename groups if the spec differs) in
-`templates/page.checklist-langer-thuis.json`, in spec order. Nothing in the section changes.
+The question wording is in the template. The answers are `ja` / `nee` / `weet_niet`, all 11 required
+(`require_answers`). Before the spec arrived this section said it was missing, and the 15 candidate questions
+in the marketing review (`Zo_Veilig_marketingreview_Robi_Woeler.docx`, "kies 10-12") were deliberately not
+turned into config; the final 11 are not that list, so don't reconcile the two.
 
-The print PDF was not available either, so the row layout follows the pakket-matcher's pill pattern
+The print PDF was not available, so the row layout follows the pakket-matcher's pill pattern
 (`.zvm-opt`) rather than the PDF's layout.
 
 ## Odoo: needs work on Robi's side (not assumed to be handled)
@@ -87,7 +91,7 @@ The print PDF was not available either, so the row layout follows the pakket-mat
 - The Automation Rule's `record_getter` must handle `lead_type = checklist-langer-thuis`. Whether it
   tolerates unknown keys is **unknown**; earlier additions needed an explicit mapping before they
   landed (`contact_subject`/`message`, `order_number`..., see `docs/contact-odoo-dual-write-2026-09-16.md`).
-- Map the `lt_*` answer fields (all 11 once the spec is in), `naam`/`name`, `email`, `consent`.
+- Map the 11 `lt_vr01` ... `lt_vr11` answer fields (see "Field spec"), `naam`/`name`, `email`, `consent`.
 - `lead_temperature` arrives as `hot` for every `buildCallbackLead` lead, including this one. If a
   checklist download should not be a hot lead, that is a decision for Odoo or a one-line override here.
 - The personalised results e-mail / PDF is Odoo's job. The page promises it ("binnen enkele minuten").
@@ -134,11 +138,11 @@ add `checklist_langer_thuis` to `SOURCE_CODES` **and** to the check constraint (
 ## Shopify Page
 
 Created through the Admin API on 2026-11-24, **unpublished**: `Page/701028073853`, title "Checklist Langer
-Thuis", handle `checklist-langer-thuis`, template suffix `checklist-langer-thuis`, empty body. It is
-unpublished on purpose: the template exists only on this branch, so on the live theme a published page would
-render the generic page template, and the question list is incomplete. Publish it after the branch is merged
-and the 10 questions are in. Rename the title if wanted (it feeds `<title>`; the visible h1 is the section's
-`title`).
+Thuis", handle `checklist-langer-thuis`, template suffix `checklist-langer-thuis`, empty body. The template is
+on the live theme since PR #190 (with 1 question); once the 11-question branch is merged it is complete, so
+publishing no longer waits for the question list. It still needs a decision on the open items (Odoo `record_getter` for the new
+`lead_type` and fields, the `log-webhook-failure` source, consent copy sign-off): until Odoo maps them a lead
+may not land. Rename the title if wanted (it feeds `<title>`; the visible h1 is the section's `title`).
 
 ## Validation (2026-11-24)
 
@@ -158,6 +162,14 @@ and the 10 questions are in. Rename the title if wanted (it feeds `<title>`; the
   success; honeypot; no `ZVMeasurement` fallback; arrow-key / Tab behaviour of the radios; no horizontal
   overflow at either width; duplicate and empty-field blocks skipped; wrapper divs balanced.
 - The real template (1 question) was rendered on the disposable theme: only "Dagelijks ritme" shows.
+
+### Validation of the 11-question template (2026-11-24, `feature/checklist-langer-thuis-questions-2026-11-24`)
+
+- `shopify theme check`: 580 warnings / 0 errors on this branch and on `origin/main` 25a29d3, identical (no new offense, nothing in the checklist files).
+- Shopify's server-side validator: the worktree was pushed to a disposable unpublished theme without error.
+- Server render of the real template (`/pages/contact?view=checklist-langer-thuis` on that theme): 11 radio groups, 33 options; groups, fields and labels equal the template in order; success text and button label as configured.
+- Browser (headless Chromium, 17 checks, Odoo and `log-webhook-failure` intercepted, nothing left the machine): 11 rows + 4 group headings + the details heading; no horizontal overflow at 1440 / 390; empty submit and 10 of 11 answered send nothing; the valid submit sends exactly one POST with `lead_type: checklist-langer-thuis`, all 11 real `lt_vr*` keys with the answers verbatim, `naam`/`name` trimmed, `email`, `consent: true`; success box shown; no failure-log call.
+- Not re-tested here (unchanged section code, covered by the 29 checks above): arrow-key behaviour, honeypot, aborted POST, blank-endpoint banner. Still untested: a real lead into Odoo, Safari / Firefox, a screen reader.
 
 **Not tested:** a real lead into Odoo (deliberately none sent); the real `log-webhook-failure` endpoint;
 Safari / Firefox; a screen reader (the markup is `role="radiogroup"` + `aria-labelledby`, `role="alert"` /
