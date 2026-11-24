@@ -1,0 +1,389 @@
+{%- comment -%}
+  Zo Veilig — checklist landing page (Langer Thuis first; Mijn Thuis / Veilig Onderweg can reuse it).
+  Capture side only: Ja / Nee / Weet ik niet per question + naam, e-mail and AVG consent, sent to
+  Odoo through the shared window.ZVLeadWebhook.send() (assets/zv-lead-webhook.js). The personalised
+  results e-mail / PDF is Odoo's job, nothing is calculated or shown here.
+
+  CONFIG = the page's JSON template (templates/page.checklist-<id>.json), not this file. Liquid in
+  this theme has no JSON parser (no parse_json), so the "config file" is the section's settings plus
+  blocks, which theme check validates and which render server-side:
+
+    settings.checklist_id   "langer-thuis"  -> lead_type "checklist-langer-thuis"
+                                            -> failure-log source "checklist_langer_thuis"
+    settings.title / intro / crumb / eyebrow / submit_label / success_text
+    block "group"           heading         starts a new rubriek; questions that follow belong to it
+                                            (a group without questions is not rendered)
+    block "question"        field + label   field = the Odoo field name, sent verbatim as the payload
+                                            key with the value ja | nee | weet_niet
+
+  A new checklist = a new page.checklist-<id>.json using this same section. Do not rename a
+  question's `field` in the theme editor: Odoo maps those names (see
+  docs/checklist-langer-thuis-2026-11-24.md). Duplicate or empty fields are skipped, because two
+  questions with the same name would share one radio group.
+
+  Consent text and error copy come from snippets/zv-form-copy.liquid, like every other lead form.
+{%- endcomment -%}
+
+{%- liquid
+  assign checklist_id = section.settings.checklist_id | default: 'langer-thuis' | handleize
+  assign lead_type = 'checklist-' | append: checklist_id
+  assign source_code = lead_type | replace: '-', '_'
+  assign answers_required = section.settings.require_answers
+  assign seen_fields = '|'
+  assign q_total = 0
+  assign group_open = false
+  assign pending_heading = ''
+  assign pending_attrs = ''
+-%}
+
+{%- comment -%}
+  The group wrapper div is opened lazily (on the first valid question after a group block, so an empty
+  group renders nothing) and closed on the next group block or at the end. group_open keeps that
+  balanced; the tags are echo'd because theme check can't pair a conditional open with a conditional
+  close and would raise UnclosedHTMLElement.
+{%- endcomment -%}
+{%- capture questions_html -%}
+  {%- for block in section.blocks -%}
+    {%- case block.type -%}
+      {%- when 'group' -%}
+        {%- if group_open -%}{%- liquid echo '</div>' -%}{%- assign group_open = false -%}{%- endif -%}
+        {%- assign pending_heading = block.settings.heading -%}
+        {%- assign pending_attrs = block.shopify_attributes -%}
+      {%- when 'question' -%}
+        {%- assign q_field = block.settings.field | strip -%}
+        {%- assign q_key = '|' | append: q_field | append: '|' -%}
+        {%- if q_field == blank or block.settings.label == blank -%}
+          <!-- zv-checklist: question block skipped, field or label is empty -->
+        {%- elsif seen_fields contains q_key -%}
+          <!-- zv-checklist: duplicate field "{{ q_field | escape }}" skipped -->
+        {%- else -%}
+          {%- assign seen_fields = seen_fields | append: q_field | append: '|' -%}
+          {%- assign q_total = q_total | plus: 1 -%}
+          {%- unless group_open -%}
+            {%- liquid
+              echo '<div class="zvc-group" ' | append: pending_attrs | append: '>'
+              if pending_heading != blank
+                echo pending_heading | escape | prepend: '<h2 class="zvc-gh">' | append: '</h2>'
+              endif
+              assign group_open = true
+            -%}
+          {%- endunless -%}
+          {%- assign q_id = 'zvc-' | append: section.id | append: '-' | append: block.id -%}
+          <div class="zvc-q" role="radiogroup" aria-labelledby="{{ q_id }}"{% if answers_required %} aria-required="true"{% endif %} data-field="{{ q_field | escape }}" {{ block.shopify_attributes }}>
+            <p class="zvc-ql" id="{{ q_id }}">{{ block.settings.label | escape }}</p>
+            <div class="zvc-opts">
+              <label class="zvc-opt"><input type="radio" name="{{ q_field | escape }}" value="ja"><span>Ja</span></label>
+              <label class="zvc-opt"><input type="radio" name="{{ q_field | escape }}" value="nee"><span>Nee</span></label>
+              <label class="zvc-opt"><input type="radio" name="{{ q_field | escape }}" value="weet_niet"><span>Weet ik niet</span></label>
+            </div>
+          </div>
+        {%- endif -%}
+    {%- endcase -%}
+  {%- endfor -%}
+  {%- if group_open -%}{%- liquid echo '</div>' -%}{%- endif -%}
+{%- endcapture -%}
+
+<div class="zv-checklist">
+  <section class="page-hero">
+    <div class="wrap">
+      <div class="crumbs"><a href="{% render 'zv-route', key: 'home' %}">Home</a> <span>›</span> <b>{{ section.settings.crumb | default: 'Checklist' | escape }}</b></div>
+      {%- if section.settings.eyebrow != blank -%}
+        <span class="eyebrow">{{ section.settings.eyebrow | escape }}</span>
+      {%- endif -%}
+      <h1>{{ section.settings.title | default: 'Hoe veilig woont iemand die u lief is?' | escape }}</h1>
+      {%- if section.settings.intro != blank -%}
+        <p class="lead">{{ section.settings.intro | escape }}</p>
+      {%- endif -%}
+    </div>
+  </section>
+
+  <section class="zvc-wrap">
+    <div class="wrap">
+      <div class="zvc-card">
+        {%- if q_total == 0 -%}
+          <!-- zv-checklist: no valid question blocks, form not rendered -->
+          {%- if request.design_mode -%}
+            <p class="zvc-empty">Deze checklist heeft nog geen vragen. Voeg een rubriek en vraagblokken toe in de sectie-instellingen.</p>
+          {%- endif -%}
+        {%- else -%}
+          <div id="zvc-ok-{{ section.id }}" class="zvc-ok" role="status" tabindex="-1" hidden>{{ section.settings.success_text | default: 'Bedankt! U ontvangt binnen enkele minuten een e-mail met uw persoonlijke checklist-resultaten.' | escape }}</div>
+          <div id="zvc-err-{{ section.id }}" class="zvc-err" role="alert" hidden>Controleer even de gemarkeerde vragen en velden en probeer het opnieuw.</div>
+          <div id="zvc-err-server-{{ section.id }}" class="zvc-err" role="alert" tabindex="-1" hidden>Er ging iets mis bij het versturen. Probeer het over een moment opnieuw, of bel ons direct op <a href="tel:0881221111">088 122 11 11</a>.</div>
+
+          <form class="zvc-form" id="zvc-form-{{ section.id }}" novalidate
+                data-zv-checklist
+                data-lead-type="{{ lead_type | escape }}"
+                data-source="{{ source_code | escape }}"
+                data-required="{{ answers_required }}"
+                data-consent-error="{% render 'zv-form-copy', key: 'consent_error' %}"
+                data-ok="zvc-ok-{{ section.id }}"
+                data-err="zvc-err-{{ section.id }}"
+                data-err-server="zvc-err-server-{{ section.id }}">
+
+            {{ questions_html }}
+
+            <div class="zvc-group zvc-details">
+              <h2 class="zvc-gh">{{ section.settings.details_heading | default: 'Uw gegevens' | escape }}</h2>
+              <div class="fld-row">
+                <div class="fld"><label for="zvc-naam-{{ section.id }}">Naam</label><input id="zvc-naam-{{ section.id }}" name="naam" autocomplete="name" placeholder="Voor- en achternaam" required></div>
+                <div class="fld"><label for="zvc-mail-{{ section.id }}">E-mailadres</label><input id="zvc-mail-{{ section.id }}" name="email" type="email" autocomplete="email" placeholder="uw@email.nl" required></div>
+              </div>
+              <div class="fld fld-consent">
+                <label class="zvc-consent">
+                  <input type="checkbox" id="zvc-consent-{{ section.id }}" name="consent_box" required>
+                  <span>{% render 'zv-form-copy', key: 'consent' %}</span>
+                </label>
+              </div>
+              <div class="zvc-hp" aria-hidden="true"><label for="zvc-web-{{ section.id }}">Website</label><input id="zvc-web-{{ section.id }}" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+              <div class="zvc-submit">
+                <button class="btn btn--gold" type="submit">{{ section.settings.submit_label | default: 'Ontvang mijn resultaten' | escape }} <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              </div>
+            </div>
+          </form>
+        {%- endif -%}
+      </div>
+    </div>
+  </section>
+</div>
+
+{% stylesheet %}
+.zv-checklist {
+  --ink:#1a1230; --indigo:#322469; --indigo-deep:#281c54; --indigo-soft:#ece8fb;
+  --paper:#fffdf8; --cream:#fdfaf2; --gold:#e4a311; --gold-lt:#f5c84a;
+  --line:#e7e0cf; --line-2:#ddd4c0; --muted:#6f6786; --ok:#2f8f5b; --bad:#c52e2f;
+  color:var(--ink); line-height:1.5;
+}
+.zv-checklist [hidden] { display:none !important; }
+.zv-checklist .wrap { max-width:1180px; margin:0 auto; padding:0 clamp(20px,3.6vw,52px); }
+.zv-checklist .page-hero { background:radial-gradient(64% 120% at 92% 0%,rgba(197,46,47,.3) 0%,rgba(197,46,47,0) 55%),linear-gradient(180deg,#2c3076 0%,#241c54 100%); color:#fff; padding:clamp(38px,4.6vw,64px) 0 clamp(30px,3.5vw,46px); }
+.zv-checklist .page-hero .crumbs { font-size:12.5px; font-weight:700; color:#cdc6e8; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.zv-checklist .page-hero .crumbs a { color:#cdc6e8; text-decoration:none; }
+.zv-checklist .page-hero .crumbs a:hover { color:#fff; }
+.zv-checklist .page-hero .crumbs b { color:#fff; }
+.zv-checklist .page-hero .eyebrow { display:inline-block; margin-top:14px; font-size:12px; font-weight:800; letter-spacing:.22em; text-transform:uppercase; color:var(--gold-lt); }
+.zv-checklist .page-hero h1 { color:#fff; font-size:clamp(28px,3.6vw,46px); font-weight:900; letter-spacing:-.02em; line-height:1.05; margin-top:10px; }
+.zv-checklist .page-hero .lead { font-size:clamp(15px,1.5vw,17.5px); font-weight:500; color:#dcd6f0; margin-top:14px; max-width:62ch; line-height:1.6; }
+.zv-checklist .zvc-wrap { padding:clamp(40px,4.5vw,68px) 0 clamp(56px,6vw,90px); background:var(--cream); }
+.zv-checklist .zvc-card { background:var(--paper); border:1px solid var(--line); border-radius:20px; padding:clamp(20px,3vw,38px); box-shadow:0 24px 54px -44px rgba(26,18,48,.5); max-width:860px; }
+.zv-checklist .zvc-empty { font-size:14.5px; font-weight:700; color:var(--muted); }
+
+/* rubrieken + vragen: the pakket-matcher's pill pattern (.zvm-opt in zelf-samenstellen-matcher), one row per question */
+.zv-checklist .zvc-group + .zvc-group { margin-top:clamp(26px,3vw,38px); }
+.zv-checklist .zvc-gh { font-size:clamp(18px,2vw,21px); font-weight:900; color:var(--indigo); letter-spacing:-.015em; line-height:1.25; padding-bottom:6px; border-bottom:2px solid var(--indigo-soft); }
+.zv-checklist .zvc-q { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px 24px; align-items:center; padding:15px 0; border-bottom:1px solid var(--line); }
+.zv-checklist .zvc-ql { margin:0; font-size:15.5px; font-weight:700; color:var(--ink); line-height:1.4; }
+.zv-checklist .zvc-opts { display:flex; flex-wrap:wrap; gap:8px; }
+.zv-checklist .zvc-opt { display:inline-flex; align-items:center; justify-content:center; min-width:84px; gap:8px; font-size:14px; font-weight:800; color:var(--indigo); background:#fff; border:1.5px solid var(--line-2); border-radius:12px; padding:9px 14px; cursor:pointer; transition:border-color .14s,background .14s; }
+.zv-checklist .zvc-opt:hover { border-color:var(--indigo); }
+.zv-checklist .zvc-opt input { width:18px; height:18px; margin:0; flex:none; accent-color:var(--indigo); }
+.zv-checklist .zvc-opt:has(input:checked) { border-color:var(--indigo); background:var(--indigo-soft); }
+.zv-checklist .zvc-opt:has(input:focus-visible) { outline:2px solid var(--indigo); outline-offset:3px; }
+.zv-checklist .zvc-q.is-missing .zvc-ql { color:var(--bad); }
+.zv-checklist .zvc-q.is-missing .zvc-opt { border-color:var(--bad); }
+@media(max-width:720px){
+  .zv-checklist .zvc-q { grid-template-columns:1fr; }
+  .zv-checklist .zvc-opt { flex:1 1 auto; justify-content:center; }
+}
+
+/* gegevens: same field/consent/button styling as herroepen-page */
+.zv-checklist .zvc-details .fld-row { margin-top:4px; }
+.zv-checklist .fld { margin-top:18px; }
+.zv-checklist .fld label { display:block; font-size:13px; font-weight:800; color:var(--ink); margin-bottom:7px; }
+.zv-checklist .fld input { width:100%; background:var(--cream); border:1.5px solid var(--line-2); border-radius:12px; padding:13px 15px; font:inherit; font-size:15px; font-weight:600; color:var(--ink); }
+.zv-checklist .fld input:focus { outline:none; border-color:var(--indigo); background:#fff; }
+.zv-checklist .fld--invalid input { border-color:var(--bad); background:rgba(197,46,47,.05); }
+.zv-checklist .fld-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media(max-width:520px){ .zv-checklist .fld-row { grid-template-columns:1fr; } }
+.zv-checklist .fld-consent .zvc-consent { display:flex; align-items:flex-start; gap:10px; cursor:pointer; }
+.zv-checklist .fld-consent .zvc-consent input { width:19px; height:19px; margin-top:2px; flex:none; accent-color:var(--indigo); }
+.zv-checklist .fld-consent .zvc-consent span { font-size:13.5px; font-weight:600; color:var(--muted); line-height:1.5; }
+.zv-checklist .fld--invalid.fld-consent .zvc-consent span { color:#9a2b2b; }
+.zv-checklist .fld-consent .zvc-consent a { color:var(--indigo); font-weight:800; }
+.zv-checklist .zvc-submit { margin-top:22px; }
+.zv-checklist .zvc-hp { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+.zv-checklist .btn { display:inline-flex; align-items:center; gap:9px; border:none; cursor:pointer; border-radius:12px; font:inherit; font-weight:800; text-decoration:none; }
+.zv-checklist .btn svg { width:18px; height:18px; }
+.zv-checklist .btn--gold { background:linear-gradient(180deg,var(--gold-lt),var(--gold)); color:#3a2a06; padding:14px 24px; box-shadow:0 14px 30px -18px rgba(228,163,17,.9); }
+.zv-checklist .btn--gold:hover { filter:brightness(1.03); }
+.zv-checklist .btn[disabled] { opacity:.6; cursor:default; }
+.zv-checklist .zvc-ok { background:rgba(47,143,91,.1); border:1px solid rgba(47,143,91,.4); border-radius:12px; padding:18px 20px; color:#256b45; font-size:16px; font-weight:700; line-height:1.5; }
+.zv-checklist .zvc-ok:focus { outline:2px solid var(--ok); outline-offset:3px; }
+.zv-checklist .zvc-err { margin-bottom:16px; background:rgba(197,46,47,.08); border:1px solid rgba(197,46,47,.35); border-radius:12px; padding:13px 16px; color:#9a2b2b; font-size:14px; font-weight:700; }
+.zv-checklist .zvc-err a { color:#9a2b2b; text-decoration:underline; }
+.zv-checklist .zvc-err:focus { outline:2px solid var(--bad); outline-offset:3px; }
+{% endstylesheet %}
+
+{% javascript %}
+(function () {
+  var forms = document.querySelectorAll('form[data-zv-checklist]');
+  Array.prototype.forEach.call(forms, init);
+
+  function init(form) {
+    var okEl = document.getElementById(form.getAttribute('data-ok'));
+    var errEl = document.getElementById(form.getAttribute('data-err'));
+    var errServerEl = document.getElementById(form.getAttribute('data-err-server'));
+    var leadType = form.getAttribute('data-lead-type');
+    var source = form.getAttribute('data-source');
+    var answersRequired = form.getAttribute('data-required') === 'true';
+    var naamInput = form.elements['naam'];
+    var mailInput = form.elements['email'];
+    var consentInput = form.elements['consent_box'];
+    var submitBtn = form.querySelector('button[type="submit"]');
+    var questions = Array.prototype.slice.call(form.querySelectorAll('.zvc-q'));
+
+    function answerOf(q) {
+      var checked = q.querySelector('input[type="radio"]:checked');
+      return checked ? checked.value : '';
+    }
+
+    function clearInvalid() {
+      questions.forEach(function (q) { q.classList.remove('is-missing'); });
+      Array.prototype.forEach.call(form.querySelectorAll('.fld'), function (f) { f.classList.remove('fld--invalid'); });
+    }
+
+    // returns the first element that failed, or null
+    function validate() {
+      clearInvalid();
+      var bad = [];
+      if (answersRequired) {
+        questions.forEach(function (q) {
+          if (!answerOf(q)) { q.classList.add('is-missing'); bad.push(q); }
+        });
+      }
+      [naamInput, mailInput, consentInput].forEach(function (input) {
+        var ok = input.checkValidity() && (input.type === 'checkbox' || input.value.trim() !== '');
+        if (!ok) { input.closest('.fld').classList.add('fld--invalid'); bad.push(input); }
+      });
+      return bad.length ? bad[0] : null;
+    }
+
+    // The banners sit at the top of a long card while the visitor is at the submit button at the
+    // bottom, so a banner that is merely un-hidden would never be seen: bring it into view.
+    function showServerError() {
+      errServerEl.hidden = false;
+      errServerEl.focus({ preventScroll: true });
+      errServerEl.scrollIntoView({ block: 'center' });
+    }
+
+    function showSuccess() {
+      form.hidden = true;
+      errEl.hidden = true;
+      errServerEl.hidden = true;
+      okEl.hidden = false;
+      okEl.focus();
+      okEl.scrollIntoView({ block: 'center' });
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      errEl.hidden = true;
+      errServerEl.hidden = true;
+
+      var firstBad = validate();
+      if (firstBad) {
+        errEl.hidden = false;
+        if (firstBad.scrollIntoView) firstBad.scrollIntoView({ block: 'center' });
+        var focusable = firstBad.matches && firstBad.matches('input') ? firstBad : firstBad.querySelector('input');
+        if (focusable) focusable.focus({ preventScroll: true });
+        return;
+      }
+
+      // Honeypot: a bot filled the hidden field. Look successful, send nothing.
+      if (form.elements['website'] && form.elements['website'].value) { showSuccess(); return; }
+
+      // ZVLeadWebhook.send() is fire-and-forget and returns nothing, so the visitor can never be
+      // told about a failed POST. What we CAN catch is "nothing was sent at all" (shared layer or
+      // endpoint not configured), and then we must not promise an e-mail.
+      if (!window.ZVLeadWebhook || !window.ZV_LEAD_ENDPOINT) {
+        showServerError();
+        return;
+      }
+
+      var naam = naamInput.value.trim();
+      var ctx = {};
+      // Answers first, identity keys last: an answer field can never overwrite lead_type/email/consent.
+      questions.forEach(function (q) { ctx[q.getAttribute('data-field')] = answerOf(q); });
+      ctx.lead_type = leadType;
+      ctx.cta_location = source;
+      ctx.naam = naam;
+      ctx.name = naam; // what the existing Odoo lead mapping reads for every other lead_type
+      ctx.email = mailInput.value.trim();
+      ctx.consent = true;
+
+      var rec = (window.ZVMeasurement && window.ZVMeasurement.buildCallbackLead)
+        ? window.ZVMeasurement.buildCallbackLead(ctx)
+        : Object.assign({ page_url: window.location.href, timestamp: new Date().toISOString() }, ctx);
+
+      if (submitBtn) submitBtn.disabled = true;
+      window.ZVLeadWebhook.send(rec, source);
+      showSuccess();
+    });
+  }
+})();
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "Checklist",
+  "tag": "section",
+  "settings": [
+    { "type": "header", "content": "Checklist" },
+    {
+      "type": "text",
+      "id": "checklist_id",
+      "label": "Checklist-ID",
+      "default": "langer-thuis",
+      "info": "Bepaalt lead_type (\"checklist-<id>\") en de bron in het foutlog (\"checklist_<id>\"). Niet wijzigen na livegang: Odoo herkent de checklist hieraan."
+    },
+    { "type": "text", "id": "crumb", "label": "Broodkruimel", "default": "Checklist" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Gratis checklist" },
+    { "type": "text", "id": "title", "label": "Titel", "default": "Hoe veilig woont iemand die u lief is?" },
+    {
+      "type": "textarea",
+      "id": "intro",
+      "label": "Inleiding",
+      "default": "Met deze checklist ontdekt u welke aandachtspunten er zijn om veilig en zelfstandig thuis te blijven wonen. Loop de vragen samen door en bespreek waar extra zekerheid wenselijk is."
+    },
+    {
+      "type": "checkbox",
+      "id": "require_answers",
+      "label": "Alle vragen verplicht",
+      "default": true,
+      "info": "Aan: elke vraag heeft altijd Ja, Nee of Weet ik niet. Uit: een onbeantwoorde vraag wordt als lege tekst naar Odoo gestuurd."
+    },
+    { "type": "header", "content": "Gegevens en versturen" },
+    { "type": "text", "id": "details_heading", "label": "Kop boven naam en e-mail", "default": "Uw gegevens" },
+    { "type": "text", "id": "submit_label", "label": "Tekst van de knop", "default": "Ontvang mijn resultaten" },
+    {
+      "type": "textarea",
+      "id": "success_text",
+      "label": "Bevestiging na versturen",
+      "default": "Bedankt! U ontvangt binnen enkele minuten een e-mail met uw persoonlijke checklist-resultaten."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "group",
+      "name": "Rubriek",
+      "settings": [
+        { "type": "text", "id": "heading", "label": "Kop van de rubriek" }
+      ]
+    },
+    {
+      "type": "question",
+      "name": "Vraag",
+      "settings": [
+        {
+          "type": "text",
+          "id": "field",
+          "label": "Veldnaam (Odoo)",
+          "info": "Technische sleutel in de lead naar Odoo, bijv. lt_vr01_ochtendritme. Niet wijzigen zonder Odoo aan te passen."
+        },
+        { "type": "textarea", "id": "label", "label": "Vraag" }
+      ]
+    }
+  ],
+  "max_blocks": 50,
+  "presets": [{ "name": "Checklist" }]
+}
+{% endschema %}
