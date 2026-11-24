@@ -735,6 +735,19 @@
     </div>
   </section>
 
+  {%- if section.settings.trust_review_count != blank -%}
+  <div class="wrap">
+    <p class="ovtp">
+      <span class="ovtp-stars" aria-hidden="true">
+        {%- for i in (1..5) -%}<span class="tp-star{% if i > section.settings.trust_stars %} off{% endif %}"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.7 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2z"/></svg></span>{%- endfor -%}
+      </span>
+      {%- if section.settings.trust_url != blank -%}<a href="{{ section.settings.trust_url }}" target="_blank" rel="noopener">{%- endif -%}
+      <b>{{ section.settings.trust_score }}</b> {{ section.settings.trust_rating_word }} · {{ section.settings.trust_review_count }} beoordelingen op Trustpilot
+      {%- if section.settings.trust_url != blank -%}</a>{%- endif -%}
+    </p>
+  </div>
+  {%- endif -%}
+
   <noscript><div class="wrap"><p class="ovnoscript">Deze pagina werkt het beste met JavaScript ingeschakeld. <a href="{{ routes.cart_url }}">Ga terug naar de winkelwagen</a>.</p></div></noscript>
 
   {%- if cart.item_count > 0 -%}
@@ -1470,6 +1483,16 @@
   .zv-overzicht .ovsteps li:not(.active) { font-size:0; gap:0; }
   .zv-overzicht .ovsteps .n { width:24px; height:24px; font-size:12px; }
 }
+/* Trustpilot mention under the step bar (2026-11-24). Class prefix is .ovtp, NOT .ovtrust: .ovtrust is the
+   checkout trust-badge row further down, and its `.ovtrust span` / `.ovtrust svg` rules would hit these stars. */
+.ovtp { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:var(--muted); margin:14px 0 0; }
+.ovtp a { color:inherit; text-decoration:none; }
+.ovtp a:hover { text-decoration:underline; }
+.ovtp b { color:var(--ink); font-weight:800; }
+.ovtp-stars { display:inline-flex; gap:2px; }
+.ovtp-stars .tp-star { width:15px; height:15px; border-radius:3px; background:#00b67a; display:grid; place-items:center; }
+.ovtp-stars .tp-star svg { width:10px; height:10px; color:#fff; }
+.ovtp-stars .tp-star.off { background:#d8cdb4; }
 {% endstylesheet %}
 
 {% schema %}
@@ -1492,7 +1515,13 @@
     { "type": "text", "id": "consent_suffix", "label": "Akkoordtekst · slot", "default": "en de betaalplicht." },
     { "type": "text", "id": "checkout_button_label", "label": "Knoptekst · afrekenen", "default": "Verder naar veilig afrekenen" },
     { "type": "textarea", "id": "closing_text", "label": "Slotzin", "default": "U rondt uw betaling van vandaag veilig af in onze beveiligde betaalomgeving." },
-    { "type": "text", "id": "continue_shopping_label", "label": "Knoptekst · verder winkelen", "default": "← Verder winkelen" }
+    { "type": "text", "id": "continue_shopping_label", "label": "Knoptekst · verder winkelen", "default": "← Verder winkelen" },
+    { "type": "header", "content": "Trustpilot" },
+    { "type": "text", "id": "trust_score", "label": "Score", "default": "4,7" },
+    { "type": "range", "id": "trust_stars", "label": "Sterren", "min": 0, "max": 5, "step": 1, "default": 5 },
+    { "type": "text", "id": "trust_rating_word", "label": "Waardering", "default": "Uitstekend" },
+    { "type": "text", "id": "trust_review_count", "label": "Aantal beoordelingen", "default": "650" },
+    { "type": "text", "id": "trust_url", "label": "Trustpilot-link", "default": "https://www.trustpilot.com/review/zoveilig.nl?languages=all&stars=5", "info": "Een url-instelling mag geen externe standaardwaarde hebben, daarom een tekstveld. Leeg laten = geen link." }
   ]
 }
 {% endschema %}
