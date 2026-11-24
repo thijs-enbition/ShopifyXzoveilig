@@ -20,16 +20,96 @@
             "label": "Weet u of uw dierbare 's ochtends volgens het gebruikelijke ritme opstaat?"
           }
         },
+        "q-later-opstaan": {
+          "type": "question",
+          "settings": {
+            "field": "lt_vr02_later_opstaan",
+            "label": "Zou u het merken als uw dierbare veel later opstaat dan normaal?"
+          }
+        },
+        "q-keukengebruik": {
+          "type": "question",
+          "settings": {
+            "field": "lt_vr03_keukengebruik",
+            "label": "Weet u of uw dierbare nog regelmatig gebruikmaakt van de keuken?"
+          }
+        },
+        "q-minder-actief": {
+          "type": "question",
+          "settings": {
+            "field": "lt_vr04_minder_actief",
+            "label": "Weet u of uw dierbare de afgelopen weken minder actief is geworden?"
+          }
+        },
         "g-overdag-nacht": { "type": "group", "settings": { "heading": "Overdag en 's nachts" } },
+        "q-vier-uur-inactief": {
+          "type": "question",
+          "settings": {
+            "field": "lt_vr05_vier_uur_inactief",
+            "label": "Zou u het merken als uw dierbare vier uur lang niet actief is in huis?"
+          }
+        },
+        "q-nachts-actiever": {
+          "type": "question",
+          "settings": {
+            "field": "lt_vr06_nachts_actiever",
+            "label": "Weet u of uw dierbare 's nachts vaker actief is dan normaal?"
+          }
+        },
         "g-veiligheid-contact": { "type": "group", "settings": { "heading": "Veiligheid en contact" } },
-        "g-uzelf": { "type": "group", "settings": { "heading": "En uzelf" } }
+        "q-rook-brand": {
+          "type": "question",
+          "settings": {
+            "field": "lt_vr07_rook_brand_melding",
+            "label": "Weet u of er iemand gewaarschuwd wordt bij rook of brand?"
+          }
+        },
+        "q-regelmatig-bezoek": {
+          "type": "question",
+          "settings": {
+            "field": "lt_vr08_regelmatig_bezoek",
+            "label": "Weet u of er regelmatig bezoek langskomt bij uw dierbare?"
+          }
+        },
+        "g-uzelf": { "type": "group", "settings": { "heading": "En uzelf" } },
+        "q-belt-controle": {
+          "type": "question",
+          "settings": {
+            "field": "lt_vr09_belt_zelf_controle",
+            "label": "Belt u weleens alleen om te controleren of alles goed gaat?"
+          }
+        },
+        "q-ritme-verandering": {
+          "type": "question",
+          "settings": {
+            "field": "lt_vr10_ritme_verandering_merkbaar",
+            "label": "Zou u het merken als het dagelijkse leefritme plotseling verandert?"
+          }
+        },
+        "q-afstand-camera": {
+          "type": "question",
+          "settings": {
+            "field": "lt_vr11_afstand_zonder_camera",
+            "label": "Kunt u op afstand zien of alles volgens het gebruikelijke patroon verloopt, zonder camera's?"
+          }
+        }
       },
       "block_order": [
         "g-ritme",
         "q-ochtendritme",
+        "q-later-opstaan",
+        "q-keukengebruik",
+        "q-minder-actief",
         "g-overdag-nacht",
+        "q-vier-uur-inactief",
+        "q-nachts-actiever",
         "g-veiligheid-contact",
-        "g-uzelf"
+        "q-rook-brand",
+        "q-regelmatig-bezoek",
+        "g-uzelf",
+        "q-belt-controle",
+        "q-ritme-verandering",
+        "q-afstand-camera"
       ],
       "settings": {
         "checklist_id": "langer-thuis",
